@@ -1,0 +1,5 @@
+traffic-cop (1.0) jammy; urgency=medium
+
+  * Initial release.
+
+ -- Nate Marti <nate_marti@sil.org>  Sat, 08 Jan 2022 12:58:59 +0100

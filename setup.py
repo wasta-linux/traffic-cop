@@ -20,7 +20,10 @@ setup(
     url="https://github.com/wasta-linux/tt-bandwidth-manager-gui",
     packages=['trafficcop'],
     package_data={'trafficcop': ['README.md']},
-    scripts=['bin/traffic-cop'],
+    scripts=[
+        'bin/traffic-cop',
+        'bin/tt-wrapper',
+    ],
     data_files=[
         ('share/polkit-1/actions', glob.glob('data/actions/*')),
         ('share/icons/hicolor/scalable/apps', glob.glob('data/icons/*.svg')),

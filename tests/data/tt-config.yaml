@@ -1,4 +1,4 @@
-### tt-bandwidth-manager (TrafficToll) configuration file.
+### traffic-cop configuration file.
 
 # All bandwidth limits specified here are applied automatically to whichever
 # interface has the active internet connection.
@@ -94,7 +94,7 @@ processes:
     #   "- cmdline:" (uses regex)
     #
     # Verify that your match works by checking the log with:
-    # $ journalctl -u tt-bandwidth-manager
+    # $ journalctl -u traffic-cop
     # If you do not see a line starting with "Shaping traffic for..." with your
     # process name in it while it is clearly causing traffic, your match section
     # is failing.

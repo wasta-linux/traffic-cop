@@ -21,14 +21,14 @@ Traffic Cop manages bandwidth usage via a systemd service by:
 - Use *prioritization* if your available bandwidth is limited; e.g. you want to ensure that your audio calls go through, even if you're also downloading updates.
 
 ### Modifying the default bandwidth management configuration
-The [default config](config/tt-default-config.yaml) is intentionally conservative. It limits a couple of processes and gives some explanatory info. It is found at [/usr/share/tt-bandwidth-manager/tt-config.yaml](config/tt-default-config.yaml) and is installed to /etc/tt-config.yaml if it doesn't already exist.
+The [default config](data/traffic-cop.conf.default) is intentionally conservative. It limits a couple of processes and gives some explanatory info. It is found at [/usr/share/traffic-cop/traffic-cop.conf](data/traffic-cop.conf.default) and is installed to /etc/traffic-cop.conf if it doesn't already exist.
 This config file requires elevated privileges to edit, e.g.:
 ```bash
-$ sudo nano /etc/tt-config.yaml
+$ sudo nano /etc/traffic-cop.conf
 ```
 This file is not overwritten during installation or update, so any changes you make are preserved.
 
-Explanations of configuration options can be found in the default config file, as well as in an example file at [/usr/share/tt-bandwidth-manager/tt-example.yaml](config/tt-example.yaml) created by [cryzed](https://github.com/cryzed), who developed the python3 package TrafficToll, upon which I've built this systemd service package.
+Explanations of configuration options can be found in the default config file, as well as in an example file at [/usr/share/traffic-cop/traffic-cop.conf.example](config/traffic-cop.conf.example) created by [cryzed](https://github.com/cryzed), who developed the python3 package TrafficToll, upon which I've built this systemd service package.
 
 ### Starting and stopping traffic-cop.service
 By default the service runs whenever there is a connection to the internet. It can be started and stopped with the usual systemd commands:
@@ -50,19 +50,19 @@ $ journalctl -f -u traffic-cop.service       # "follow" the log live
 ![screenshot](screenshot.png)
 
 ### Changing the network connection device
-Normally, if you change your connection device (e.g. from Wi-Fi to Ethernet), **tt-bandwidth-manager** will recognize the change and adapt accordingly. This is known to *not* work as expected when the new connection is a newly-enabled wireguard VPN, and it may also be the case when turning on other VPNs.
+Normally, if you change your connection device (e.g. from Wi-Fi to Ethernet), **traffic-cop** will recognize the change and adapt accordingly. This is known to *not* work as expected when the new connection is a newly-enabled wireguard VPN, and it may also be the case when turning on other VPNs.
 
 If ```systemctl status traffic-cop.service``` shows that the app is managing a network interface other than the current one, e.g. wlp2s0 (Wi-Fi device interface) instead of wgpia0 (wireguard VPN interface), please use ```systemctl restart traffic-cop.service``` to update it. This may also be needed when the VPN is turned off, if the VPN's interface still exists.
 
-For example, maybe you've been using **tt-bandwidth-manager** and you just turned on your PIA VPN:
+For example, maybe you've been using **traffic-cop** and you just turned on your PIA VPN:
 ```bash
 $ ip -br address
 lo               UNKNOWN        127.0.0.1/8 ::1/128
 wlp2s0           UP             192.168.43.56/24 [ipv6 address]/64 # Wi-Fi interface
-ifb0             UNKNOWN        [ipv6 address]/64                  # interface created by tt-bandwidth-manager
+ifb0             UNKNOWN        [ipv6 address]/64                  # interface created by traffic-cop
 wgpia0           UNKNOWN        10.63.229.219/32                   # PIA VPN interface
 ```
-But **tt-bandwidth-manager** is still managing traffic on wlp2s0 (see the last line before the recent log output):
+But **traffic-cop** is still managing traffic on wlp2s0 (see the last line before the recent log output):
 ```bash
 $ systemctl status traffic-cop.service
 ● traffic-cop.service - Manage bandwidth usage
@@ -72,7 +72,7 @@ $ systemctl status traffic-cop.service
     Tasks: 2 (limit: 4915)
    CGroup: /system.slice/traffic-cop.service
            ├─21915 /bin/bash /usr/bin/tt-wrapper
-           └─21955 /usr/bin/python3 /usr/bin/tt wlp2s0 /etc/tt-config.yaml
+           └─21955 /usr/bin/python3 /usr/bin/tt wlp2s0 /etc/traffic-cop.conf
 
 [...recent log output...]
 ```
@@ -87,16 +87,16 @@ $ systemctl status traffic-cop.service
     Tasks: 2 (limit: 4915)
    CGroup: /system.slice/traffic-cop.service
            ├─5773 /bin/bash /usr/bin/tt-wrapper
-           └─5795 /usr/bin/python3 /usr/bin/tt wgpia0 /etc/tt-config.yaml
+           └─5795 /usr/bin/python3 /usr/bin/tt wgpia0 /etc/traffic-cop.conf
 ```
 
 ## About
-**tt-bandwidth-manager** is based on the [TrafficToll](https://github.com/cryzed/TrafficToll) python3 package developed by [cryzed](https://github.com/cryzed), but it's built as a debian package and modified to run as a systemd service.
+**traffic-cop** is based on the [TrafficToll](https://github.com/cryzed/TrafficToll) python3 package developed by [cryzed](https://github.com/cryzed), but it's built as a debian package and modified to run as a systemd service.
 
 It's composed of 4 parts:
 - The traffictoll python3 package whose executable is installed at /usr/bin/tt.
-- A default config file installed at /etc/tt-config.yaml.
-  - There is also an example config file at /usr/share/tt-bandwidth-manager/tt-example.yaml.
+- A default config file installed at /etc/traffic-cop.conf.
+  - There is also an example config file at /usr/share/traffic-cop/traffic-cop.conf.example.
 - A wrapper script installed at /usr/bin/tt-wrapper that:
   - selects the current networking device
   - selects the correct configuration file

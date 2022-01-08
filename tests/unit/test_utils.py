@@ -10,18 +10,18 @@ class Misc(unittest.TestCase):
     def setUp(self):
         self.tests_dir = Path(__file__).parents[1]
         self.pkg_dir = Path(__file__).parents[2]
-        self.example_config = self.tests_dir / 'data' / 'tt-example.yaml'
+        self.example_config = self.tests_dir / 'data' / 'traffic-cop.conf.example'
 
     def test_check_diff(self):
         example = self.example_config
-        default = self.tests_dir / 'data' / 'tt-default-config.yaml'
+        default = self.tests_dir / 'data' / 'traffic-cop.conf.default'
         diff = utils.check_diff(example, default)
         self.assertNotEqual(diff, 0)
 
     def test_ensure_config_backup(self):
-        # This only tests that tests/data/tt-config.yaml == tests/data/tt-config.yaml.bak.
+        # This only tests that tests/data/traffic-cop.conf == tests/data/traffic-cop.conf.bak.
         #   It doesn't test the creation of a properly-named new backup file.
-        current = self.tests_dir / 'data' / 'tt-config.yaml'
+        current = self.tests_dir / 'data' / 'traffic-cop.conf'
         result = utils.mute(utils.ensure_config_backup, current)
         self.assertTrue(result)
 

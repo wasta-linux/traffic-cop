@@ -17,4 +17,10 @@ Depends:
  traceroute,
  ${python3:Depends},
  ${misc:Depends}
+Conflicts:
+ tt-bandwidth-manager,
+ tt-bandwidth-manager-gui
+Replaces:
+ tt-bandwidth-manager,
+ tt-bandwidth-manager-gui
 Description: Manage bandwidth usage by app.

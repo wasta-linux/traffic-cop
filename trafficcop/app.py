@@ -45,8 +45,8 @@ class TrafficCop(Gtk.Application):
 
         # Define app-wide variables.
         self.tt_pid, self.tt_start, self.tt_dev = utils.get_tt_info()
-        self.config_file = Path('/etc/tt-config.yaml')
-        self.default_config = Path("/usr/share/tt-bandwidth-manager/tt-default-config.yaml")
+        self.config_file = Path('/etc/traffic-cop.conf')
+        self.default_config = Path("/usr/share/traffic-cop/traffic-cop.conf.default")
         self.config_store = ''
         self.net_hogs_q = queue.Queue()
         self.main_pid = os.getpid()
@@ -111,12 +111,12 @@ class TrafficCop(Gtk.Application):
                 with open(changelog) as f:
                     first_line = f.readline()
             else:
-                changelog = Path('/usr/share/doc/tt-bandwidth-manager-gui/changelog.gz')
+                changelog = Path('/usr/share/doc/traffic-cop/changelog.gz')
                 with gzip.open(changelog) as f:
                     first_line = f.readline().strip().decode()
             # 2nd term in 1st line of changelog; also need to remove parentheses.
             version = first_line.split()[1][1:-1]
-            print(f"Traffic Cop (app) / tt-bandwidth-manager-gui (package): {version}")
+            print(f"Traffic Cop (app) / traffic-cop (package): {version}")
             exit(0)
 
     def do_activate(self):

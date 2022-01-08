@@ -22,7 +22,7 @@ fi
 echo "Setup.device: $device"
 
 # Define default config.
-config="/etc/tt-config.yaml"
+config="/etc/traffic-cop.conf"
 echo "Setup.config: $config"
 
 # Start TrafficToll.
