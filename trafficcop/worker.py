@@ -21,7 +21,7 @@ def handle_button_log_clicked():
         "gnome-terminal",
         "--",
         "journalctl",
-        "--unit=tt-bandwidth-manager.service",
+        "--unit=traffic-cop.service",
         "--follow",
         "--output=cat",
         "--no-pager",

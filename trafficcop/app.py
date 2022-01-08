@@ -157,7 +157,7 @@ class TrafficCop(Gtk.Application):
         cmd = [
             "systemctl",
             "show",
-            "tt-bandwidth-manager.service",
+            "traffic-cop.service",
             "--no-pager",
         ]
         status_output = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -174,7 +174,7 @@ class TrafficCop(Gtk.Application):
             utils.print_result(cmd, status_output)
             output_list = status_output.stdout.decode().splitlines()
             #print(output_list)
-            upat = '\s+Loaded: loaded \(/etc/systemd/system/tt-bandwidth-manager.service; (.*);.*'
+            upat = '\s+Loaded: loaded \(/etc/systemd/system/traffic-cop.service; (.*);.*'
             apat = '\s+Active: (.*) since .*'
             for line in output_list:
                 try:
@@ -293,13 +293,13 @@ class TrafficCop(Gtk.Application):
         self.update_button_states()
 
     def stop_service(self):
-        cmd = ["systemctl", "stop", "tt-bandwidth-manager.service"]
+        cmd = ["systemctl", "stop", "traffic-cop.service"]
         result = subprocess.run(cmd)
         utils.print_result(cmd, result)
         self.update_info_widgets()
 
     def start_service(self):
-        cmd = ["systemctl", "start", "tt-bandwidth-manager.service"]
+        cmd = ["systemctl", "start", "traffic-cop.service"]
         result = subprocess.run(cmd)
         utils.print_result(cmd, result)
         self.tt_pid, self.tt_start, self.tt_dev = utils.wait_for_tt_start()
@@ -307,7 +307,7 @@ class TrafficCop(Gtk.Application):
         self.treeview_config = self.update_treeview_config()
 
     def restart_service(self):
-        cmd = ["systemctl", "restart", "tt-bandwidth-manager.service"]
+        cmd = ["systemctl", "restart", "traffic-cop.service"]
         result = subprocess.run(cmd)
         utils.print_result(cmd, result)
         self.tt_pid, self.tt_start, self.tt_dev = utils.wait_for_tt_start()

@@ -18,9 +18,9 @@ class Handler():
     def on_toggle_unit_state_state_set(self, widget, state):
         # Apply new state to the service.
         if state == True:
-            cmd = ["systemctl", "enable", "tt-bandwidth-manager.service"]
+            cmd = ["systemctl", "enable", "traffic-cop.service"]
         elif state == False:
-            cmd = ["systemctl", "disable", "tt-bandwidth-manager.service"]
+            cmd = ["systemctl", "disable", "traffic-cop.service"]
         subprocess.run(cmd)
         # Ensure that toggle button matches true state.
         app.app.update_state_toggles()

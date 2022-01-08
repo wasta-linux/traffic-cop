@@ -19,8 +19,8 @@ from trafficcop import utils
 class ActivationToggle(unittest.TestCase):
     def setUp(self):
         self.app = app.app
-        self.stop = ['systemctl', 'stop', 'tt-bandwidth-manager.service']
-        self.start = ['systemctl', 'start', 'tt-bandwidth-manager.service']
+        self.stop = ['systemctl', 'stop', 'traffic-cop.service']
+        self.start = ['systemctl', 'start', 'traffic-cop.service']
 
     def test_activate_UNFINISHED(self):
         pass
