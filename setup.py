@@ -4,6 +4,9 @@ import glob
 from distutils.core import setup
 from pathlib import Path
 
+deb_pkg = 'traffic-cop'
+py3_pkg = 'trafficcop'
+
 # Get version number from debian/changelog.
 changelog = Path(__file__).parents[0] / 'debian' / 'changelog'
 with open(changelog) as f:
@@ -17,9 +20,9 @@ setup(
     description="Manage bandwidth usage by app or process.",
     author="Nate Marti",
     author_email="nate_marti@sil.org",
-    url="https://github.com/wasta-linux/traffic-cop",
-    packages=['trafficcop'],
-    package_data={'trafficcop': ['README.md']},
+    url=f"https://github.com/wasta-linux/{deb_pkg}",
+    packages=[py3_pkg],
+    package_data={py3_pkg: ['README.md']},
     scripts=[
         'bin/traffic-cop',
         'bin/tt-wrapper',
@@ -27,7 +30,8 @@ setup(
     data_files=[
         ('share/polkit-1/actions', glob.glob('data/actions/*')),
         ('share/icons/hicolor/scalable/apps', glob.glob('data/icons/*.svg')),
-        ('share/traffic-cop/ui', glob.glob('data/ui/*.glade')),
+        (f"share/{deb_pkg}/ui", glob.glob('data/ui/*.glade')),
+        (f"share/{deb_pkg}", glob.glob('data/*.conf*')),
         ('share/applications', glob.glob('data/*.desktop')),
     ]
 )
