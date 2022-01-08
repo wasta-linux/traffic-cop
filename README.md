@@ -3,14 +3,14 @@ This package installs **Traffic Cop** to help you manage bandwidth usage by app 
 
 ![Traffic Cop](data/traffic-cop.png)
 
-### Features
+## Features
 - Shows config (displayed in "B/s" regardless of unit used in the config file).
 - Shows live upload and download rates globally and for each managed process.
 
-### Limitations
+## Limitations
 Traffic Cop relies on **[nethogs](https://github.com/raboof/nethogs)** to track network usage. As of version 0.8.5-2, **nethogs** does not track udp packets, which are used by many VoIP apps, including **Zoom** and **Skype**, and thus **Traffic Cop** also doesn't show reliable upload and download rates for udp traffic. However, the backend app, **tt**, *does* properly manage this udp traffic. You can confirm it for yourself if you have a pay-per-MB internet plan and check the counter provided by your ISP periodically during a call to verify that the rate you've set is being properly applied.
 
-### More information
+## More information
 Traffic Cop manages bandwidth usage via a systemd service by:
 - setting global download and upload bandwidth limits
 - setting per-process bandwidth limits
@@ -20,7 +20,7 @@ Traffic Cop manages bandwidth usage via a systemd service by:
 - Use the *bandwidth limits* if you pay for data by the MB; e.g. you don't want your audio or video calls to use more data than they absolutely need.
 - Use *prioritization* if your available bandwidth is limited; e.g. you want to ensure that your audio calls go through, even if you're also downloading updates.
 
-## Modifying the default bandwidth management configuration
+### Modifying the default bandwidth management configuration
 The [default config](config/tt-default-config.yaml) is intentionally conservative. It limits a couple of processes and gives some explanatory info. It is found at [/usr/share/tt-bandwidth-manager/tt-config.yaml](config/tt-default-config.yaml) and is installed to /etc/tt-config.yaml if it doesn't already exist.
 This config file requires elevated privileges to edit, e.g.:
 ```bash
@@ -30,7 +30,7 @@ This file is not overwritten during installation or update, so any changes you m
 
 Explanations of configuration options can be found in the default config file, as well as in an example file at [/usr/share/tt-bandwidth-manager/tt-example.yaml](config/tt-example.yaml) created by [cryzed](https://github.com/cryzed), who developed the python3 package TrafficToll, upon which I've built this systemd service package.
 
-## Starting and stopping tt-bandwidth-manager.service
+### Starting and stopping tt-bandwidth-manager.service
 By default the service runs whenever there is a connection to the internet. It can be started and stopped with the usual systemd commands:
 ```bash
 $ sudo systemctl restart tt-bandwidth-manager.service # e.g., if you change the config file
@@ -40,7 +40,7 @@ $ sudo systemctl enable tt-bandwidth-manager.service  # allow it start on reboot
 $ sudo systemctl start tt-bandwidth-manager.service   # start the service immediately
 ```
 
-## Viewing the log file
+### Viewing the log file
 Runtime logging can be found as with all systemd services using:
 ```bash
 $ systemctl status tt-bandwidth-manager.service       # see if the service is running
@@ -49,7 +49,7 @@ $ journalctl -f -u tt-bandwidth-manager.service       # "follow" the log live
 ```
 ![screenshot](screenshot.png)
 
-## Changing the network connection device
+### Changing the network connection device
 Normally, if you change your connection device (e.g. from Wi-Fi to Ethernet), **tt-bandwidth-manager** will recognize the change and adapt accordingly. This is known to *not* work as expected when the new connection is a newly-enabled wireguard VPN, and it may also be the case when turning on other VPNs.
 
 If ```systemctl status tt-bandwidth-manager.service``` shows that the app is managing a network interface other than the current one, e.g. wlp2s0 (Wi-Fi device interface) instead of wgpia0 (wireguard VPN interface), please use ```systemctl restart tt-bandwidth-manager.service``` to update it. This may also be needed when the VPN is turned off, if the VPN's interface still exists.
