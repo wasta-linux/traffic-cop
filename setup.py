@@ -17,7 +17,7 @@ setup(
     description="Manage bandwidth usage by app or process.",
     author="Nate Marti",
     author_email="nate_marti@sil.org",
-    url="https://github.com/wasta-linux/tt-bandwidth-manager-gui",
+    url="https://github.com/wasta-linux/traffic-cop",
     packages=['trafficcop'],
     package_data={'trafficcop': ['README.md']},
     scripts=[
