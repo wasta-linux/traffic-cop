@@ -23,4 +23,4 @@ Conflicts:
 Replaces:
  tt-bandwidth-manager,
  tt-bandwidth-manager-gui
-Description: Manage bandwidth usage by app.
+Description: Manage bandwidth usage by app or process.
