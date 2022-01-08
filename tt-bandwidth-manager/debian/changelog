@@ -1,0 +1,47 @@
+tt-bandwidth-manager (0.4.4) focal; urgency=medium
+
+  * Fix problem when >1 default route is found.
+
+ -- Nate Marti <nate_marti@sil.org>  Mon, 09 Nov 2020 16:07:03 +0100
+
+tt-bandwidth-manager (0.4.3) focal; urgency=medium
+
+  * Handle offline status better.
+
+ -- Nate Marti <nate_marti@sil.org>  Fri, 02 Oct 2020 16:11:42 +0100
+
+tt-bandwidth-manager (0.4.2) focal; urgency=medium
+
+  * Added prerm script to remove service.
+
+ -- Nate Marti <nate_marti@sil.org>  Wed, 30 Sep 2020 14:56:16 +0100
+
+tt-bandwidth-manager (0.4.1) focal; urgency=medium
+
+  * Removed alternlate user config location.
+
+ -- Nate Marti <nate_marti@sil.org>  Wed, 30 Sep 2020 12:05:09 +0100
+
+tt-bandwidth-manager (0.4) focal; urgency=medium
+
+  * Fixed path reference to executable.
+
+ -- Nate Marti <nate_marti@sil.org>  Tue, 29 Sep 2020 12:38:38 +0100
+
+tt-bandwidth-manager (0.3) focal; urgency=medium
+
+  * Fixed to depend on deb package rather than pip install.
+
+ -- Nate Marti <nate_marti@sil.org>  Tue, 29 Sep 2020 12:15:31 +0100
+
+tt-bandwidth-manager (0.2) focal; urgency=medium
+
+  * Multiple minor fixes.
+
+ -- Nate Marti <nate_marti@sil.org>  Tue, 22 Sep 2020 15:42:55 +0100
+
+tt-bandwidth-manager (0.1) focal; urgency=medium
+
+  * Initial release.
+
+ -- Nate Marti <nate_marti@sil.org>  Thu, 10 Sep 2020 09:32:32 +0100

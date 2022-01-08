@@ -1,0 +1,3 @@
+bin/*       /usr/bin/
+config/*    /usr/share/tt-bandwidth-manager
+etc/*       /etc/systemd/system

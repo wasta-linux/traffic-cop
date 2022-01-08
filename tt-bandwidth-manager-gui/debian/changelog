@@ -1,0 +1,68 @@
+tt-bandwidth-manager-gui (0.3.5) focal; urgency=medium
+
+  * Fix missing timestamp when 'systemctl show' returns an error.
+  * Show return codes for subprocess commands.
+
+ -- Nate Marti <nate_marti@sil.org>  Wed, 13 Jan 2021 14:58:14 +0100
+
+tt-bandwidth-manager-gui (0.3.4) focal; urgency=medium
+
+  * Fix missing variables when 'systemctl show' command returns an error.
+
+ -- Nate Marti <nate_marti@sil.org>  Tue, 12 Jan 2021 12:46:08 +0100
+
+tt-bandwidth-manager-gui (0.3.3) focal; urgency=medium
+
+  * Add explicit depends (needed for armbian focal).
+
+ -- Nate Marti <nate_marti@sil.org>  Tue, 17 Nov 2020 17:27:55 +0100
+
+tt-bandwidth-manager-gui (0.3.2) focal; urgency=medium
+
+  * Properly handle --version check from commandline.
+
+ -- Nate Marti <nate_marti@sil.org>  Mon, 09 Nov 2020 17:18:55 +0100
+
+tt-bandwidth-manager-gui (0.3.1) focal; urgency=medium
+
+  * Use idle_add when updating Gtk elements from thread.
+
+ -- Nate Marti <nate_marti@sil.org>  Wed, 28 Oct 2020 16:16:13 +0100
+
+tt-bandwidth-manager-gui (0.3.0) focal; urgency=medium
+
+  * Added bandwidth usage fields in the config display.
+  * Reduced CPU usage.
+  * Improved handling of device switching.
+
+ -- Nate Marti <nate_marti@sil.org>  Wed, 28 Oct 2020 10:58:10 +0100
+
+tt-bandwidth-manager-gui (0.2.2) focal; urgency=medium
+
+  * Fixed bad timestamp comparison causing service crash.
+
+ -- Nate Marti <nate_marti@sil.org>  Fri, 16 Oct 2020 22:00:55 +0100
+
+tt-bandwidth-manager-gui (0.2.1) focal; urgency=medium
+
+  * Fixed variable error when starting app with service stopped.
+
+ -- Nate Marti <nate_marti@sil.org>  Tue, 13 Oct 2020 16:27:27 +0100
+
+tt-bandwidth-manager-gui (0.2.0) focal; urgency=medium
+
+  * Added config display.
+
+ -- Nate Marti <nate_marti@sil.org>  Tue, 13 Oct 2020 07:46:00 +0100
+
+tt-bandwidth-manager-gui (0.1.1) focal; urgency=medium
+
+  * Ensure elevated privileges from CLI.
+
+ -- Nate Marti <nate_marti@sil.org>  Fri, 09 Oct 2020 17:40:36 +0100
+
+tt-bandwidth-manager-gui (0.1) focal; urgency=medium
+
+  * Initial release.
+
+ -- Nate Marti <nate_marti@sil.org>  Thu, 08 Oct 2020 18:33:05 +0100
