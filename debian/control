@@ -7,7 +7,9 @@ Build-Depends:
  python3-all,
  python3-gi,
  python3-netifaces,
+ python3-packaging,
  python3-psutil,
+ python3-yaml,
  dh-python
 Standards-Version: 3.9.7
 Homepage: https://github.com/wasta-linux/traffic-cop
