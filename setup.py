@@ -28,10 +28,10 @@ setup(
         'bin/tt-wrapper',
     ],
     data_files=[
-        ('share/polkit-1/actions', glob.glob('data/actions/*')),
+        ('share/polkit-1/actions', glob.glob('data/actions/*.policy')),
         ('share/icons/hicolor/scalable/apps', glob.glob('data/icons/*.svg')),
         (f"share/{deb_pkg}/ui", glob.glob('data/ui/*.glade')),
         (f"share/{deb_pkg}", glob.glob('data/*.conf*')),
-        ('share/applications', glob.glob('data/*.desktop')),
+        ('share/applications', glob.glob('data/applications/*.desktop')),
     ]
 )
