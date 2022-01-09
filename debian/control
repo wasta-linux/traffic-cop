@@ -19,9 +19,7 @@ Homepage: https://github.com/wasta-linux/traffic-cop
 Package: traffic-cop
 Architecture: all
 Depends:
- gir1.2-gtk-3.0,
  gnome-terminal,
- gobject-introspection,
  nethogs,
  python3,
  python3-gi,
@@ -39,4 +37,4 @@ Conflicts:
 Replaces:
  tt-bandwidth-manager,
  tt-bandwidth-manager-gui
-Description: Manage bandwidth usage by app or process.
+Description: Manage bandwidth usage by app or process. Removed Depends: gobject-introspection, gir1.2-gtk-3.0,
