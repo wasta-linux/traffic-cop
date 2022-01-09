@@ -54,8 +54,10 @@ def get_nethogs_version():
     cmd = ['nethogs', '-V']
     stdout = subprocess.PIPE
     stderr = subprocess.STDOUT
-    r = subprocess.run(cmd, stdout=stdout, stderr=stderr)
-    return r.stdout.split()[1]
+    r = subprocess.run(cmd, stdout=stdout, stderr=stderr, encoding='utf-8')
+    version = r.stdout.split()[1]
+    print(f"nethogs version: {version}")
+    return version
 
 def nethogs_supports_udp(version_string):
     if version.parse(version_string) >= version.parse('0.8.6'):
