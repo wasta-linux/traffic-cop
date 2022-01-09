@@ -37,4 +37,4 @@ Conflicts:
 Replaces:
  tt-bandwidth-manager,
  tt-bandwidth-manager-gui
-Description: Manage bandwidth usage by app or process. Removed Depends: gobject-introspection, gir1.2-gtk-3.0,
+Description: Manage bandwidth usage by app or process.
