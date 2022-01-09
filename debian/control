@@ -4,6 +4,8 @@ Priority: optional
 Maintainer: Nate Marti <nate_marti@sil.org>
 Build-Depends:
  debhelper (>= 12.0.0),
+ gir1.2-gtk-3.0,
+ gobject-introspection,
  python3-all,
  python3-gi,
  python3-netifaces,
@@ -17,7 +19,9 @@ Homepage: https://github.com/wasta-linux/traffic-cop
 Package: traffic-cop
 Architecture: all
 Depends:
+ gir1.2-gtk-3.0,
  gnome-terminal,
+ gobject-introspection,
  nethogs,
  python3,
  python3-gi,
