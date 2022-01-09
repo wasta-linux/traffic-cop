@@ -8,8 +8,8 @@ from trafficcop import utils
 
 class Misc(unittest.TestCase):
     def setUp(self):
-        self.tests_dir = Path(__file__).parents[1]
-        self.pkg_dir = Path(__file__).parents[2]
+        self.tests_dir = Path(__file__).parent
+        self.pkg_dir = self.tests_dir.parent
         self.example_config = self.tests_dir / 'data' / 'traffic-cop.conf.example'
 
     def test_check_diff(self):

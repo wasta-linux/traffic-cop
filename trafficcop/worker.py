@@ -53,12 +53,15 @@ def parse_nethogs_to_queue(queue, main_window):
     # If no device is given, then all devices are monitored, which double-counts
     #   on gateway device plus tc device.
     cmd = ['nethogs', '-t', '-v2', '-d' + str(delay), device]
+    if utils.nethogs_supports_udp(utils.get_nethogs_version()):
+        cmd.insert(1, '-C')
     stdout = subprocess.PIPE
     stderr = subprocess.STDOUT
     with subprocess.Popen(cmd, stdout=stdout, stderr=stderr, encoding='utf-8') as p:
         while main_window.is_visible():
             # There is a long wait for each line: sometimes nearly 2 seconds!
             line = p.stdout.readline()
+            # TODO: Should 'unknown' lines be queued too?
             if line[0] == '/':
                 queue.put(line)
             elif line == '' and p.poll() is not None:

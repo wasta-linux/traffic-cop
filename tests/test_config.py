@@ -15,7 +15,7 @@ from trafficcop import utils
 
 class Yaml(unittest.TestCase):
     def setUp(self):
-        tests_dir = Path(__file__).parents[1]
+        tests_dir = Path(__file__).parent
         self.data_dir = tests_dir / 'data'
 
     def test_convert_bad_syntax(self):

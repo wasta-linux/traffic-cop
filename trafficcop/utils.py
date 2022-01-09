@@ -8,6 +8,8 @@ import shutil
 import subprocess
 import time
 
+from packaging import version
+
 
 @contextlib.contextmanager
 def setlocale(*args, **kw):
@@ -47,6 +49,19 @@ def get_net_device():
         except KeyError:
             device = None
     return device
+
+def get_nethogs_version():
+    cmd = ['nethogs', '-V']
+    stdout = subprocess.PIPE
+    stderr = subprocess.STDOUT
+    r = subprocess.run(cmd, stdout=stdout, stderr=stderr)
+    return r.stdout.split()[1]
+
+def nethogs_supports_udp(version_string):
+    if version.parse(version_string) >= version.parse('0.8.6'):
+        return True
+    else:
+        return False
 
 def convert_epoch_to_human(epoch):
     human = time.ctime(epoch)
