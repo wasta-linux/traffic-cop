@@ -1,5 +1,4 @@
 import gi
-#import mock
 import psutil
 import subprocess
 import sys

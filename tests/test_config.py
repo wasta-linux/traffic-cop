@@ -1,9 +1,5 @@
-#import gi
-#import mock
 import unittest
 
-#gi.require_version("Gtk", "3.0")
-#from gi.repository import Gtk
 from pathlib import Path
 
 from trafficcop import config
