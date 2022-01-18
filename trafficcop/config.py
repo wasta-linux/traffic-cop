@@ -296,7 +296,6 @@ def convert_yaml_to_store(file):
         'match-type': g_config[7],
         'match-str': g_config[8],
     }
-
     # Add entries for 'unknown TCP' and 'unknown UDP'.
     config_dict['Other TCP'] = {
         'download': '',
@@ -308,7 +307,16 @@ def convert_yaml_to_store(file):
         'match-type': '',
         'match-str': 'unknown',
     }
-
+    config_dict['Other UDP'] = {
+        'download': '',
+        'upload': '',
+        'download-minimum': '',
+        'upload-minimum': '',
+        'download-priority': 9,
+        'upload-priority': 9,
+        'match-type': '',
+        'match-str': 'unknown',
+    }
     # Move process config keys up to the main dict.
     for p_name, p in content['processes'].items():
         config_dict[p_name] = p
