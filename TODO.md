@@ -1,5 +1,6 @@
 ### Planned features and outstanding issues
 - Fix under-reported of live usage for each application (missing UDP traffic?)
+- Add manpage.
 - Solve supposed python dependency issue on "aiocontextvars" in Ubuntu bionic 18.04
 
 ### Feature wishlist
