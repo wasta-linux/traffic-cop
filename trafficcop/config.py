@@ -112,55 +112,79 @@ def convert_dict_to_list(k, v_dict):
         # Scope (Global or Process) not given valid config.
         v_dict = {}
     name = k
-    try:
-        dn_max = v_dict['download']
-    except KeyError:
-        dn_max = ''
-    try:
-        up_max = v_dict['upload']
-    except KeyError:
-        up_max = ''
-    try:
-        dn_min = v_dict['download-minimum']
-    except KeyError:
-        dn_min = ''
-    try:
-        up_min = v_dict['upload-minimum']
-    except KeyError:
-        up_min = ''
-    try:
-        dn_pri = v_dict['download-priority']
-    except KeyError:
-        dn_pri = 9
-    try:
-        up_pri = v_dict['upload-priority']
-    except KeyError:
-        up_pri = 9
+
+    # Set defaults.
+    dn_max = v_dict.get('download', '')
+    up_max = v_dict.get('upload', '')
+    dn_min = v_dict.get('download-minimum', '')
+    up_min = v_dict.get('upload-minimum', '')
+    dn_pri = v_dict.get('download-priority', 9)
+    up_pri = v_dict.get('upload-priority', 9)
+    dn_rate = ' '*4 #'{:.2f}'.format(0)
+    dn_unit = ' '*4 #'B/s'
+    up_rate = ' '*4 #'{:.2f}'.format(0)
+    up_unit = ' '*4 #'B/s'
+    # try:
+    #     dn_max = v_dict['download']
+    # except KeyError:
+    #     dn_max = ''
+    # try:
+    #     up_max = v_dict['upload']
+    # except KeyError:
+    #     up_max = ''
+    # try:
+    #     dn_min = v_dict['download-minimum']
+    # except KeyError:
+    #     dn_min = ''
+    # try:
+    #     up_min = v_dict['upload-minimum']
+    # except KeyError:
+    #     up_min = ''
+    # try:
+    #     dn_pri = v_dict['download-priority']
+    # except KeyError:
+    #     dn_pri = 9
+    # try:
+    #     up_pri = v_dict['upload-priority']
+    # except KeyError:
+    #     up_pri = 9
+
     # The match section can theoretically be any of the attributes that
     #   psutil.process exposes. This could get really complicated. Just going to
     #   support 'name', 'exe', and 'cmdline'. Others seem less useful.
     # List of possible attributes:
     #   https://psutil.readthedocs.io/en/latest/index.html#psutil.Process.as_dict
-    dn_rate = ' '*4 #'{:.2f}'.format(0)
-    dn_unit = ' '*4 #'B/s'
-    up_rate = ' '*4 #'{:.2f}'.format(0)
-    up_unit = ' '*4 #'B/s'
-    try:
-        m_type = 'name'
-        m_str = v_dict['match'][0][m_type]
-    except KeyError:
-        try:
-            m_type = 'exe'
-            m_str = v_dict['match'][0][m_type]
-        except KeyError:
-            try:
-                m_type = 'cmdline'
-                m_str = m_str = v_dict['match'][0][m_type]
-            except:
-                m_str = ''
-                m_type = ''
+    # Get match type and match string.
+    m_str = ''
+    m_type = ''
+    types = [
+        'name',
+        'exe',
+        'cmdline',
+    ]
+    for t in types:
+        match = v_dict.get('match')
+        if match:
+            m_str = match[0].get(t)
+            if m_str:
+                m_type = t
+                break
+    # try:
+    #     m_type = 'name'
+    #     m_str = v_dict['match'][0][m_type]
+    # except KeyError:
+    #     try:
+    #         m_type = 'exe'
+    #         m_str = v_dict['match'][0][m_type]
+    #     except KeyError:
+    #         try:
+    #             m_type = 'cmdline'
+    #             m_str = m_str = v_dict['match'][0][m_type]
+    #         except:
+    #             m_str = ''
+    #             m_type = ''
 
-    list = [
+    info_list = [
         name,
         dn_max, up_max,
         dn_min, up_min,
@@ -169,7 +193,7 @@ def convert_dict_to_list(k, v_dict):
         up_rate, up_unit,
         m_type, m_str
     ]
-    return list
+    return info_list
 
 def convert_config_rates_to_human(config):
     '''
@@ -253,11 +277,12 @@ def convert_yaml_to_store(file):
 
     if not content:
         # Yaml file has no viable content.
-        print("ERROR: {} has no usable content.".format(file))
+        print(f"ERROR: {file} has no usable content.")
         return ''
 
     # Create a new "flat" dict to hold the config.
     config_dict = {}
+
     # Move global config keys down into their own dict under a 'Global' key.
     g_name = 'Global'
     g_config = convert_dict_to_list(g_name, content)
@@ -270,6 +295,18 @@ def convert_yaml_to_store(file):
         'upload-priority': g_config[6],
         'match-type': g_config[7],
         'match-str': g_config[8],
+    }
+
+    # Add entries for 'unknown TCP' and 'unknown UDP'.
+    config_dict['Other TCP'] = {
+        'download': '',
+        'upload': '',
+        'download-minimum': '',
+        'upload-minimum': '',
+        'download-priority': 9,
+        'upload-priority': 9,
+        'match-type': '',
+        'match-str': 'unknown',
     }
 
     # Move process config keys up to the main dict.

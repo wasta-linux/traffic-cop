@@ -224,7 +224,10 @@ def update_scopes(scopes, queue, store):
     # Update scopes dict 'new' entries.
     while not queue.empty():
         line = queue.get().split()
-        exe_pid_usr = line[0]
+        if line[0] == 'unknown':
+            exe_pid_usr = line[1]
+        else:
+            exe_pid_usr = line[0]
         b_up = int(float(line[-2]))
         b_dn = int(float(line[-1]))
         scope = match_cmdline_to_scope(exe_pid_usr, store, proc_list)
@@ -270,8 +273,10 @@ def update_scopes(scopes, queue, store):
 def match_cmdline_to_scope(exe_pid_usr, store, proc_list):
     # Strip pid and user from cmdline.
     cmdline_list = exe_pid_usr.split('/')
-    pid = cmdline_list[-2]
+    # "exe" can be the path to an executable or "TCP"/"UDP".
     exe = '/'.join(cmdline_list[:-2])
+    # "pid" will be "0" if "exe" is "TCP" or "UDP".
+    pid = cmdline_list[-2]
 
     # Get scope names, match-type, and match-str from store.
     scopes = {}
