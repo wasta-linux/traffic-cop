@@ -298,7 +298,11 @@ def match_cmdline_to_scope(exe_pid_usr, store, proc_list):
 
     # Match cmdline with scope.
     scope = None
-    if not match_exe_pid_usr_and_proc:
+    if exe == 'TCP':
+        return 'unknown TCP'
+    elif exe == 'UDP':
+        return 'unknown UDP'
+    elif not match_exe_pid_usr_and_proc:
         return None
 
     for k, v in scopes.items():
@@ -319,8 +323,6 @@ def match_cmdline_to_scope(exe_pid_usr, store, proc_list):
             if v[1] == match_exe_pid_usr_and_proc['cmdline']:
                 scope = k
                 break
-        elif k == 'unknown TCP' or k == 'unknown UDP':
-            scope = k
         else:
             # Unhandled match-type.
             print(f"no match for: '{k}: {v}'")
