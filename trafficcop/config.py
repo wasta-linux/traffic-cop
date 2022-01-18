@@ -22,24 +22,26 @@ def create_config_treeview(store):
     c_name = Gtk.TreeViewColumn("Process", r_left, text=0)
     c_name.set_sort_column_id(0)
 
-    c_dn_max = Gtk.TreeViewColumn("Max Down", r_right, text=1)
-    c_up_max = Gtk.TreeViewColumn("Max Up", r_right, text=2)
-    c_dn_min = Gtk.TreeViewColumn("Min Down", r_right, text=3)
-    c_up_min = Gtk.TreeViewColumn("Min Up", r_right, text=4)
+    up = '\u2191'
+    dn = '\u2193'
+    c_dn_max = Gtk.TreeViewColumn(f"Max {dn}", r_right, text=1)
+    c_up_max = Gtk.TreeViewColumn(f"Max {up}", r_right, text=2)
+    c_dn_min = Gtk.TreeViewColumn(f"Min {dn}", r_right, text=3)
+    c_up_min = Gtk.TreeViewColumn(f"Min {up}", r_right, text=4)
     rates = [c_dn_max, c_up_max, c_dn_min, c_up_min]
     for r in rates:
         r.set_fixed_width(80)
 
-    c_dn_pri = Gtk.TreeViewColumn("Pri. Down", r_center, text=5)
+    c_dn_pri = Gtk.TreeViewColumn(f"Priority {dn}", r_center, text=5)
     c_dn_pri.set_sort_column_id(5)
-    c_up_pri = Gtk.TreeViewColumn("Pri. Up", r_center, text=6)
+    c_up_pri = Gtk.TreeViewColumn(f"Priority {up}", r_center, text=6)
     c_up_pri.set_sort_column_id(6)
 
-    c_dn_rt = Gtk.TreeViewColumn("Rate Down", r_right, text=7)
+    c_dn_rt = Gtk.TreeViewColumn(f"Rate {dn}", r_right, text=7)
     c_dn_u = Gtk.TreeViewColumn("", r_left, text=8)
     c_dn_u.set_fixed_width(40)
 
-    c_up_rt = Gtk.TreeViewColumn("Rate Up", r_right, text=9)
+    c_up_rt = Gtk.TreeViewColumn(f"Rate {up}", r_right, text=9)
     c_up_u = Gtk.TreeViewColumn("", r_left, text=10)
     c_up_u.set_fixed_width(40)
     tree.append_column(c_name)
