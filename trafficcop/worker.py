@@ -61,13 +61,16 @@ def parse_nethogs_to_queue(queue, main_window):
     with subprocess.Popen(cmd, stdout=stdout, stderr=stderr, encoding='utf-8') as p:
         while main_window.is_visible():
             # There is a long wait for each line: sometimes nearly 2 seconds!
-            line = p.stdout.readline()
-            # TODO: Should 'unknown' lines be queued too?
-            if line[0] == '/' or line.split()[0] == 'unknown':
+            line = p.stdout.readline().rstrip()
+            if line == '':
+                if p.poll() is None:
+                    # Output line is blank.
+                    continue
+                else:
+                    # Process completed. (Shouldn't happen.)
+                    break
+            elif line[0] == '/' or line.split()[0] == 'unknown':
                 queue.put(line)
-            elif line == '' and p.poll() is not None:
-                # Process completed. (Shouldn't happen.)
-                break
 
 def bw_updater():
     while app.app.window.is_visible():
