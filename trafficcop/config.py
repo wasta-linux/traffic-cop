@@ -283,7 +283,7 @@ def convert_yaml_to_store(file):
     # Create a new "flat" dict to hold the config.
     config_dict = {}
 
-    # Move global config keys down into their own dict under a 'Global' key.
+    # Move global config keys into their own dict under a 'Global' key.
     g_name = 'Global'
     g_config = convert_dict_to_list(g_name, content)
     config_dict[g_name] = {
@@ -297,7 +297,7 @@ def convert_yaml_to_store(file):
         'match-str': g_config[8],
     }
     # Add entries for 'unknown TCP' and 'unknown UDP'.
-    config_dict['Other TCP'] = {
+    config_dict['unknown TCP'] = {
         'download': '',
         'upload': '',
         'download-minimum': '',
@@ -307,7 +307,7 @@ def convert_yaml_to_store(file):
         'match-type': '',
         'match-str': 'unknown',
     }
-    config_dict['Other UDP'] = {
+    config_dict['unknown UDP'] = {
         'download': '',
         'upload': '',
         'download-minimum': '',
@@ -317,7 +317,7 @@ def convert_yaml_to_store(file):
         'match-type': '',
         'match-str': 'unknown',
     }
-    # Move process config keys up to the main dict.
+    # Add entries for Process config keys.
     for p_name, p in content['processes'].items():
         config_dict[p_name] = p
 

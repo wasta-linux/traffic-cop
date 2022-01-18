@@ -319,9 +319,11 @@ def match_cmdline_to_scope(exe_pid_usr, store, proc_list):
             if v[1] == match_exe_pid_usr_and_proc['cmdline']:
                 scope = k
                 break
+        elif k == 'unknown TCP' or k == 'unknown UDP':
+            scope = k
         else:
             # Unhandled match-type.
-            print('no match for', k, ':', v)
+            print(f"no match for: '{k}: {v}'")
             continue
     return scope
 
