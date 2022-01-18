@@ -299,34 +299,32 @@ def match_cmdline_to_scope(exe_pid_usr, store, proc_list):
     # Match cmdline with scope.
     scope = None
     if exe == 'TCP':
-        return 'unknown TCP'
+        scope = 'unknown TCP'
     elif exe == 'UDP':
-        return 'unknown UDP'
-    elif not match_exe_pid_usr_and_proc:
-        return None
-
-    for k, v in scopes.items():
-        # k = scope; v = [match-type, match-str]
-        if v[0] == 'name':
-            match = re.match(v[1], match_exe_pid_usr_and_proc['name'])
-            if match:
-                scope = k
-                break
-        elif v[0] == 'exe':
-            # See if scope exe matches proc exe.
-            match = re.match(v[1], match_exe_pid_usr_and_proc['exe'])
-            if match:
-                scope = k
-                break
-        elif v[0] == 'cmdline':
-            # See if scope cmdline equals proc cmdline.
-            if v[1] == match_exe_pid_usr_and_proc['cmdline']:
-                scope = k
-                break
-        else:
-            # Unhandled match-type.
-            print(f"no match for: '{k}: {v}'")
-            continue
+        scope = 'unknown UDP'
+    elif match_exe_pid_usr_and_proc:
+        for k, v in scopes.items():
+            # k = scope; v = [match-type, match-str]
+            if v[0] == 'name':
+                match = re.match(v[1], match_exe_pid_usr_and_proc['name'])
+                if match:
+                    scope = k
+                    break
+            elif v[0] == 'exe':
+                # See if scope exe matches proc exe.
+                match = re.match(v[1], match_exe_pid_usr_and_proc['exe'])
+                if match:
+                    scope = k
+                    break
+            elif v[0] == 'cmdline':
+                # See if scope cmdline equals proc cmdline.
+                if v[1] == match_exe_pid_usr_and_proc['cmdline']:
+                    scope = k
+                    break
+            else:
+                # Unhandled match-type.
+                print(f"no match for: '{k}: {v}'")
+                continue
     return scope
 
 def calculate_data_rates(data):
