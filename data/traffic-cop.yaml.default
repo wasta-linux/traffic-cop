@@ -44,7 +44,7 @@
 #   download: 1.5mbit
 #   upload: 500kbit
 #   match:
-#     - cmdline|exe|match: "string"
+#     - cmdline|exe|match: string
 #
 #       Choose one of the three properties to match:
 #       > "cmdline" uses regex syntax for matching.
@@ -59,7 +59,8 @@
 #       "cmdline" can be used to specify a narrower set of processes for finer
 #       control.
 #       Verify that traffic is being managed by clicking on "View Log..." in the
-#       Traffic Cop window, or by using: $ journalctl -u traffic-cop.service
+#       Traffic Cop window, or in a terminal with:
+#       $ journalctl -u traffic-cop.service
 #       If it's working, you will see lines that say, "Shaping traffic for..."
 
 processes:
@@ -69,8 +70,8 @@ processes:
     download: 70kbps
     upload: 50kbps
     match:
-      - cmdline: '.*/usr/lib/firefox/firefox.*' # works for both deb & snap packages
-      #- name: "Socket Process" # only works for UDP packets; useful for audio/video calls
+      - cmdline: .*/usr/lib/firefox/firefox.* # works for both deb & snap packages
+      #- name: Socket Process # only limits UDP packets; useful for audio/video calls
 
   "Skype":
     download-priority: 0
