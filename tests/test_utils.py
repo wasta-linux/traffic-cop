@@ -10,18 +10,18 @@ class Misc(unittest.TestCase):
     def setUp(self):
         self.tests_dir = Path(__file__).parent
         self.pkg_dir = self.tests_dir.parent
-        self.example_config = self.tests_dir / 'data' / 'traffic-cop.conf.example'
+        self.example_config = self.tests_dir / 'data' / 'traffic-cop.yaml.example'
 
     def test_check_diff(self):
         example = self.example_config
-        default = self.tests_dir / 'data' / 'traffic-cop.conf.default'
+        default = self.tests_dir / 'data' / 'traffic-cop.yaml.default'
         diff = utils.check_diff(example, default)
         self.assertNotEqual(diff, 0)
 
     def test_ensure_config_backup(self):
-        # This only tests that tests/data/traffic-cop.conf == tests/data/traffic-cop.conf.bak.
+        # This only tests that tests/data/traffic-cop.yaml == tests/data/traffic-cop.yaml.bak.
         #   It doesn't test the creation of a properly-named new backup file.
-        current = self.tests_dir / 'data' / 'traffic-cop.conf'
+        current = self.tests_dir / 'data' / 'traffic-cop.yaml'
         result = utils.mute(utils.ensure_config_backup, current)
         self.assertTrue(result)
 

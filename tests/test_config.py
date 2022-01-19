@@ -23,7 +23,7 @@ class Yaml(unittest.TestCase):
             self.assertEqual(len(row[:]), 13)
 
     def test_convert_default(self):
-        yaml = self.data_dir / 'traffic-cop.conf.default'
+        yaml = self.data_dir / 'traffic-cop.yaml.default'
         store = config.convert_yaml_to_store(yaml)
         # Ensure store is not empty.
         self.assertNotEqual(store, '')

@@ -21,14 +21,14 @@ Traffic Cop manages bandwidth usage via a systemd service by:
 - Use *prioritization* if your available bandwidth is limited; e.g. you want to ensure that your audio calls go through, even if you're also downloading updates.
 
 ### Modifying the default bandwidth management configuration
-The [default config](data/traffic-cop.conf.default) is intentionally conservative. It limits a couple of processes and gives some explanatory info. It is found at [/usr/share/traffic-cop/traffic-cop.conf](data/traffic-cop.conf.default) and is installed to /etc/traffic-cop.conf if it doesn't already exist.
+The [default config](data/traffic-cop.yaml.default) is intentionally conservative. It limits a couple of processes and gives some explanatory info. It is found at [/usr/share/traffic-cop/traffic-cop.yaml](data/traffic-cop.yaml.default) and is installed to /etc/traffic-cop.yaml if it doesn't already exist.
 This config file requires elevated privileges to edit, e.g.:
 ```bash
-$ sudo nano /etc/traffic-cop.conf
+$ sudo nano /etc/traffic-cop.yaml
 ```
 This file is not overwritten during installation or update, so any changes you make are preserved.
 
-Explanations of configuration options can be found in the default config file, as well as in an example file at [/usr/share/traffic-cop/traffic-cop.conf.example](config/traffic-cop.conf.example) created by [cryzed](https://github.com/cryzed), who developed the python3 package TrafficToll, upon which I've built this systemd service package.
+Explanations of configuration options can be found in the default config file, as well as in an example file at [/usr/share/traffic-cop/traffic-cop.yaml.example](config/traffic-cop.yaml.example) created by [cryzed](https://github.com/cryzed), who developed the python3 package TrafficToll, upon which I've built this systemd service package.
 
 ### Starting and stopping traffic-cop.service
 By default the service runs whenever there is a connection to the internet. It can be started and stopped with the usual systemd commands:
@@ -72,7 +72,7 @@ $ systemctl status traffic-cop.service
     Tasks: 2 (limit: 4915)
    CGroup: /system.slice/traffic-cop.service
            ├─21915 /bin/bash /usr/bin/tt-wrapper
-           └─21955 /usr/bin/python3 /usr/bin/tt wlp2s0 /etc/traffic-cop.conf
+           └─21955 /usr/bin/python3 /usr/bin/tt wlp2s0 /etc/traffic-cop.yaml
 
 [...recent log output...]
 ```
@@ -87,7 +87,7 @@ $ systemctl status traffic-cop.service
     Tasks: 2 (limit: 4915)
    CGroup: /system.slice/traffic-cop.service
            ├─5773 /bin/bash /usr/bin/tt-wrapper
-           └─5795 /usr/bin/python3 /usr/bin/tt wgpia0 /etc/traffic-cop.conf
+           └─5795 /usr/bin/python3 /usr/bin/tt wgpia0 /etc/traffic-cop.yaml
 ```
 
 ## About
@@ -95,8 +95,8 @@ $ systemctl status traffic-cop.service
 
 It's composed of 4 parts:
 - The traffictoll python3 package whose executable is installed at /usr/bin/tt.
-- A default config file installed at /etc/traffic-cop.conf.
-  - There is also an example config file at /usr/share/traffic-cop/traffic-cop.conf.example.
+- A default config file installed at /etc/traffic-cop.yaml.
+  - There is also an example config file at /usr/share/traffic-cop/traffic-cop.yaml.example.
 - A wrapper script installed at /usr/bin/tt-wrapper that:
   - selects the current networking device
   - selects the correct configuration file

@@ -37,7 +37,7 @@ def handle_button_log_clicked():
 
 def handle_button_config_clicked():
     # Open config file in gedit.
-    cmd = ["gedit", "/etc/traffic-cop.conf"]
+    cmd = ["gedit", "/etc/traffic-cop.yaml"]
     result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     utils.print_result(cmd, result)
 

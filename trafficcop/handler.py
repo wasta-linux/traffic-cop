@@ -53,14 +53,14 @@ class Handler():
 
     def on_button_apply_clicked(self, button):
         # Update the config file variable.
-        app.app.config_file = Path('/etc/traffic-cop.conf')
+        app.app.config_file = Path('/etc/traffic-cop.yaml')
         # Restart the service to apply updated configuration.
         app.app.restart_service()
         # Disable the button again.
         button.set_sensitive(False)
 
     def on_button_reset_clicked(self, button):
-        current = Path("/etc/traffic-cop.conf")
+        current = Path("/etc/traffic-cop.yaml")
         default = app.app.default_config
 
         # Get user confirmation before resetting configuration.
@@ -78,7 +78,7 @@ class Handler():
         # Ensure that backup is made of current config.
         utils.ensure_config_backup(current)
 
-        # Copy /usr/share/traffic-cop/traffic-cop.conf.default to /etc/traffic-cop.conf;
+        # Copy /usr/share/traffic-cop/traffic-cop.yaml.default to /etc/traffic-cop.yaml;
         #   overwrite existing file.
         shutil.copyfile(default, current)
         # Restart the service to apply default configuration.

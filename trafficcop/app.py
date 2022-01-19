@@ -45,8 +45,8 @@ class TrafficCop(Gtk.Application):
 
         # Define app-wide variables.
         self.tt_pid, self.tt_start, self.tt_dev = utils.get_tt_info()
-        self.config_file = Path('/etc/traffic-cop.conf')
-        self.default_config = Path("/usr/share/traffic-cop/traffic-cop.conf.default")
+        self.config_file = Path('/etc/traffic-cop.yaml')
+        self.default_config = Path("/usr/share/traffic-cop/traffic-cop.yaml.default")
         self.config_store = ''
         self.net_hogs_q = queue.Queue()
         self.main_pid = os.getpid()
