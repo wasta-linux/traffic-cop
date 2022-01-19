@@ -1,104 +1,76 @@
 ### traffic-cop configuration file.
 
+# NOTES
+# ------------------------------------------------------------------------------
+# Devices:
 # All bandwidth limits specified here are applied automatically to whichever
 # interface has the active internet connection.
+#
+# Units:
+# Units can be specified in all formats that tc supports, e.g.:
+#  bit (bits per second)
+#  kbit (kilobits per second)
+#  bps (bytes per second)
+#  kbps (kilobytes per second; base 1000)
+#  kibps (kibibytes per second; base 1024)
+# More info can be found in a terminal with:
+# $ man tc | grep -A28 RATES
 
-# ------------------------------------------------------------------------------
-# Global bandwidth limits are specified first. Setting these limits can be
-# useful for two reasons:
-#   1) you want to limit the used bandwidth for the entire interface or
-#   2) you want to make use of traffic prioritization
-#
-# If you want to 1) limit the used bandwidth for the entire interface, simply
-# specify values below your actual speed: the traffic will be shaped in such a
-# way, that it does not exceed the specified numbers.
-#
-# If you want to 2) make use of the traffic prioritization feature, these values
-# must be as close as possible to your real speed: if they are too low, traffic
-# prioritization will work, but you are losing part of your bandwidth; if they
-# are too high, traffic prioritization won't work as well as it could. I
-# recommend you use some internet speed test you can find online to get an
-# approximation for the correct values.
-#
-# If you don't want to do 1) or 2), you can omit these values. Bandwidth
-# limiting per application will still work, just traffic prioritization won't
-# work as well or entirely.
-#
-# Units can be specified in all formats that tc supports, namely:
-#   bit, kbit, mbit, gbit, tbit, bps, kbps, mbps, gbps, tbps.
-#   To specify in IEC units, replace the SI prefix (k-, m-, g-, t-)
-#   with IEC prefix (ki-, mi-, gi- and ti-) respectively.
-# Some examples for clarity:
-#   bit = bits per second
-#   kbit = kilobits per second
-#   bps = bytes per second
-#   kbps = kilobytes per second  (1000 bytes per second)
-#   kibps = kibibytes per second (1024 bytes per second)
-# ------------------------------------------------------------------------------
 
-# Global (device) BW limits.
+# GLOBAL CONFIGURATION
+# ------------------------------------------------------------------------------
+# Set global bandwidth limits.
+# - limit bandwidth for entire interface
+# - make use of prioritization, which requires global limits
+# Uncomment the lines below to make use of global download and upload limits.
 #download: 250kbps
 #upload: 250kbps
 
-# ------------------------------------------------------------------------------
-# Guaranteed download and upload rates for all global traffic that is not shaped
-# as part of a matched process by TrafficToll. The idea here is to leave enough
-# "guaranteed" bandwidth to all applications not defined in "processes", so that
-# they are not starved to a bandwidth, by processes with higher priority, that
-# would cause the other IP to drop the connection. These are the default values,
-# if omitted. Keep in mind that this doesn't reserve the bandwidth -- if this
-# traffic is not made use of, it's available to processes with higher priority.
-# ------------------------------------------------------------------------------
-
-# Global (device) guaranteed BW for non-managed traffic.
+# Set global minimum bandwidth for non-managed traffic.
 #download-minimum: 128kbit
 #upload-minimum: 128kbit
 
-# ------------------------------------------------------------------------------
-# The global download and upload priority. This will be the priority for traffic
-# that is not created by any of the processes. By default it will always be the
-# lowest priority if any of the processes specify a download or upload priority
-# explicitly, otherwise all traffic will have the same priority.
-# ------------------------------------------------------------------------------
-
-# Global priority for non-managed traffic. "0" is top priority.
+# Set global priority for non-managed traffic. "0" is top priority.
 #download-priority: 1
 #upload-priority: 1
 
-# A list of processes you want to match and their respective settings
+
+# PER-PROCESS CONFIGURATION
+# ------------------------------------------------------------------------------
+# Configure bandwidth management for individual processes. For example:
+# "Name": (user-defined; used for logging)
+#   download-priority: 0
+#   upload-priority: 0
+#   download: 1.5mbit
+#   upload: 500kbit
+#   match:
+#     - cmdline|exe|match: "string"
+#
+#       Choose one of the three properties to match:
+#       > "cmdline" uses regex syntax for matching.
+#           It refers to the entire command with options: "/usr/lib/firefox/firefox --new-window"
+#           See also: System Monitor > Processes tab > Command Line column.
+#       > "exe" uses an exact path (no regex).
+#           It refers to the executable path from the command: "/usr/lib/firefox/firefox"
+#       > "name" uses regex syntax for matching.
+#           It refers to the name of the process: "GeckoMain"
+#       In summary, specifying "exe" will cover all child processes of the
+#       parent executable and so has the broadest application. While "name" and
+#       "cmdline" can be used to specify a narrower set of processes for finer
+#       control.
+#       Verify that traffic is being managed by clicking on "View Log..." in the
+#       Traffic Cop window, or by using: $ journalctl -u traffic-cop.service
+#       If it's working, you will see lines that say, "Shaping traffic for..."
+
 processes:
-  # The name here is by user preference. It's used to ID the process on stdout.
-  "Speedtest":
-    download-priority: 0
-    upload-priority: 0
-
-    # --------------------------------------------------------------------------
-    # Download and upload rate limits can be entirely omitted if you don't want
-    # to apply any, in this case traffic will only be prioritized like specified.
-    # --------------------------------------------------------------------------
-    #download:
-    #upload:
-
-    # --------------------------------------------------------------------------
-    # The match section. A process is selected when all predicates in the match
-    # section match. Every attribute psutil.Process
-    # provides on Linux can be matched on, using regular expressions.
-    # See more at:
-    # https://psutil.readthedocs.io/en/latest/index.html#psutil.Process
-    #
-    # For example:
-    #   "- name:" (uses regex)
-    #   "- exe:" (needs full path to executable)
-    #   "- cmdline:" (uses regex)
-    #
-    # Verify that your match works by checking the log with:
-    # $ journalctl -u traffic-cop
-    # If you do not see a line starting with "Shaping traffic for..." with your
-    # process name in it while it is clearly causing traffic, your match section
-    # is failing.
-    # --------------------------------------------------------------------------
+  "Firefox":
+    #download-priority: 0
+    #upload-priority: 0
+    download: 70kbps
+    upload: 50kbps
     match:
-      - name: speedtest
+      - cmdline: '.*/usr/lib/firefox/firefox.*' # works for both deb & snap packages
+      #- name: "Socket Process" # only works for UDP packets; useful for audio/video calls
 
   "Skype":
     download-priority: 0
@@ -108,13 +80,21 @@ processes:
     match:
       - name: skype
 
-#  "Spotify":
-#    download-priority: 2
-#    upload-priority: 2
-#    download: 128kbit
-#    upload: 64kbit
-#    match:
-#      - name: spotify
+  "Snap Updates":
+    download-priority: 9
+    upload-priority: 9
+    download: 1mbit
+    upload: 500kbit
+    match:
+      - name: snapd
+
+  "Spotify":
+    download-priority: 2
+    upload-priority: 2
+    download: 128kbit
+    upload: 64kbit
+    match:
+      - name: spotify
 
   "Zoom":
     download-priority: 0
