@@ -269,11 +269,16 @@ def convert_config_list_units(c_list):
     return c_list
 
 def convert_yaml_to_store(file):
+    errors = [
+        yaml.YAMLError,
+        ruamel.yaml.scanner.ScannerError,
+    ]
     # Get dict from yaml file.
     with open(file, 'r') as stream:
         try:
             content = yaml.safe_load(stream)
-        except yaml.YAMLError as e:
+        except yaml.YAMLError or ruamel.yaml.scanner.ScannerError as e:
+            # TODO: Fallback to previous config.
             print(e)
             return ''
 
@@ -323,46 +328,58 @@ def convert_yaml_to_store(file):
     for p_name, p in content['processes'].items():
         config_dict[p_name] = p
 
+    # # Convert dict to a list store.
+    # store = Gtk.ListStore(str, str, str, str, str, int, int, str, str, str, str, str, str)
+    # for k, v in config_dict.items():
+    #     l = convert_dict_to_list(k, v)
+    #     l = convert_config_list_units(l) # in-place updating of list items
+    #     l_iter = store.append(l)
+    # return store
+    store = convert_dict_to_store(config_dict)
+    return store
+
+def convert_dict_to_store(data_dict):
     # Convert dict to a list store.
     store = Gtk.ListStore(str, str, str, str, str, int, int, str, str, str, str, str, str)
-    for k, v in config_dict.items():
+    for k, v in data_dict.items():
         l = convert_dict_to_list(k, v)
         l = convert_config_list_units(l) # in-place updating of list items
         l_iter = store.append(l)
     return store
 
-def convert_yaml_to_dict(file):
-    # Get dict from yaml file.
-    with open(file, 'r') as stream:
-        try:
-            content = yaml.safe_load(stream)
-        except yaml.YAMLError as e:
-            print(e)
-            return ''
 
-    if not content:
-        # Yaml file has no viable content.
-        print("ERROR: {} has no usable content.".format(file))
-        return ''
-
-    # Create a new "flat" dict to hold the config.
-    config_dict = {}
-    # Move global config keys down into their own dict under a 'Global' key.
-    g_name = 'Global'
-    g_config = convert_dict_to_list(g_name, content)
-    config_dict[g_name] = {
-        'download': g_config[1],
-        'upload': g_config[2],
-        'download-minimum': g_config[3],
-        'upload-minimum': g_config[4],
-        'download-priority': g_config[5],
-        'upload-priority': g_config[6],
-        'match-type': g_config[7],
-        'match-str': g_config[8],
-    }
-
-    # Move process config keys up to the main dict.
-    for p_name, p in content['processes'].items():
-        config_dict[p_name] = p
-
-    return config_dict
+# def convert_yaml_to_dict(file):
+#     # Get dict from yaml file.
+#     with open(file, 'r') as stream:
+#         try:
+#             content = yaml.safe_load(stream)
+#         except yaml.YAMLError as e:
+#             print(e)
+#             return ''
+#
+#     if not content:
+#         # Yaml file has no viable content.
+#         print("ERROR: {} has no usable content.".format(file))
+#         return ''
+#
+#     # Create a new "flat" dict to hold the config.
+#     config_dict = {}
+#     # Move global config keys down into their own dict under a 'Global' key.
+#     g_name = 'Global'
+#     g_config = convert_dict_to_list(g_name, content)
+#     config_dict[g_name] = {
+#         'download': g_config[1],
+#         'upload': g_config[2],
+#         'download-minimum': g_config[3],
+#         'upload-minimum': g_config[4],
+#         'download-priority': g_config[5],
+#         'upload-priority': g_config[6],
+#         'match-type': g_config[7],
+#         'match-str': g_config[8],
+#     }
+#
+#     # Move process config keys up to the main dict.
+#     for p_name, p in content['processes'].items():
+#         config_dict[p_name] = p
+#
+#     return config_dict
