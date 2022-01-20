@@ -11,6 +11,7 @@ Build-Depends:
  python3-netifaces,
  python3-packaging,
  python3-psutil,
+ python3-setuptools,
  python3-yaml,
  dh-python
 Standards-Version: 3.9.7
