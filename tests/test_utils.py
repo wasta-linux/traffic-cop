@@ -12,12 +12,6 @@ class Misc(unittest.TestCase):
         self.pkg_dir = self.tests_dir.parent
         self.example_config = self.tests_dir / 'data' / 'traffic-cop.yaml.example'
 
-    def test_check_diff(self):
-        example = self.example_config
-        default = self.tests_dir / 'data' / 'traffic-cop.yaml.default'
-        diff = utils.check_diff(example, default)
-        self.assertNotEqual(diff, 0)
-
     def test_ensure_config_backup(self):
         # This only tests that tests/data/traffic-cop.yaml == tests/data/traffic-cop.yaml.bak.
         #   It doesn't test the creation of a properly-named new backup file.
