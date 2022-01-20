@@ -271,13 +271,14 @@ def convert_config_list_units(c_list):
 def convert_yaml_to_store(file):
     errors = [
         yaml.YAMLError,
-        ruamel.yaml.scanner.ScannerError,
+        #ruamel.yaml.scanner.ScannerError,
     ]
     # Get dict from yaml file.
     with open(file, 'r') as stream:
         try:
             content = yaml.safe_load(stream)
-        except yaml.YAMLError or ruamel.yaml.scanner.ScannerError as e:
+        #except yaml.YAMLError or ruamel.yaml.scanner.ScannerError as e:
+        except yaml.YAMLError as e:
             # TODO: Fallback to previous config.
             print(e)
             return ''
