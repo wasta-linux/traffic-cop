@@ -75,32 +75,32 @@ processes:
       #- name: Socket Process # only limits UDP packets; useful for audio/video calls
 
   "Skype":
-    download-priority: 0
-    upload-priority: 0
+    #download-priority: 0
+    #upload-priority: 0
     download: 70kbps
     upload: 35kbps
     match:
       - name: skype
 
   "Snap Updates":
-    download-priority: 9
-    upload-priority: 9
+    #download-priority: 9
+    #upload-priority: 9
     download: 1mbit
     upload: 500kbit
     match:
       - name: snapd
 
   "Spotify":
-    download-priority: 2
-    upload-priority: 2
+    #download-priority: 2
+    #upload-priority: 2
     download: 128kbit
     upload: 64kbit
     match:
       - name: spotify
 
   "Zoom":
-    download-priority: 0
-    upload-priority: 0
+    #download-priority: 0
+    #upload-priority: 0
     download: 70kbps
     upload: 35kbps
     match:
