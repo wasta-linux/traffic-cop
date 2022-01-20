@@ -4,7 +4,7 @@
 # ------------------------------------------------------------------------------
 # Devices:
 # All bandwidth limits specified here are applied automatically to whichever
-# interface has the active internet connection.
+# interface has the active internet connection (e.g. wlp2s0).
 #
 # Units:
 # Units can be specified in all formats that tc supports, e.g.:
@@ -48,7 +48,7 @@
 #
 #       Choose one of the three properties to match:
 #       > "cmdline" uses regex syntax for matching.
-#           It refers to the entire command with options: "/usr/lib/firefox/firefox --new-window"
+#           It refers to the entire command, including options: "/usr/lib/firefox/firefox --new-window"
 #           See also: System Monitor > Processes tab > Command Line column.
 #       > "exe" uses an exact path (no regex).
 #           It refers to the executable path from the command: "/usr/lib/firefox/firefox"
@@ -58,6 +58,7 @@
 #       parent executable and so has the broadest application. While "name" and
 #       "cmdline" can be used to specify a narrower set of processes for finer
 #       control.
+#
 #       Verify that traffic is being managed by clicking on "View Log..." in the
 #       Traffic Cop window, or in a terminal with:
 #       $ journalctl -u traffic-cop.service
