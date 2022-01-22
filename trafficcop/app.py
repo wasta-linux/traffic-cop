@@ -123,7 +123,7 @@ class TrafficCop(Gtk.Application):
                     first_line = f.readline().strip().decode()
             # 2nd term in 1st line of changelog; also need to remove parentheses.
             version = first_line.split()[1][1:-1]
-            print(f"Traffic Cop (app) / traffic-cop (package): {version}")
+            print(f"traffic-cop {version}")
             exit(0)
 
         if 'debug' in options:
