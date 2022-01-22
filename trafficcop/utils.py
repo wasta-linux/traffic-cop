@@ -1,5 +1,6 @@
 import contextlib
 import locale
+import logging
 import netifaces
 import os
 import psutil
@@ -48,6 +49,7 @@ def get_net_device():
             break
         except KeyError:
             device = None
+    logging.debug(f"Network device: {device}")
     return device
 
 def get_nethogs_version():
@@ -56,7 +58,7 @@ def get_nethogs_version():
     stderr = subprocess.STDOUT
     r = subprocess.run(cmd, stdout=stdout, stderr=stderr, encoding='utf-8')
     version = r.stdout.split()[1]
-    print(f"nethogs version: {version}")
+    logging.debug(f"nethogs version: {version}")
     return version
 
 def nethogs_supports_udp(version_string):
@@ -128,6 +130,7 @@ def get_tt_info(exe='/usr/bin/tt'):
 def get_file_mtime(file):
     statinfo = os.stat(file)
     mtime = convert_epoch_to_human(statinfo.st_mtime)
+    logging.debug(f"{file} last modified: {mtime}")
     return mtime
 
 def wait_for_tt_start(exe='/usr/bin/tt', max=100):
@@ -167,7 +170,7 @@ def ensure_config_backup(current):
         return True
     diff = check_diff(current, backup)
     if diff == 0:
-        print(already, backup)
+        logging.debug(already, backup)
         return True
     # The backup file exists and is different from current config:
     #   need to choose new backup file name and check again.
@@ -180,7 +183,7 @@ def ensure_config_backup(current):
         return True
     diff = check_diff(current, backup)
     if diff == 0:
-        print(already, backup)
+        logging.debug(already, backup)
         return True
     while backup.exists():
         # Keep trying new indices until an available one is found.
@@ -191,7 +194,7 @@ def ensure_config_backup(current):
             return True
         diff = check_diff(current, backup)
         if diff == 0:
-            print(already, backup)
+            logging.debug(already, backup)
             return True
 
 def update_global_scope():
@@ -268,6 +271,7 @@ def update_scopes(scopes, queue, store):
     scopes['Global']['now']['bytes_up'] = b_up
     scopes['Global']['now']['bytes_dn'] = b_dn
 
+    logging.debug(f"Store data: {scopes}")
     return scopes
 
 def match_cmdline_to_scope(exe_pid_usr, store, proc_list):
@@ -325,6 +329,7 @@ def match_cmdline_to_scope(exe_pid_usr, store, proc_list):
                 # Unhandled match-type.
                 print(f"no match for: '{k}: {v}'")
                 continue
+    logging.debug(f"\"{exe_pid_usr}\" matched to \"{scope}\"")
     return scope
 
 def calculate_data_rates(data):
@@ -337,3 +342,32 @@ def calculate_data_rates(data):
         rate_up = bytes_up / elapsed
         rate_dn = bytes_dn / elapsed
     return [rate_dn, rate_up]
+
+def set_up_logging(log_level):
+    # Define log file.
+    log_dir = Path('/var', 'log', 'traffic-cop')
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file_path = log_dir / 'traffic-cop.log'
+
+    # Define logging handlers.
+    file_h = logging.FileHandler(log_file_path)
+    file_h.setLevel(logging.INFO)
+    stdout_h = logging.StreamHandler(sys.stdout)
+    stdout_h.setLevel(logging.WARNING)
+    stderr_h = logging.StreamHandler(sys.stderr)
+    stderr_level = logging.ERROR
+    if log_level == logging.DEBUG:
+        stderr_level = log_level
+    stderr_h.setLevel(stderr_level)
+    handlers = [file_h, stdout_h, stderr_h]
+
+    # Set initial config.
+    logging.basicConfig(
+        level=log_level,
+        format='%(asctime)s %(levelname)s: %(message)s',
+        datefmt='%H:%M:%S',
+        handlers=handlers
+    )
+
+    # Print is better than logging for quick comprehension.
+    print(f'traffic-cop log: {log_file_path}')

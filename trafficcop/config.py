@@ -1,4 +1,5 @@
 import gi
+import logging
 import re
 import yaml
 
@@ -280,12 +281,12 @@ def convert_yaml_to_store(file):
         #except yaml.YAMLError or ruamel.yaml.scanner.ScannerError as e:
         except yaml.YAMLError as e:
             # TODO: Fallback to previous config.
-            print(e)
+            logging.error(e)
             return ''
 
     if not content:
         # Yaml file has no viable content.
-        print(f"ERROR: {file} has no usable content.")
+        logging.error(f"\"{file}\" has no usable content.")
         return ''
 
     # Create a new "flat" dict to hold the config.

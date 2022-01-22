@@ -37,6 +37,10 @@ class TrafficCop(Gtk.Application):
             'version', ord('V'), GLib.OptionFlags.NONE, GLib.OptionArg.NONE,
             'Print version number', None
         )
+        self.add_main_option(
+            'debug', ord('d'), GLib.OptionFlags.NONE, Glib.OptionArg.NONE,
+            'Set log level to DEBUG', None
+        )
 
         # Get UI location based on current file location.
         self.ui_dir = '/usr/share/traffic-cop/ui'
@@ -58,6 +62,9 @@ class TrafficCop(Gtk.Application):
         do_startup is the setting up of the app, either for "activate" or for "open".
         It runs just after __init__.
         '''
+        # Set log level.
+        self.log_level=logging.INFO
+
         # Define builder and its widgets.
         Gtk.Application.do_startup(self)
 
@@ -99,10 +106,10 @@ class TrafficCop(Gtk.Application):
         options = command_line.get_options_dict()
         options = options.end().unpack()
 
-        if not options:
-            # No command line args passed: run GUI.
-            self.activate()
-            return 0
+        # if not options:
+        #     # No command line args passed: run GUI.
+        #     self.activate()
+        #     return 0
 
         if 'version' in options:
             # Get version number from debian/changelog.
@@ -119,6 +126,10 @@ class TrafficCop(Gtk.Application):
             print(f"Traffic Cop (app) / traffic-cop (package): {version}")
             exit(0)
 
+        if 'debug' in options:
+            self.log_level=logging.DEBUG
+
+
     def do_activate(self):
         '''
         do_activate is the displaying of the window. It runs last after do_command_line.
@@ -128,6 +139,9 @@ class TrafficCop(Gtk.Application):
             self.args.insert(0, 'pkexec')
             subprocess.run(self.args)
             exit()
+
+        # Start logging.
+        utils.set_up_logging(self.log_level)
 
         # Update widgets and show window.
         self.update_info_widgets()
@@ -143,11 +157,11 @@ class TrafficCop(Gtk.Application):
         t_bw_updater = threading.Thread(target=worker.bw_updater, name='T-bw')
         t_bw_updater.start()
 
-        # Verify execution with elevated privileges.
-        if os.geteuid() != 0:
-            bin = '/usr/bin/traffic-cop'
-            print("traffic-cop needs elevated privileges; e.g.:\n\n$ pkexec", bin, "\n$ sudo", bin)
-            exit(1)
+        # # Verify execution with elevated privileges.
+        # if os.geteuid() != 0:
+        #     bin = '/usr/bin/traffic-cop'
+        #     print("traffic-cop needs elevated privileges; e.g.:\n\n$ pkexec", bin, "\n$ sudo", bin)
+        #     exit(1)
 
     def update_service_props(self):
         # Get true service start time.
@@ -161,7 +175,8 @@ class TrafficCop(Gtk.Application):
             "--no-pager",
         ]
         status_output = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        utils.print_result(cmd, status_output)
+        logging.debug(f"{' '.join(cmd)}; exit status: {result.returncode}")
+        # utils.print_result(cmd, status_output)
         if status_output.returncode != 0:
             # Status output error. Probably due to kernel incompatibility after update.
             #   Fall back to trying "systemctl status" command instead.
@@ -171,7 +186,8 @@ class TrafficCop(Gtk.Application):
             cmd.pop(1)
             cmd.insert(1, "status")
             status_output = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            utils.print_result(cmd, status_output)
+            # utils.print_result(cmd, status_output)
+            logging.debug(f"{' '.join(cmd)}; exit status: {result.returncode}")
             output_list = status_output.stdout.decode().splitlines()
             #print(output_list)
             upat = '\s+Loaded: loaded \(/etc/systemd/system/traffic-cop.service; (.*);.*'
@@ -229,13 +245,14 @@ class TrafficCop(Gtk.Application):
     def update_device_name(self):
         # Get name of managed interface.
         pid, time, dev = utils.get_tt_info()
-        if pid > 0:
-            self.label_iface.set_text(dev)
-        else:
-            self.label_iface.set_text("--")
+        if pid <= 0:
+            dev = '--'
+        self.label_iface.set_text(dev)
+        logging.debug(f"device: {dev}")
 
     def update_config_time(self):
         self.label_applied.set_text(self.tt_start)
+        logging.debug(f"config time: {self.tt_start}")
 
     def update_button_states(self):
         # TODO: I need a way to "watch" the config file if setting the "Apply"
@@ -276,7 +293,7 @@ class TrafficCop(Gtk.Application):
             config_epoch = utils.convert_human_to_epoch(config_mtime)
             tt_epoch = utils.convert_human_to_epoch(self.tt_start)
             if config_epoch > tt_epoch:
-                print("WARNING: The config file has been modified since the service started.\nApplying the changes now.")
+                logging.warning("The config file has been modified since the service started.\nApplying the changes now.")
                 self.restart_service()
             else:
                 new_config_store = config.convert_yaml_to_store(self.config_file)
@@ -295,13 +312,15 @@ class TrafficCop(Gtk.Application):
     def stop_service(self):
         cmd = ["systemctl", "stop", "traffic-cop.service"]
         result = subprocess.run(cmd)
-        utils.print_result(cmd, result)
+        logging.debug(f"{' '.join(cmd)}; exit status: {result.returncode}")
+        # utils.print_result(cmd, result)
         self.update_info_widgets()
 
     def start_service(self):
         cmd = ["systemctl", "start", "traffic-cop.service"]
         result = subprocess.run(cmd)
-        utils.print_result(cmd, result)
+        # utils.print_result(cmd, result)
+        logging.debug(f"{' '.join(cmd)}; exit status: {result.returncode}")
         self.tt_pid, self.tt_start, self.tt_dev = utils.wait_for_tt_start()
         self.update_info_widgets()
         self.treeview_config = self.update_treeview_config()
@@ -309,7 +328,8 @@ class TrafficCop(Gtk.Application):
     def restart_service(self):
         cmd = ["systemctl", "restart", "traffic-cop.service"]
         result = subprocess.run(cmd)
-        utils.print_result(cmd, result)
+        logging.debug(f"{' '.join(cmd)}; exit status: {result.returncode}")
+        # utils.print_result(cmd, result)
         self.tt_pid, self.tt_start, self.tt_dev = utils.wait_for_tt_start()
         # Check service status and update widgets.
         self.update_info_widgets()
