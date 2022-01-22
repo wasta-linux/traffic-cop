@@ -104,14 +104,14 @@ class TrafficCop(Gtk.Application):
         do_command_line runs after do_startup and before do_activate.
         '''
         options = command_line.get_options_dict()
-        options = options.end().unpack()
+        self.options = options.end().unpack()
 
         # if not options:
         #     # No command line args passed: run GUI.
         #     self.activate()
         #     return 0
 
-        if 'version' in options:
+        if 'version' in self.options:
             # Get version number from debian/changelog.
             if self.runmode == 'uninstalled':
                 changelog = Path(__file__).parents[1] / 'debian' / 'changelog'
@@ -126,9 +126,8 @@ class TrafficCop(Gtk.Application):
             print(f"traffic-cop {version}")
             exit(0)
 
-        if 'debug' in options:
+        if 'debug' in self.options:
             self.log_level=logging.DEBUG
-
 
     def do_activate(self):
         '''
@@ -142,6 +141,7 @@ class TrafficCop(Gtk.Application):
 
         # Start logging.
         utils.set_up_logging(self.log_level)
+        logging.debug(f"CLI options: {self.options}")
 
         ###
         # Get widgets from glade file, which is defined in __init__.
