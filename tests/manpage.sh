@@ -13,9 +13,9 @@ outfile_name="${outfile_name##*/}"
 outfile="${root_dir}/doc/${outfile_name}"
 debfile="${root_dir}/debian/${app_name}.manpages"
 if [[ -z "$1" || "$1" == 'preview' || "$1" == 'p' ]]; then
-    pandoc "$draft" -s -t man | man -l -
+    pandoc -s -f markdown-smart -t man "$draft" | man -l -
 elif [[ "$1" == 'convert' || "$1" == 'c' ]]; then
     mkdir -p "${root_dir}/doc"
-    pandoc "$draft" -s -t man -o "$outfile"
+    pandoc -s -f markdown-smart -t man -o "$outfile" "$draft"
     echo "doc/${outfile_name}" > "$debfile"
 fi
