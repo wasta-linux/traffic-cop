@@ -3,6 +3,7 @@
 # Preview and convert MD file to manpage.
 # Ref:
 #   https://www.howtogeek.com/682871/how-to-create-a-man-page-on-linux/
+#   https://github.com/jgm/pandoc/issues/5404
 
 tests_dir=$(realpath $(dirname "${0}"))
 root_dir=$(dirname "$tests_dir")
