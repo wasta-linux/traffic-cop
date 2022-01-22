@@ -160,7 +160,8 @@ def check_diff(file1, file2):
     return result.returncode
 
 def ensure_config_file(default_config_file, runtime_config_file):
-    if not default_config_file.is_file():
+    if not runtime_config_file.is_file():
+        logging.debug(f"Copying {default_config_file} to {runtime_config_file}.")
         shutil.copyfile(default_config_file, runtime_config_file)
 
 def ensure_config_backup(current):
