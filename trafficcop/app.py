@@ -68,36 +68,36 @@ class TrafficCop(Gtk.Application):
         # Define builder and its widgets.
         Gtk.Application.do_startup(self)
 
-        # # Get widgets from glade file, which is defined in __init__.
-        # self.builder = Gtk.Builder()
-        # self.builder.add_from_file(self.ui_dir + '/mainwindow.glade')
-        # self.window = self.builder.get_object('mainwindow')
-        # self.toggle_active = self.builder.get_object('toggle_active')
-        # self.toggle_unit_state = self.builder.get_object('toggle_unit_state')
-        # self.button_restart = self.builder.get_object('button_restart')
-        # self.label_iface = self.builder.get_object('label_iface')
-        # self.button_log = self.builder.get_object('button_log')
-        # self.label_applied = self.builder.get_object('label_applied')
-        # self.button_apply = self.builder.get_object('button_apply')
-        # self.button_config = self.builder.get_object('button_config')
-        # self.button_reset = self.builder.get_object('button_reset')
-        # self.w_config = self.builder.get_object('w_config')
-        # self.vp_config = self.builder.get_object('vp_config')
-        #
-        # # Main window.
-        # self.add_window(self.window)
-        # self.window.set_icon_name('traffic-cop')
-        #
+        # Get widgets from glade file, which is defined in __init__.
+        self.builder = Gtk.Builder()
+        self.builder.add_from_file(self.ui_dir + '/mainwindow.glade')
+        self.window = self.builder.get_object('mainwindow')
+        self.toggle_active = self.builder.get_object('toggle_active')
+        self.toggle_unit_state = self.builder.get_object('toggle_unit_state')
+        self.button_restart = self.builder.get_object('button_restart')
+        self.label_iface = self.builder.get_object('label_iface')
+        self.button_log = self.builder.get_object('button_log')
+        self.label_applied = self.builder.get_object('label_applied')
+        self.button_apply = self.builder.get_object('button_apply')
+        self.button_config = self.builder.get_object('button_config')
+        self.button_reset = self.builder.get_object('button_reset')
+        self.w_config = self.builder.get_object('w_config')
+        self.vp_config = self.builder.get_object('vp_config')
+
+        # Main window.
+        self.add_window(self.window)
+        self.window.set_icon_name('traffic-cop')
+
         # # Populate config viewport.
         # self.treeview_config = self.update_treeview_config()
         # self.treeview_config.show()
         # self.vp_config.add(self.treeview_config)
-        #
-        # # Populate widget data.
-        # self.button_apply.set_sensitive(False)
-        #
-        # # Connect GUI signals to Handler class.
-        # self.builder.connect_signals(handler.Handler())
+
+        # Populate widget data.
+        self.button_apply.set_sensitive(False)
+
+        # Connect GUI signals to Handler class.
+        self.builder.connect_signals(handler.Handler())
 
     def do_command_line(self, command_line):
         '''
@@ -144,36 +144,10 @@ class TrafficCop(Gtk.Application):
         logging.debug(f"CLI options: {self.options}")
 
         ###
-        # Get widgets from glade file, which is defined in __init__.
-        self.builder = Gtk.Builder()
-        self.builder.add_from_file(self.ui_dir + '/mainwindow.glade')
-        self.window = self.builder.get_object('mainwindow')
-        self.toggle_active = self.builder.get_object('toggle_active')
-        self.toggle_unit_state = self.builder.get_object('toggle_unit_state')
-        self.button_restart = self.builder.get_object('button_restart')
-        self.label_iface = self.builder.get_object('label_iface')
-        self.button_log = self.builder.get_object('button_log')
-        self.label_applied = self.builder.get_object('label_applied')
-        self.button_apply = self.builder.get_object('button_apply')
-        self.button_config = self.builder.get_object('button_config')
-        self.button_reset = self.builder.get_object('button_reset')
-        self.w_config = self.builder.get_object('w_config')
-        self.vp_config = self.builder.get_object('vp_config')
-
-        # Main window.
-        self.add_window(self.window)
-        self.window.set_icon_name('traffic-cop')
-
         # Populate config viewport.
         self.treeview_config = self.update_treeview_config()
         self.treeview_config.show()
         self.vp_config.add(self.treeview_config)
-
-        # Populate widget data.
-        self.button_apply.set_sensitive(False)
-
-        # Connect GUI signals to Handler class.
-        self.builder.connect_signals(handler.Handler())
         ###
 
         # Update widgets and show window.
