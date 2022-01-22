@@ -103,6 +103,7 @@ class TrafficCop(Gtk.Application):
         '''
         do_command_line runs after do_startup and before do_activate.
         '''
+        logging.debug(f"do_command_line start")
         options = command_line.get_options_dict()
         self.options = options.end().unpack()
 
@@ -126,6 +127,7 @@ class TrafficCop(Gtk.Application):
 
         # Activate app.
         self.activate()
+        logging.debug(f"do_command_line end")
 
     def do_activate(self):
         '''
@@ -139,6 +141,7 @@ class TrafficCop(Gtk.Application):
 
         # Start logging.
         utils.set_up_logging(self.log_level)
+        logging.debug(f"do_activate start")
         logging.debug(f"CLI options: {self.options}")
 
         # Ensure config file exists.
@@ -170,6 +173,7 @@ class TrafficCop(Gtk.Application):
         #     bin = '/usr/bin/traffic-cop'
         #     print("traffic-cop needs elevated privileges; e.g.:\n\n$ pkexec", bin, "\n$ sudo", bin)
         #     exit(1)
+        logging.debug(f"do_activate end")
 
     def update_service_props(self):
         # Get true service start time.

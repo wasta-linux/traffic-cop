@@ -270,6 +270,7 @@ def convert_config_list_units(c_list):
     return c_list
 
 def convert_yaml_to_store(file):
+    logging.debug(f"Reading config from {file}")
     errors = [
         yaml.YAMLError,
         #ruamel.yaml.scanner.ScannerError,
@@ -342,6 +343,7 @@ def convert_yaml_to_store(file):
 
 def convert_dict_to_store(data_dict):
     # Convert dict to a list store.
+    logging.debug(f"Reading data: {data_dict}")
     store = Gtk.ListStore(str, str, str, str, str, int, int, str, str, str, str, str, str)
     for k, v in data_dict.items():
         l = convert_dict_to_list(k, v)

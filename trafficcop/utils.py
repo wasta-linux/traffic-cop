@@ -373,7 +373,7 @@ def set_up_logging(log_level):
         level=log_level,
         format='%(asctime)s %(levelname)s: %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S',
-        handlers=handlers
+        handlers=handlers,
     )
 
     # Print is better than logging for quick comprehension.
