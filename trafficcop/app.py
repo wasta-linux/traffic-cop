@@ -106,11 +106,6 @@ class TrafficCop(Gtk.Application):
         options = command_line.get_options_dict()
         self.options = options.end().unpack()
 
-        # if not options:
-        #     # No command line args passed: run GUI.
-        #     self.activate()
-        #     return 0
-
         if 'version' in self.options:
             # Get version number from debian/changelog.
             if self.runmode == 'uninstalled':
@@ -128,6 +123,9 @@ class TrafficCop(Gtk.Application):
 
         if 'debug' in self.options:
             self.log_level=logging.DEBUG
+
+        # Activate app.
+        self.activate()
 
     def do_activate(self):
         '''
