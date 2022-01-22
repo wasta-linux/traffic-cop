@@ -255,14 +255,14 @@ class TrafficCop(Gtk.Application):
     def update_device_name(self):
         # Get name of managed interface.
         pid, time, dev = utils.get_tt_info()
-        if pid <= 0:
+        if pid == -1:
             dev = '--'
         self.label_iface.set_text(dev)
-        logging.debug(f"device: {dev}")
+        logging.debug(f"Updated device name: {dev}")
 
     def update_config_time(self):
         self.label_applied.set_text(self.tt_start)
-        logging.debug(f"config time: {self.tt_start}")
+        logging.debug(f"Updated config time: {self.tt_start}")
 
     def update_button_states(self):
         # TODO: I need a way to "watch" the config file if setting the "Apply"
