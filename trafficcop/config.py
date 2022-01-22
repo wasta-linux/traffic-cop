@@ -111,6 +111,7 @@ def update_store_rates(store, rates_dict):
                 break
 
 def convert_dict_to_list(k, v_dict):
+    logging.debug(f"Converting \"{k: v_dict}\" to list")
     if not type(v_dict) == dict:
         # Scope (Global or Process) not given valid config.
         v_dict = {}
@@ -196,6 +197,7 @@ def convert_dict_to_list(k, v_dict):
         up_rate, up_unit,
         m_type, m_str
     ]
+    logging.debug(f"List: {info_list}")
     return info_list
 
 def convert_config_rates_to_human(config):
