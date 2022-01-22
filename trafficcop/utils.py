@@ -79,10 +79,10 @@ def convert_human_to_epoch(human):
                 # Convert object to epoch format.
                 epoch = time.mktime(str) # Tue 2020-10-13 05:59:00 WAT
             except ValueError as v:
-                print(repr(v))
+                logging.debug(repr(v))
                 epoch = ''
             except Exception as e:
-                print(repr(e))
+                logging.debug(repr(e))
                 epoch = ''
     else:
         epoch = human
