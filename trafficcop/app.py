@@ -183,7 +183,7 @@ class TrafficCop(Gtk.Application):
             "--no-pager",
         ]
         status_output = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        logging.debug(f"{' '.join(cmd)}; exit status: {result.returncode}")
+        logging.debug(f"{' '.join(cmd)}; exit status: {status_output.returncode}")
         # utils.print_result(cmd, status_output)
         if status_output.returncode != 0:
             # Status output error. Probably due to kernel incompatibility after update.
@@ -195,7 +195,7 @@ class TrafficCop(Gtk.Application):
             cmd.insert(1, "status")
             status_output = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             # utils.print_result(cmd, status_output)
-            logging.debug(f"{' '.join(cmd)}; exit status: {result.returncode}")
+            logging.debug(f"{' '.join(cmd)}; exit status: {status_output.returncode}")
             output_list = status_output.stdout.decode().splitlines()
             #print(output_list)
             upat = '\s+Loaded: loaded \(/etc/systemd/system/traffic-cop.service; (.*);.*'
