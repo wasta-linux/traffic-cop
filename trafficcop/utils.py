@@ -282,6 +282,7 @@ def update_scopes(scopes, queue, store):
     return scopes
 
 def match_cmdline_to_scope(exe_pid_usr, store, proc_list):
+    logging.debug(f"Attempting to match traffic from: {exe_pid_usr}")
     # Strip pid and user from cmdline.
     cmdline_list = exe_pid_usr.split('/')
     # "exe" can be the path to an executable or "TCP"/"UDP".
@@ -334,7 +335,7 @@ def match_cmdline_to_scope(exe_pid_usr, store, proc_list):
                     break
             else:
                 # Unhandled match-type.
-                print(f"no match for: '{k}: {v}'")
+                logging.warning(f"No match for: '{k}: {v}'")
                 continue
     logging.debug(f"\"{exe_pid_usr}\" matched to \"{scope}\"")
     return scope
