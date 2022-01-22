@@ -103,7 +103,6 @@ class TrafficCop(Gtk.Application):
         '''
         do_command_line runs after do_startup and before do_activate.
         '''
-        logging.debug(f"do_command_line start")
         options = command_line.get_options_dict()
         self.options = options.end().unpack()
 
@@ -127,7 +126,6 @@ class TrafficCop(Gtk.Application):
 
         # Activate app.
         self.activate()
-        logging.debug(f"do_command_line end")
 
     def do_activate(self):
         '''
