@@ -372,7 +372,7 @@ def set_up_logging(log_level):
     logging.basicConfig(
         level=log_level,
         format='%(asctime)s %(levelname)s: %(message)s',
-        datefmt='%H:%M:%S',
+        datefmt='%Y-%m-%d %H:%M:%S',
         handlers=handlers
     )
 
