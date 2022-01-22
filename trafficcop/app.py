@@ -39,7 +39,7 @@ class TrafficCop(Gtk.Application):
         )
         self.add_main_option(
             'debug', ord('d'), GLib.OptionFlags.NONE, GLib.OptionArg.NONE,
-            'Set log level to DEBUG', None
+            'Print DEBUG info to stdout', None
         )
 
         # Get UI location based on current file location.
