@@ -141,6 +141,9 @@ class TrafficCop(Gtk.Application):
         utils.set_up_logging(self.log_level)
         logging.debug(f"CLI options: {self.options}")
 
+        # Ensure config file exists.
+        utils.ensure_config_file(self.default_config, self.config_file)
+
         ###
         # Populate config viewport.
         self.treeview_config = self.update_treeview_config()

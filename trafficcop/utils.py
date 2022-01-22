@@ -159,6 +159,10 @@ def check_diff(file1, file2):
     )
     return result.returncode
 
+def ensure_config_file(default_config_file, runtime_config_file):
+    if not default_config_file.is_file():
+        shutil.copyfile(default_config_file, runtime_config_file)
+
 def ensure_config_backup(current):
     '''
     Make a backup of user config; add index to file name if other backup already exists.

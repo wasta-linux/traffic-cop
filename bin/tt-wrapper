@@ -23,10 +23,6 @@ echo "Setup.device: $device"
 
 # Define default config.
 config="/etc/traffic-cop.yaml"
-# Ensure config file exists.
-if [[ ! -e "$config" ]]; then
-    cp '/usr/share/traffic-cop/traffic-cop.yaml.default' "$config"
-fi
 echo "Setup.config: $config"
 
 # Start TrafficToll.
