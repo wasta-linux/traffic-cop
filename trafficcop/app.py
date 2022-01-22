@@ -38,7 +38,7 @@ class TrafficCop(Gtk.Application):
             'Print version number', None
         )
         self.add_main_option(
-            'debug', ord('d'), GLib.OptionFlags.NONE, Glib.OptionArg.NONE,
+            'debug', ord('d'), GLib.OptionFlags.NONE, GLib.OptionArg.NONE,
             'Set log level to DEBUG', None
         )
 
