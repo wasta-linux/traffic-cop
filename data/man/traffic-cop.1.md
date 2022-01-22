@@ -10,10 +10,10 @@ Traffic Cop - Manage bandwidth usage by app or process.
 
 # OPTIONS
 **-h**, **--help**
-: Show help.
+: Show help and exit.
 
 **-d**, **--debug**
-: Set log level to DEBUG.
+: Print DEBUG info to stdout.
 
 **-V**, **--version**
 : Print traffic-cop version number and exit.
