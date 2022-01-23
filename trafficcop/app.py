@@ -139,7 +139,7 @@ class TrafficCop(Gtk.Application):
 
         # Start logging.
         utils.set_up_logging(self.log_level)
-        logging.debug(f"do_activate start")
+        # logging.debug(f"do_activate start")
         logging.debug(f"CLI options: {self.options}")
 
         # Ensure config file exists.
@@ -171,7 +171,7 @@ class TrafficCop(Gtk.Application):
         #     bin = '/usr/bin/traffic-cop'
         #     print("traffic-cop needs elevated privileges; e.g.:\n\n$ pkexec", bin, "\n$ sudo", bin)
         #     exit(1)
-        logging.debug(f"do_activate end")
+        # logging.debug(f"do_activate end")
 
     def update_service_props(self):
         # Get true service start time.
@@ -258,11 +258,11 @@ class TrafficCop(Gtk.Application):
         if pid == -1:
             dev = '--'
         self.label_iface.set_text(dev)
-        logging.debug(f"Updated device name: {dev}")
+        # logging.debug(f"Updated device name: {dev}")
 
     def update_config_time(self):
         self.label_applied.set_text(self.tt_start)
-        logging.debug(f"Updated config time: {self.tt_start}")
+        # logging.debug(f"Updated config time: {self.tt_start}")
 
     def update_button_states(self):
         # TODO: I need a way to "watch" the config file if setting the "Apply"

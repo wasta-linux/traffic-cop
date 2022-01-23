@@ -72,14 +72,16 @@ class Handler():
         diff = utils.check_diff(current, default)
         if diff == 0:
             # Already using the default config.
-            print("Already using default config.")
+            logging.debug("Using default config.")
             return
 
         # Ensure that backup is made of current config.
+        logging.debug('Ensuring backup of current config.')
         utils.ensure_config_backup(current)
 
         # Copy /usr/share/traffic-cop/traffic-cop.yaml.default to /etc/traffic-cop.yaml;
         #   overwrite existing file.
+        logging.debug('Setting config file to default.')
         shutil.copyfile(default, current)
         # Restart the service to apply default configuration.
         app.app.restart_service()

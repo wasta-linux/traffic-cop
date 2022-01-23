@@ -93,6 +93,7 @@ def update_config_store(store, new_store):
 def update_store_rates(store, rates_dict):
     # WARNING: This assumes the scopes in rates_dict are the same as those in store.
     #   In other words it assumes that the store hasn't changed.
+    logging.debug(f"Updating GUI with new rates: {rates_dict}")
     for row in store:
         for scope, values in rates_dict.items():
             if row[0] == scope:
@@ -110,12 +111,10 @@ def update_store_rates(store, rates_dict):
                     row[10] = values[3]
                 break
 
-def convert_dict_to_list(k, v_dict):
-    logging.debug(f"Converting \"{k}: {v_dict}\" to list")
+def convert_dict_to_list(name, v_dict):
     if not type(v_dict) == dict:
         # Scope (Global or Process) not given valid config.
         v_dict = {}
-    name = k
 
     # Set defaults.
     dn_max = v_dict.get('download', '')
@@ -197,7 +196,7 @@ def convert_dict_to_list(k, v_dict):
         up_rate, up_unit,
         m_type, m_str
     ]
-    logging.debug(f"List: {info_list}")
+    logging.debug(f"Process data for {name}: {info_list}")
     return info_list
 
 def convert_config_rates_to_human(config):
@@ -345,7 +344,7 @@ def convert_yaml_to_store(file):
 
 def convert_dict_to_store(data_dict):
     # Convert dict to a list store.
-    logging.debug(f"Reading data: {data_dict}")
+    # logging.debug(f"Reading data: {data_dict}")
     store = Gtk.ListStore(str, str, str, str, str, int, int, str, str, str, str, str, str)
     for k, v in data_dict.items():
         l = convert_dict_to_list(k, v)
