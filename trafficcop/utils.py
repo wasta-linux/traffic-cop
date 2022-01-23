@@ -287,8 +287,10 @@ def match_cmdline_to_scope(exe_pid_usr, store, proc_list):
     cmdline_list = exe_pid_usr.split('/')
     # "exe" can be the path to an executable or "TCP"/"UDP".
     exe = '/'.join(cmdline_list[:-2])
+    logging.debug(f"exe: {exe}")
     # "pid" will be "0" if "exe" is "TCP" or "UDP".
     pid = cmdline_list[-2]
+    logging.debug(f"pid: {pid}")
 
     # Get scope names, match-type, and match-str from store.
     scopes = {}
@@ -306,6 +308,7 @@ def match_cmdline_to_scope(exe_pid_usr, store, proc_list):
             continue
         if p_pid == pid:
             match_exe_pid_usr_and_proc = proc.info
+            logging.debug(f"Matched process info: {match_exe_pid_usr_and_proc}")
             break
 
     # Match cmdline with scope.
@@ -315,6 +318,7 @@ def match_cmdline_to_scope(exe_pid_usr, store, proc_list):
     elif exe == 'UDP':
         scope = 'unknown UDP'
     elif match_exe_pid_usr_and_proc:
+        logging.debug(f"Checking scopes: {scopes}")
         for k, v in scopes.items():
             # k = scope; v = [match-type, match-str]
             if v[0] == 'name':
