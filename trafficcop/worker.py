@@ -12,6 +12,7 @@ from gi.repository import GLib
 from pathlib import Path
 
 from trafficcop import app
+from trafficcop import rates
 from trafficcop import utils
 
 
@@ -80,7 +81,8 @@ def bw_updater():
 
         # Get all applicable cmdlines & bytes transferred for each scope in config.
         # Sum the total sent for each scope, as well as the total received and give it a timestamp.
-        app.app.scopes = utils.update_scopes(app.app.scopes, app.app.net_hogs_q, app.app.config_store)
+        # app.app.scopes = utils.update_scopes(app.app.scopes, app.app.net_hogs_q, app.app.config_store)
+        app.app.scopes = rates.update_scopes(app.app.scopes, app.app.net_hogs_q, app.app.config_store)
         logging.debug(f"Current GUI scopes: {app.app.scopes}")
 
         # Get the upload and download rates (B/s).
@@ -88,12 +90,14 @@ def bw_updater():
         for scope, data in app.app.scopes.items():
             if not data['last']['time']:
                 continue
-            rates = utils.calculate_data_rates(data)
+            # rates = utils.calculate_data_rates(data)
+            data_rates = rates.calculate_data_rates(data)
 
             # Adjust the number to only show 3 digits; change units as necessary (KB/s, MB/s, GB/s).
-            human_up = utils.convert_bytes_to_human(rates[0])
-            human_dn = utils.convert_bytes_to_human(rates[1])
+            human_up = utils.convert_bytes_to_human(data_rates[0])
+            human_dn = utils.convert_bytes_to_human(data_rates[1])
             rates_dict[scope] = [*human_up, *human_dn]
 
         # Update the values shown in the treeview.
-        GLib.idle_add(utils.update_store_rates, app.app.config_store, rates_dict)
+        # GLib.idle_add(utils.update_store_rates, app.app.config_store, rates_dict)
+        GLib.idle_add(rates.update_store_rates, app.app.config_store, rates_dict)
