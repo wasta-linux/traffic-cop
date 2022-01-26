@@ -1,5 +1,4 @@
 ### Planned features and outstanding issues
-- BUG: per-process traffic isn't correctly paired with nethogs output (as of when?!?).
 - Fallback to previous config if error in updated config file.
 - Solve supposed python dependency issue on "aiocontextvars" in Ubuntu bionic 18.04
 
