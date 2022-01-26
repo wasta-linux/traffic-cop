@@ -234,6 +234,7 @@ def update_scopes(scopes, queue, store):
     # Update scopes dict 'new' entries.
     while not queue.empty():
         line = queue.get().split()
+        logging.debug(f"nethogs line: {line}")
         if line[0] == 'unknown':
             exe_pid_usr = line[1]
         else:
@@ -367,7 +368,6 @@ def match_cmdline_to_scope(exe_pid_usr, store, proc_list):
             # Get scope names, match-type, and match-str from store.
             scopes = get_configured_scopes(store)
             if scopes:
-                logging.debug(f"Checking scopes: {scopes}")
                 scope = match_proc_to_scope(matched_proc, scopes)
 
     logging.debug(f"nethogs line \"{exe_pid_usr}\" matched to scope \"{scope}\"")
