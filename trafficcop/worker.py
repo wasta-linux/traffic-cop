@@ -2,6 +2,7 @@
 # All of these functions run inside of threads and use GLib to communicate back.
 
 import gi
+import logging
 import psutil
 import subprocess
 import sys
@@ -11,7 +12,6 @@ from gi.repository import GLib
 from pathlib import Path
 
 from trafficcop import app
-from trafficcop import config
 from trafficcop import utils
 
 
@@ -96,5 +96,4 @@ def bw_updater():
             rates_dict[scope] = [*human_up, *human_dn]
 
         # Update the values shown in the treeview.
-        logging.debug(f"New bandwidth rates for GUI: {rates_dict}")
-        GLib.idle_add(config.update_store_rates, app.app.config_store, rates_dict)
+        GLib.idle_add(utils.update_store_rates, app.app.config_store, rates_dict)

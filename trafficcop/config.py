@@ -90,27 +90,6 @@ def update_config_store(store, new_store):
             store.remove(row.iter)
     return store
 
-def update_store_rates(store, rates_dict):
-    # WARNING: This assumes the scopes in rates_dict are the same as those in store.
-    #   In other words it assumes that the store hasn't changed.
-    logging.debug(f"Updating GUI with new rates: {rates_dict}")
-    for row in store:
-        for scope, values in rates_dict.items():
-            if row[0] == scope:
-                if values[0] <= 0:
-                    row[7] = ' '*4
-                    row[8] = ' '*4
-                else:
-                    row[7] = '{:.0f}'.format(values[0])
-                    row[8] = values[1]
-                if values[2] <= 0:
-                    row[9] = ' '*4
-                    row[10] = ' '*4
-                else:
-                    row[9] = '{:.0f}'.format(values[2])
-                    row[10] = values[3]
-                break
-
 def convert_dict_to_list(name, v_dict):
     if not type(v_dict) == dict:
         # Scope (Global or Process) not given valid config.
@@ -127,30 +106,6 @@ def convert_dict_to_list(name, v_dict):
     dn_unit = ' '*4 #'B/s'
     up_rate = ' '*4 #'{:.2f}'.format(0)
     up_unit = ' '*4 #'B/s'
-    # try:
-    #     dn_max = v_dict['download']
-    # except KeyError:
-    #     dn_max = ''
-    # try:
-    #     up_max = v_dict['upload']
-    # except KeyError:
-    #     up_max = ''
-    # try:
-    #     dn_min = v_dict['download-minimum']
-    # except KeyError:
-    #     dn_min = ''
-    # try:
-    #     up_min = v_dict['upload-minimum']
-    # except KeyError:
-    #     up_min = ''
-    # try:
-    #     dn_pri = v_dict['download-priority']
-    # except KeyError:
-    #     dn_pri = 9
-    # try:
-    #     up_pri = v_dict['upload-priority']
-    # except KeyError:
-    #     up_pri = 9
 
     # The match section can theoretically be any of the attributes that
     #   psutil.process exposes. This could get really complicated. Just going to

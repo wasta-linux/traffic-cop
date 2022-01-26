@@ -312,29 +312,28 @@ def get_configured_scopes(store):
 
 def match_proc_to_scope(proc, scopes):
     scope = None
-    for k, v in scopes.items():
-        logging.debug(f"Scope: {k}: {v}")
-        if v[0] == 'name':
-            match = re.match(v[1], proc['name'])
+    for s, data in scopes.items():
+        if data[0] == 'name' or data[0] == 'cmdline':
+            # See if scope 'name' or 'cmdline' matches proc 'name' or 'cmdline'.
+            target_string = proc[data[0]]
+            if data[0] == 'cmdline':
+                # cmdline property from psutil given as list instead of string.
+                target_string = ' '.join(proc[data[0]])
+            logging.debug(f"Checking if {data[1]} matches {target_string}")
+            match = re.match(data[1], target_string)
             if match:
-                scope = k
+                scope = s
                 break
-        elif v[0] == 'exe':
-            # See if scope exe matches proc exe.
-            match = re.match(v[1], proc['exe'])
-            if match:
-                scope = k
-                break
-        elif v[0] == 'cmdline':
-            # See if scope cmdline equals proc cmdline.
-            if v[1] == proc['cmdline']:
-                scope = k
+        elif data[0] == 'exe':
+            # See if scope exe equals proc exe.
+            if data[1] == proc[data[0]]:
+                scope = s
                 break
         else:
             # Unhandled match-type.
-            logging.warning(f"Unhandled match-type for scope: '{k}: {v}'")
+            logging.warning(f"Unhandled match-type for scope: '{s}: {data}'")
             continue
-    logging.debug(f"Process {proc} matched to scope {scope}")
+    logging.debug(f"Process \"{proc}\" matched to scope \"{scope}\"")
     return scope
 
 def match_cmdline_to_scope(exe_pid_usr, store, proc_list):
@@ -373,6 +372,27 @@ def match_cmdline_to_scope(exe_pid_usr, store, proc_list):
 
     logging.debug(f"nethogs line \"{exe_pid_usr}\" matched to scope \"{scope}\"")
     return scope
+
+def update_store_rates(store, rates_dict):
+    # WARNING: This assumes the scopes in rates_dict are the same as those in store.
+    #   In other words it assumes that the store hasn't changed.
+    logging.debug(f"New bandwidth rates for GUI: {rates_dict}")
+    for row in store:
+        for scope, values in rates_dict.items():
+            if row[0] == scope:
+                if values[0] <= 0:
+                    row[7] = ' '*4
+                    row[8] = ' '*4
+                else:
+                    row[7] = '{:.0f}'.format(values[0])
+                    row[8] = values[1]
+                if values[2] <= 0:
+                    row[9] = ' '*4
+                    row[10] = ' '*4
+                else:
+                    row[9] = '{:.0f}'.format(values[2])
+                    row[10] = values[3]
+                break
 
 def calculate_data_rates(data):
     elapsed = data['now']['time'] - data['last']['time']
