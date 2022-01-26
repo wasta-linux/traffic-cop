@@ -81,6 +81,7 @@ def bw_updater():
         # Get all applicable cmdlines & bytes transferred for each scope in config.
         # Sum the total sent for each scope, as well as the total received and give it a timestamp.
         app.app.scopes = utils.update_scopes(app.app.scopes, app.app.net_hogs_q, app.app.config_store)
+        logging.debug(f"Current GUI scopes: {app.app.scopes}")
 
         # Get the upload and download rates (B/s).
         rates_dict = {}
@@ -95,4 +96,5 @@ def bw_updater():
             rates_dict[scope] = [*human_up, *human_dn]
 
         # Update the values shown in the treeview.
+        logging.debug(f"New bandwidth rates for GUI: {rates_dict}")
         GLib.idle_add(config.update_store_rates, app.app.config_store, rates_dict)

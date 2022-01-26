@@ -243,6 +243,7 @@ def update_scopes(scopes, queue, store):
         b_dn = int(float(line[-1]))
         if b_up == 0 and b_dn == 0:
             # No traffic to track.
+            logging.debug(f"Not updating for 0-byte traffic.")
             continue
         scope = match_cmdline_to_scope(exe_pid_usr, store, proc_list)
         if not scope:
