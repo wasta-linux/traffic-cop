@@ -360,8 +360,9 @@ def match_cmdline_to_scope(exe_pid_usr, store, proc_list):
         if matched_proc:
             # Get scope names, match-type, and match-str from store.
             scopes = get_configured_scopes(store)
-            logging.debug(f"Checking scopes: {scopes}")
-            scope = match_proc_to_scope(proc, scopes)
+            if scopes:
+                logging.debug(f"Checking scopes: {scopes}")
+                scope = match_proc_to_scope(proc, scopes)
 
     logging.debug(f"nethogs line \"{exe_pid_usr}\" matched to scope \"{scope}\"")
     return scope
