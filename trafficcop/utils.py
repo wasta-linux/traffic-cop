@@ -281,7 +281,64 @@ def update_scopes(scopes, queue, store):
     logging.debug(f"Store data: {scopes}")
     return scopes
 
+def get_proc_info_from_pid(pid, proc_list):
+    # Match pid to process_iter.
+    proc_info = {}
+    for p in proc_list:
+        try:
+            p_pid = str(p.pid)
+        except psutil.NoSuchProcess:
+            continue
+        if p_pid == pid:
+            proc_info = p.info
+            logging.debug(f"Matched process info: {proc_info}")
+            break
+    return proc_info
+
+def get_configured_scopes(store):
+    # Get scope names, match-type, and match-str from store.
+    scopes = {}
+    for row in store:
+        if row[0] == 'Global' or row[0] == 'unknown TCP' or row[0] == 'unknown UDP':
+            continue
+        scopes[row[0]] = row[11:]
+    return scopes
+
+def match_proc_to_scope(proc, scopes):
+    scope = None
+    for k, v in scopes.items():
+        if v[0] == 'name':
+            match = re.match(v[1], proc['name'])
+            if match:
+                scope = k
+                break
+        elif v[0] == 'exe':
+            # See if scope exe matches proc exe.
+            match = re.match(v[1], proc['exe'])
+            if match:
+                scope = k
+                break
+        elif v[0] == 'cmdline':
+            # See if scope cmdline equals proc cmdline.
+            if v[1] == proc['cmdline']:
+                scope = k
+                break
+        else:
+            # Unhandled match-type.
+            logging.warning(f"Unhandled match-type for scope: '{k}: {v}'")
+            continue
+    return scope
+
 def match_cmdline_to_scope(exe_pid_usr, store, proc_list):
+    """
+    Return Traffic Cop scope that matches pid of each line of nethogs output.
+    This scope is used for displaying each process' traffic in the Traffic Cop window.
+    Match (scope) options:
+    - None (default)
+    - unknown TCP
+    - unknown UDP
+    - other configured processes
+    """
     logging.debug(f"Attempting to match traffic from: {exe_pid_usr}")
     # Strip pid and user from cmdline.
     cmdline_list = exe_pid_usr.split('/')
@@ -292,57 +349,78 @@ def match_cmdline_to_scope(exe_pid_usr, store, proc_list):
     pid = cmdline_list[-2]
     logging.debug(f"pid: {pid}")
 
-    # Get scope names, match-type, and match-str from store.
-    scopes = {}
-    for row in store:
-        if row[0] == 'Global':
-            continue
-        scopes[row[0]] = row[11:]
-
-    # Get cmdlines from proces_iter.
-    match_exe_pid_usr_and_proc = {}
-    for proc in proc_list:
-        try:
-            p_pid = str(proc.pid)
-        except psutil.NoSuchProcess:
-            continue
-        if p_pid == pid:
-            match_exe_pid_usr_and_proc = proc.info
-            logging.debug(f"Matched process info: {match_exe_pid_usr_and_proc}")
-            break
-
-    # Match cmdline with scope.
     scope = None
     if exe == 'TCP':
         scope = 'unknown TCP'
     elif exe == 'UDP':
         scope = 'unknown UDP'
-    elif match_exe_pid_usr_and_proc:
-        logging.debug(f"Checking scopes: {scopes}")
-        for k, v in scopes.items():
-            # k = scope; v = [match-type, match-str]
-            if v[0] == 'name':
-                match = re.match(v[1], match_exe_pid_usr_and_proc['name'])
-                if match:
-                    scope = k
-                    break
-            elif v[0] == 'exe':
-                # See if scope exe matches proc exe.
-                match = re.match(v[1], match_exe_pid_usr_and_proc['exe'])
-                if match:
-                    scope = k
-                    break
-            elif v[0] == 'cmdline':
-                # See if scope cmdline equals proc cmdline.
-                if v[1] == match_exe_pid_usr_and_proc['cmdline']:
-                    scope = k
-                    break
-            else:
-                # Unhandled match-type.
-                logging.warning(f"No match for: '{k}: {v}'")
-                continue
-    logging.debug(f"\"{exe_pid_usr}\" matched to \"{scope}\"")
+    else:
+        # Match pid to process_iter.
+        matched_proc = get_proc_info_from_pid(pid, proc_list)
+        if matched_proc:
+            # Get scope names, match-type, and match-str from store.
+            scopes = get_configured_scopes(store)
+            logging.debug(f"Checking scopes: {scopes}")
+            scope = match_proc_to_scope(proc, scopes)
+
+    logging.debug(f"nethogs line \"{exe_pid_usr}\" matched to scope \"{scope}\"")
     return scope
+
+    # # Match pid to process_iter.
+    # matched_proc = get_proc_info_from_pid(pid, proc_list)
+    # # matched_proc = {}
+    # # for proc in proc_list:
+    # #     try:
+    # #         p_pid = str(proc.pid)
+    # #     except psutil.NoSuchProcess:
+    # #         continue
+    # #     if p_pid == pid:
+    # #         matched_proc = proc.info
+    # #         logging.debug(f"Matched process info: {matched_proc}")
+    # #         break
+    #
+    # # Get scope names, match-type, and match-str from store.
+    # scopes = {}
+    # for row in store:
+    #     if row[0] == 'Global' or row[0] == 'unknown TCP' or row[0] == 'unknown UDP':
+    #         continue
+    #     scopes[row[0]] = row[11:]
+    #
+    # # Match process with scope.
+    # scope = None
+    # if exe == 'TCP':
+    #     scope = 'unknown TCP'
+    # elif exe == 'UDP':
+    #     scope = 'unknown UDP'
+    # elif matched_proc:
+    #     logging.debug(f"Checking scopes: {scopes}")
+    #     for k, v in scopes.items():
+    #         # k = scope; v = [match-type, match-str]
+    #         # if k == 'unknown TCP' or k == 'unknown UDP':
+    #         #     # Unidentified traffic already matched above.
+    #         #     continue
+    #         if v[0] == 'name':
+    #             match = re.match(v[1], matched_proc['name'])
+    #             if match:
+    #                 scope = k
+    #                 break
+    #         elif v[0] == 'exe':
+    #             # See if scope exe matches proc exe.
+    #             match = re.match(v[1], matched_proc['exe'])
+    #             if match:
+    #                 scope = k
+    #                 break
+    #         elif v[0] == 'cmdline':
+    #             # See if scope cmdline equals proc cmdline.
+    #             if v[1] == matched_proc['cmdline']:
+    #                 scope = k
+    #                 break
+    #         else:
+    #             # Unhandled match-type.
+    #             logging.warning(f"Unhandled match-type for scope: '{k}: {v}'")
+    #             continue
+    # logging.debug(f"\"{exe_pid_usr}\" matched to \"{scope}\"")
+    # return scope
 
 def calculate_data_rates(data):
     elapsed = data['now']['time'] - data['last']['time']
