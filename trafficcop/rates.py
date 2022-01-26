@@ -1,15 +1,18 @@
+""" Functions used to update bandwidth rates in GUI. """
+
 import logging
 import psutil
 import re
 import time
 
+from trafficcop import utils
 
 def update_global_scope():
     '''
     Update system bandwidth usage for the Global scope.
     '''
     net_io = psutil.net_io_counters(pernic=True)
-    dev = get_net_device()
+    dev = utils.get_net_device()
     if not dev:
         # No current connection.
         return [0, 0]
