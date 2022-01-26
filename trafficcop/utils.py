@@ -240,6 +240,9 @@ def update_scopes(scopes, queue, store):
             exe_pid_usr = line[0]
         b_up = int(float(line[-2]))
         b_dn = int(float(line[-1]))
+        if b_up == 0 and b_dn == 0:
+            # No traffic to track.
+            continue
         scope = match_cmdline_to_scope(exe_pid_usr, store, proc_list)
         if not scope:
             # Not matched; will be counted in 'Global'.
@@ -278,7 +281,7 @@ def update_scopes(scopes, queue, store):
     scopes['Global']['now']['bytes_up'] = b_up
     scopes['Global']['now']['bytes_dn'] = b_dn
 
-    logging.debug(f"Store data: {scopes}")
+    logging.debug(f"Updated data: {scopes}")
     return scopes
 
 def get_proc_info_from_pid(pid, proc_list):
