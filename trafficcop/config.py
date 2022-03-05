@@ -217,6 +217,10 @@ def validate_yaml(yaml_file):
     """
     Determine if given file exists, has correct syntax, and has correct schema.
     """
+    # Ref:
+    #   https://pypi.org/project/schema/
+    #   https://stackoverflow.com/questions/3262569/validating-a-yaml-document-in-python#22231372
+
     status = False
     file_obj = Path(yaml_file)
     myschema = schema.Schema(
