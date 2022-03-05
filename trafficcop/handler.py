@@ -1,5 +1,6 @@
 """ Signal handler module. """
 
+import logging
 import shutil
 import subprocess
 import threading
