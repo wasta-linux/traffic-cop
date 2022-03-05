@@ -51,6 +51,7 @@ class TrafficCop(Gtk.Application):
         self.tt_pid, self.tt_start, self.tt_dev = utils.get_tt_info()
         self.config_file = Path('/etc/traffic-cop.yaml')
         self.default_config = Path("/usr/share/traffic-cop/traffic-cop.yaml.default")
+        self.fallback_config = config.get_config_files(self)[0]
         self.config_store = ''
         self.net_hogs_q = queue.Queue()
         self.main_pid = os.getpid()
@@ -291,7 +292,7 @@ class TrafficCop(Gtk.Application):
         '''
         if not self.config_store:
             # App is just starting up; create the store.
-            self.config_store = config.convert_yaml_to_store(self.config_file)
+            self.config_store = config.convert_yaml_to_store(self.config_file, self.fallback_config)
 
         if self.tt_start:
             # Service is running.
@@ -306,7 +307,7 @@ class TrafficCop(Gtk.Application):
                 logging.warning("The config file has been modified since the service started.\nApplying the changes now.")
                 self.restart_service()
             else:
-                new_config_store = config.convert_yaml_to_store(self.config_file)
+                new_config_store = config.convert_yaml_to_store(self.config_file, self.default_config)
                 self.config_store = config.update_config_store(self.config_store, new_config_store)
 
         treeview_config = config.create_config_treeview(self.config_store)

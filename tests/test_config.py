@@ -15,6 +15,7 @@ class Yaml(unittest.TestCase):
         logging.disable(logging.CRITICAL)
         tests_dir = Path(__file__).parent
         self.data_dir = tests_dir / 'data'
+        self.fallback_file = self.data_dir / 'traffic-cop.yaml.default'
 
     def test_bad_syntax_empty_file(self):
         yaml_file = self.data_dir / 'empty.yaml'
@@ -48,7 +49,7 @@ class Yaml(unittest.TestCase):
 
     def test_convert_bad_syntax(self):
         yaml_file = self.data_dir / 'bad_syntax.yaml'
-        store = config.convert_yaml_to_store(yaml_file, application='test')
+        store = config.convert_yaml_to_store(yaml_file, self.fallback_file, test=True)
         self.assertNotEqual(store, '')
         for row in store:
             # Ensure row has the correct number of columns.
@@ -56,17 +57,12 @@ class Yaml(unittest.TestCase):
 
     def test_convert_default(self):
         yaml_file = self.data_dir / 'traffic-cop.yaml.default'
-        store = config.convert_yaml_to_store(yaml_file, application='test')
+        store = config.convert_yaml_to_store(yaml_file, self.fallback_file, test=True)
         # Ensure store is not empty.
         self.assertNotEqual(store, '')
         for row in store:
             # Ensure row has 7 columns.
             self.assertEqual(len(row[:]), 13)
-
-    def test_convert_empty(self):
-        yaml = self.data_dir / 'empty.yaml'
-        store = config.convert_yaml_to_store(yaml, application='test')
-        self.assertEqual(store, '')
 
     def tearDown(self):
         pass
