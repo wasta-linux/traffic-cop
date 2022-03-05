@@ -64,11 +64,12 @@ class Yaml(unittest.TestCase):
             # Ensure row has 7 columns.
             self.assertEqual(len(row[:]), 13)
 
+    @unittest.skip('causes GTK error during package build')
     def test_create_treeview(self):
         tree = config.create_config_treeview(self.default_store)
         self.assertTrue(tree)
 
-    @unittest.skip('Needs work.')
+    @unittest.skip('needs work')
     def test_update_config_store(self):
         new = config.update_config_store(None, self.default_store)
         self.assertNotEqual(None, new)
