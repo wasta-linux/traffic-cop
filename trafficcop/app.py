@@ -350,9 +350,16 @@ class TrafficCop(Gtk.Application):
         """
         List all backup configs, default config, and current config file.
         """
+        # /etc/traffic-cop-1.yaml.bak
+        # /etc/traffic-cop.yaml
+        # /etc/traffic-cop.yaml.bak
         config_dir = self.config_file.parent
-        # Get backup configs first.
-        config_files = sorted(config_dir.glob('traffic-cop-*.yaml'), reverse=True)
+        # Get initial backup config first.
+        config_files = config_dir.glob('traffic-cop.yaml.bak*')
+        # Add newer config backups.
+        config_files.extend(config_dir.glob('traffic-cop-*.yaml.bak').sorted())
+        # Reverse the list order to put newest first.
+        config_files = config_files.copy()[::-1]
         # Append default and current configs.
         config_files.append(self.default_config)
         config_files.append(self.config_file)
