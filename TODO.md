@@ -1,5 +1,8 @@
 ### Planned features and outstanding issues
-- Fallback to previous config if error in updated config file.
+- Test builds for:
+  - Jammy daily (2022-03-05)
+  - Focal
+  - Bionic
 - Solve supposed python dependency issue on "aiocontextvars" in Ubuntu bionic 18.04
 
 ### Feature wishlist
