@@ -51,7 +51,7 @@ class TrafficCop(Gtk.Application):
         self.tt_pid, self.tt_start, self.tt_dev = utils.get_tt_info()
         self.config_file = Path('/etc/traffic-cop.yaml')
         self.default_config = Path("/usr/share/traffic-cop/traffic-cop.yaml.default")
-        self.fallback_config = config.get_config_files(self)[0]
+        self.fallback_config = self.get_config_files()[0]
         self.config_store = ''
         self.net_hogs_q = queue.Queue()
         self.main_pid = os.getpid()
@@ -345,6 +345,19 @@ class TrafficCop(Gtk.Application):
         # Check service status and update widgets.
         self.update_info_widgets()
         self.treeview_config = self.update_treeview_config()
+
+    def get_config_files(self):
+        """
+        List all backup configs, default config, and current config file.
+        """
+        config_dir = self.config_file.parent
+        # Get backup configs first.
+        config_files = sorted(config_dir.glob('traffic-cop-*.yaml'), reverse=True)
+        # Append default and current configs.
+        config_files.append(self.default_config)
+        config_files.append(self.config_file)
+        logging.debug(f"Config files: {', '.join([str(f) for f in config_files])}")
+        return config_files
 
     def get_user_confirmation(self):
         text = "The current configuration file will be backed up first."

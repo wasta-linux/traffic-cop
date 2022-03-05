@@ -212,18 +212,18 @@ def convert_config_list_units(c_list):
         c_list[i] = ' '.join(h_list)
     return c_list
 
-def get_config_files(app):
-    """
-    List all backup configs, default config, and current config file.
-    """
-    config_dir = app.config_file.parent
-    # Get backup configs first.
-    config_files = sorted(config_dir.glob('traffic-cop-*.yaml'), reverse=True)
-    # Append default and current configs.
-    config_files.append(app.default_config)
-    config_files.append(app.config_file)
-    logging.debug(f"Config files: {', '.join([str(f) for f in config_files])}")
-    return config_files
+# def get_config_files(app):
+#     """
+#     List all backup configs, default config, and current config file.
+#     """
+#     config_dir = app.config_file.parent
+#     # Get backup configs first.
+#     config_files = sorted(config_dir.glob('traffic-cop-*.yaml'), reverse=True)
+#     # Append default and current configs.
+#     config_files.append(app.default_config)
+#     config_files.append(app.config_file)
+#     logging.debug(f"Config files: {', '.join([str(f) for f in config_files])}")
+#     return config_files
 
 def validate_yaml(yaml_file):
     """
