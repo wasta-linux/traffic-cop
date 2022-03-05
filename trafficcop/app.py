@@ -355,9 +355,10 @@ class TrafficCop(Gtk.Application):
         # /etc/traffic-cop.yaml.bak
         config_dir = self.config_file.parent
         # Get initial backup config first.
-        config_files = config_dir.glob('traffic-cop.yaml.bak*')
+        config_files = [f for f in config_dir.glob('traffic-cop.yaml.bak*')]
         # Add newer config backups.
-        config_files.extend(config_dir.glob('traffic-cop-*.yaml.bak').sorted())
+        newer = [f for f in config_dir.glob('traffic-cop-*.yaml.bak')]
+        config_files.extend(sorted(newer))
         # Reverse the list order to put newest first.
         config_files = config_files.copy()[::-1]
         # Append default and current configs.
