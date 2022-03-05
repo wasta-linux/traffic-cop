@@ -1,8 +1,8 @@
 ### Planned features and outstanding issues
 - Test builds for:
-  - Jammy daily (2022-03-05)
-  - Focal
-  - Bionic
+  - Jammy daily, 2022-03-05
+  - Focal (built, 2022-03-05, not yet tested)
+  - Bionic (doesn't build, 2022-03-05: no debhelper >= 12.0.0)
 - Solve supposed python dependency issue on "aiocontextvars" in Ubuntu bionic 18.04
 
 ### Feature wishlist
