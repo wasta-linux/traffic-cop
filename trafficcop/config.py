@@ -2,6 +2,7 @@ import gi
 import logging
 import re
 import schema
+import shutil
 import yaml
 
 gi.require_version("Gtk", "3.0")
@@ -213,6 +214,19 @@ def convert_config_list_units(c_list):
         c_list[i] = ' '.join(h_list)
     return c_list
 
+def get_config_files(application):
+    """
+    List all backup configs, default config, and current config file.
+    """
+    config_dir = application.config_file.parent
+    # Get backup configs first.
+    config_files = sorted(config_dir.glob('traffic-cop-*.yaml'), reverse=True)
+    # Append default and current configs.
+    config_files.append(application.default_config)
+    config_files.append(application.config_file)
+    logging.debug(f"Config files: {', '.join([str(f) for f in config_files])}")
+    return config_files
+
 def validate_yaml(yaml_file):
     """
     Determine if given file exists, has correct syntax, and has correct schema.
@@ -266,15 +280,25 @@ def validate_yaml(yaml_file):
 
     return status
 
-def convert_yaml_to_store(file):
+def convert_yaml_to_store(file, application=app.app):
     logging.debug(f"Reading config from {file}")
+
+    # Validate YAML file.
+    if not validate_yaml(file):
+        logging.error(f"Invalid config file: {file}")
+        # Choose fallback file.
+        if application != 'test':
+            config_files = get_config_files(application)
+            file = config_files[0]
+            logging.error(f"Using previous config: {file}")
+            shutil.copyfile(file, application.config_file)
 
     # Get dict from yaml file.
     with open(file, 'r') as stream:
         try:
             content = yaml.safe_load(stream)
-        except yaml.YAMLError as e:
-            # TODO: Fallback to previous config?
+        except Exception as e:
+            # Not likely to happen?
             logging.error(e)
             return ''
 

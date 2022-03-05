@@ -19,12 +19,6 @@ def setlocale(*args, **kw):
     yield locale.setlocale(*args, **kw)
     locale.setlocale(locale.LC_ALL, saved)
 
-def mute(func, *args, **kwargs):
-    with open(os.devnull, 'w') as devnull:
-        with contextlib.redirect_stdout(devnull):
-            output = func(*args, **kwargs)
-    return output
-
 def print_result(cmd, result):
     print(f"'{' '.join(cmd)}' -> {result.returncode}")
 

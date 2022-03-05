@@ -16,8 +16,8 @@ class Yaml(unittest.TestCase):
         tests_dir = Path(__file__).parent
         self.data_dir = tests_dir / 'data'
 
-    def test_file_no_exist(self):
-        yaml_file = self.data_dir / 'nonexistent_file.yaml'
+    def test_bad_syntax_empty_file(self):
+        yaml_file = self.data_dir / 'empty.yaml'
         status = config.validate_yaml(yaml_file)
         self.assertFalse(status)
 
@@ -36,14 +36,19 @@ class Yaml(unittest.TestCase):
         status = config.validate_yaml(yaml_file)
         self.assertFalse(status)
 
-    def test_good_syntax(self):
+    def test_file_no_exist(self):
+        yaml_file = self.data_dir / 'nonexistent_file.yaml'
+        status = config.validate_yaml(yaml_file)
+        self.assertFalse(status)
+
+    def test_file_good_syntax(self):
         yaml_file = self.data_dir / 'traffic-cop.yaml.default'
         status = config.validate_yaml(yaml_file)
         self.assertTrue(status)
 
     def test_convert_bad_syntax(self):
         yaml_file = self.data_dir / 'bad_syntax.yaml'
-        store = config.convert_yaml_to_store(yaml_file)
+        store = config.convert_yaml_to_store(yaml_file, application='test')
         self.assertNotEqual(store, '')
         for row in store:
             # Ensure row has the correct number of columns.
@@ -51,7 +56,7 @@ class Yaml(unittest.TestCase):
 
     def test_convert_default(self):
         yaml_file = self.data_dir / 'traffic-cop.yaml.default'
-        store = config.convert_yaml_to_store(yaml_file)
+        store = config.convert_yaml_to_store(yaml_file, application='test')
         # Ensure store is not empty.
         self.assertNotEqual(store, '')
         for row in store:
@@ -60,7 +65,7 @@ class Yaml(unittest.TestCase):
 
     def test_convert_empty(self):
         yaml = self.data_dir / 'empty.yaml'
-        store = utils.mute(config.convert_yaml_to_store, yaml)
+        store = config.convert_yaml_to_store(yaml, application='test')
         self.assertEqual(store, '')
 
     def tearDown(self):

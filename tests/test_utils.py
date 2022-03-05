@@ -16,7 +16,7 @@ class Misc(unittest.TestCase):
         # This only tests that tests/data/traffic-cop.yaml == tests/data/traffic-cop.yaml.bak.
         #   It doesn't test the creation of a properly-named new backup file.
         current = self.tests_dir / 'data' / 'traffic-cop.yaml'
-        result = utils.mute(utils.ensure_config_backup, current)
+        result = utils.ensure_config_backup(current)
         self.assertTrue(result)
 
     def tearDown(self):
@@ -37,7 +37,7 @@ class Timestamps(unittest.TestCase):
         self.assertGreater(epochA, epochB)
 
     def test_bad(self):
-        epoch = utils.mute(self.convert, "Lun Sep 17 00:00:00 2020")
+        epoch = self.convert("Lun Sep 17 00:00:00 2020")
         self.assertEqual(epoch, "")
 
     def test_empty(self):
