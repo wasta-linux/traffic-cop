@@ -51,7 +51,6 @@ class TrafficCop(Gtk.Application):
         self.tt_pid, self.tt_start, self.tt_dev = utils.get_tt_info()
         self.config_file = Path('/etc/traffic-cop.yaml')
         self.default_config = Path("/usr/share/traffic-cop/traffic-cop.yaml.default")
-        self.fallback_config = self.get_config_files()[0]
         self.config_store = ''
         self.net_hogs_q = queue.Queue()
         self.main_pid = os.getpid()
@@ -144,6 +143,7 @@ class TrafficCop(Gtk.Application):
         logging.debug(f"CLI options: {self.options}")
 
         # Ensure config file exists.
+        self.fallback_config = self.get_config_files()[0]
         utils.ensure_config_file(self.default_config, self.config_file)
 
         ###
