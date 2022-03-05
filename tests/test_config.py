@@ -16,6 +16,8 @@ class Yaml(unittest.TestCase):
         tests_dir = Path(__file__).parent
         self.data_dir = tests_dir / 'data'
         self.fallback_file = self.data_dir / 'traffic-cop.yaml.default'
+        default_yaml_file = self.data_dir / 'traffic-cop.yaml.default'
+        self.default_store = config.convert_yaml_to_store(default_yaml_file, self.fallback_file, test=True)
 
     def test_bad_syntax_empty_file(self):
         yaml_file = self.data_dir / 'empty.yaml'
@@ -56,13 +58,20 @@ class Yaml(unittest.TestCase):
             self.assertEqual(len(row[:]), 13)
 
     def test_convert_default(self):
-        yaml_file = self.data_dir / 'traffic-cop.yaml.default'
-        store = config.convert_yaml_to_store(yaml_file, self.fallback_file, test=True)
         # Ensure store is not empty.
-        self.assertNotEqual(store, '')
-        for row in store:
+        self.assertNotEqual(self.default_store, '')
+        for row in self.default_store:
             # Ensure row has 7 columns.
             self.assertEqual(len(row[:]), 13)
+
+    def test_create_treeview(self):
+        tree = config.create_config_treeview(self.default_store)
+        self.assertTrue(tree)
+
+    @unittest.skip('Needs work.')
+    def test_update_config_store(self):
+        new = config.update_config_store(None, self.default_store)
+        self.assertNotEqual(None, new)
 
     def tearDown(self):
         pass
