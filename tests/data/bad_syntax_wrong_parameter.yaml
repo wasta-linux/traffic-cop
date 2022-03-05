@@ -1,0 +1,7 @@
+# Bad syntax
+download: 3mbps
+processes:
+  Firefox:
+    dl: 1mbps
+    match:
+      - name: 'Firefox'

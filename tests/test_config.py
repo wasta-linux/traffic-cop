@@ -14,17 +14,42 @@ class Yaml(unittest.TestCase):
         tests_dir = Path(__file__).parent
         self.data_dir = tests_dir / 'data'
 
+    def test_file_no_exist(self):
+        yaml_file = self.data_dir / 'nonexistent_file.yaml'
+        status = config.validate_yaml(yaml_file)
+        self.assertFalse(status)
+
+    def test_bad_syntax_indent(self):
+        yaml_file = self.data_dir / 'bad_syntax_indent.yaml'
+        status = config.validate_yaml(yaml_file)
+        self.assertFalse(status)
+
+    def test_bad_syntax_no_match(self):
+        yaml_file = self.data_dir / 'bad_syntax_no_match.yaml'
+        status = config.validate_yaml(yaml_file)
+        self.assertFalse(status)
+
+    def test_bad_syntax_wrong_parameter(self):
+        yaml_file = self.data_dir / 'bad_syntax_wrong_parameter.yaml'
+        status = config.validate_yaml(yaml_file)
+        self.assertFalse(status)
+
+    def test_good_syntax(self):
+        yaml_file = self.data_dir / 'traffic-cop.yaml.default'
+        status = config.validate_yaml(yaml_file)
+        self.assertTrue(status)
+
     def test_convert_bad_syntax(self):
-        yaml = self.data_dir / 'bad_syntax.yaml'
-        store = config.convert_yaml_to_store(yaml)
+        yaml_file = self.data_dir / 'bad_syntax.yaml'
+        store = config.convert_yaml_to_store(yaml_file)
         self.assertNotEqual(store, '')
         for row in store:
             # Ensure row has the correct number of columns.
             self.assertEqual(len(row[:]), 13)
 
     def test_convert_default(self):
-        yaml = self.data_dir / 'traffic-cop.yaml.default'
-        store = config.convert_yaml_to_store(yaml)
+        yaml_file = self.data_dir / 'traffic-cop.yaml.default'
+        store = config.convert_yaml_to_store(yaml_file)
         # Ensure store is not empty.
         self.assertNotEqual(store, '')
         for row in store:

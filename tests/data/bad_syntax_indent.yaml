@@ -1,0 +1,5 @@
+# Bad syntax
+download: 3mbps
+processes:
+  Fake:
+  download: 1mbps

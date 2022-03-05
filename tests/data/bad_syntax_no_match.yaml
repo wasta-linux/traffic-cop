@@ -1,0 +1,5 @@
+# Bad syntax
+download: 3mbps
+processes:
+  Firefox:
+    download: 1mbps

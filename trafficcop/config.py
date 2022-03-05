@@ -1,10 +1,12 @@
 import gi
 import logging
 import re
+import schema
 import yaml
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
+from pathlib import Path
 
 from trafficcop import app
 
@@ -210,6 +212,55 @@ def convert_config_list_units(c_list):
         h_list = convert_config_rates_to_human(c_list[i])
         c_list[i] = ' '.join(h_list)
     return c_list
+
+def validate_yaml(yaml_file):
+    """
+    Determine if given file exists, has correct syntax, and has correct schema.
+    """
+    status = False
+    file_obj = Path(yaml_file)
+    myschema = schema.Schema(
+        {
+            schema.Optional('download'): schema.And(str),
+            schema.Optional('upload'): schema.And(str),
+            schema.Optional('download-minimum'): schema.And(str),
+            schema.Optional('upload-minimum'): schema.And(str),
+            schema.Optional('download-priority'): schema.And(int),
+            schema.Optional('upload-priority'): schema.And(int),
+            schema.Optional('processes'): {
+                schema.Regex(r'[a-zA-z-]+'): {
+                    'match': [{
+                        schema.Optional('cmdline'): schema.And(str),
+                        schema.Optional('exe'): schema.And(str),
+                        schema.Optional('name'): schema.And(str),
+                    }],
+                    schema.Optional('download'): schema.And(str),
+                    schema.Optional('upload'): schema.And(str),
+                    schema.Optional('download-minimum'): schema.And(str),
+                    schema.Optional('upload-minimum'): schema.And(str),
+                    schema.Optional('download-priority'): schema.And(int),
+                    schema.Optional('upload-priority'): schema.And(int),
+                },
+            },
+        }
+    )
+    if file_obj.is_file():
+        # Test if YAML syntax is correct.
+        with open(yaml_file, 'r') as f:
+            try:
+                data = yaml.safe_load(f)
+                # Test if YAML matches schema.
+                try:
+                    myschema.validate(data)
+                    status = True
+                except schema.SchemaError as e:
+                    logging.error(e)
+            except yaml.YAMLError as e:
+                logging.error(e)
+    else:
+        logging.error(f"File does not exist: {file_obj}")
+
+    return status
 
 def convert_yaml_to_store(file):
     logging.debug(f"Reading config from {file}")
