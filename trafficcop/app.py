@@ -363,7 +363,7 @@ class TrafficCop(Gtk.Application):
         # Append default and current configs.
         config_files.append(self.default_config)
         config_files.append(self.config_file)
-        logging.debug(f"Config files: {', '.join([str(f) for f in config_files])}")
+        logging.info(f"Config files: {', '.join([str(f) for f in config_files])}")
         return config_files
 
     def get_user_confirmation(self):
