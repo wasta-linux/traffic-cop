@@ -47,6 +47,9 @@ class Handler():
         current = Path("/etc/traffic-cop.yaml")
         utils.ensure_config_backup(current)
 
+        # Update fallback config file.
+        app.app.fallback_config = app.app.get_config_files()[0]
+
         target = worker.handle_button_config_clicked
         t_config = threading.Thread(target=target, name='T-cfg')
         t_config.start()
