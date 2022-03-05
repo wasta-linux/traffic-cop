@@ -42,6 +42,7 @@ class Handler():
         t_log.start()
 
     def on_button_config_clicked(self, *args):
+        # NOTE: Button later renamed to "Edit..."
         # Ensure that backup is made of current config.
         logging.debug('Ensuring backup of current config.')
         current = Path("/etc/traffic-cop.yaml")
