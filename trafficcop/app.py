@@ -307,7 +307,7 @@ class TrafficCop(Gtk.Application):
                 logging.warning("The config file has been modified since the service started.\nApplying the changes now.")
                 self.restart_service()
             else:
-                new_config_store = config.convert_yaml_to_store(self.config_file, self.default_config)
+                new_config_store = config.convert_yaml_to_store(self.config_file, self.fallback_config)
                 self.config_store = config.update_config_store(self.config_store, new_config_store)
 
         treeview_config = config.create_config_treeview(self.config_store)
