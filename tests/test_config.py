@@ -1,3 +1,4 @@
+import logging
 import unittest
 
 from pathlib import Path
@@ -11,6 +12,7 @@ from trafficcop import utils
 
 class Yaml(unittest.TestCase):
     def setUp(self):
+        logging.disable(logging.CRITICAL)
         tests_dir = Path(__file__).parent
         self.data_dir = tests_dir / 'data'
 
