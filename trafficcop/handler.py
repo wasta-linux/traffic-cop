@@ -41,6 +41,11 @@ class Handler():
         t_log.start()
 
     def on_button_config_clicked(self, *args):
+        # Ensure that backup is made of current config.
+        logging.debug('Ensuring backup of current config.')
+        current = Path("/etc/traffic-cop.yaml")
+        utils.ensure_config_backup(current)
+
         target = worker.handle_button_config_clicked
         t_config = threading.Thread(target=target, name='T-cfg')
         t_config.start()
