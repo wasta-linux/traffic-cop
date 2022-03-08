@@ -33,14 +33,16 @@ def handle_button_log_clicked():
         cmd.pop() # to remove the "--since" option
     cmd_txt = " ".join(cmd)
     result = subprocess.run(cmd_txt, shell=True)
-    print(f"{cmd} -> {result.returncode}")
+    # print(f"{cmd} -> {result.returncode}")
+    logging.debug(f"command: '{' '.join(cmd)}'; exit status: {result.returncode}")
     return
 
 def handle_button_config_clicked():
     # Open config file in gedit.
     cmd = ["gedit", "/etc/traffic-cop.yaml"]
     result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    utils.print_result(cmd, result)
+    # utils.print_result(cmd, result)
+    logging.debug(f"command: '{' '.join(cmd)}'; exit status: {result.returncode}")
 
 def handle_config_changed():
     pass
