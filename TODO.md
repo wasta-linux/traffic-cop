@@ -1,9 +1,17 @@
 ### Planned features and outstanding issues
+- [ ] Only show terminal output if running in debug mode.
 - Test builds for:
-  - Jammy daily, 2022-03-05
-  - Focal (built, 2022-03-05, not yet tested)
-  - Bionic (doesn't build, 2022-03-05: no debhelper >= 12.0.0)
-- Solve supposed python dependency issue on "aiocontextvars" in Ubuntu bionic 18.04
+  - [x] Jammy daily 2022-03-05 (built 2022-03-05)
+  - [x] Focal (built 2022-03-05)
+  - [x] Bionic: not compatible due to python3 version (as of 2022-03-08):
+    - traffictoll/net.py; L25; value = shlex.join(value):
+    - AttributeError: module shlex has no attribue "join"
+    - "join" method was added to shlex in python3.8, but:
+      - sudo apt install python3
+      - python3 --version
+      - 3.6.9 (no newer version available)
+      - https://docs.python.org/3/library/shlex.html#shlex.join
+    - Tried requiring python3.8 in bionic, but it still wanted to use python3 at runtime.
 
 ### Feature wishlist
 - Let config table expand with window height.
