@@ -1,5 +1,6 @@
 ### Planned features and outstanding issues
-- [ ] Only show terminal output if running in debug mode.
+- [ ] Verify that upgrading from tt-bandwidth-manager-gui works properly. (focal)
+- [x] Only show terminal output if running in debug mode.
 - Test builds for:
   - [x] Jammy daily 2022-03-05 (built 2022-03-05)
   - [x] Focal (built 2022-03-05)
