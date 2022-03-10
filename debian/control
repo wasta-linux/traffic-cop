@@ -30,7 +30,7 @@ Depends:
  python3-psutil,
  python3-schema,
  python3-yaml,
- python3-traffictoll,
+ python3-traffictoll (>> 0.4),
  traceroute,
  ${python3:Depends},
  ${misc:Depends}
