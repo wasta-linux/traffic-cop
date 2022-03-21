@@ -1,7 +1,7 @@
 # Traffic Cop
 This package installs **Traffic Cop** to help you manage bandwidth usage by app or process.
 
-![Traffic Cop](data/Traffic Cop.png)
+![Traffic Cop](data/traffic-cop.png)
 
 ## Features
 - Shows config (displayed in "B/s" regardless of unit used in the config file).
