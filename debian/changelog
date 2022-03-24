@@ -1,3 +1,9 @@
+traffic-cop (1.0.1) jammy; urgency=medium
+
+  * Hotfix to ensure the service isn't enabled on install.
+
+ -- Nate Marti <nate_marti@sil.org>  Thu, 24 Mar 2022 16:38:32 +0100
+
 traffic-cop (1.0) jammy; urgency=medium
 
   * Replace tt-bandwidth-manager{-gui}.
