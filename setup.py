@@ -33,5 +33,6 @@ setup(
         (f"share/{deb_pkg}/ui", glob.glob('data/ui/*.glade')),
         (f"share/{deb_pkg}", ['data/traffic-cop.yaml.default']),
         ('share/applications', glob.glob('data/applications/*.desktop')),
+        ('lib/systemd/system-preset', ['data/traffic-cop.preset']),
     ]
 )
