@@ -15,4 +15,4 @@ export PYBUILD_NAME=trafficcop
 
 # Don't let traffic-cop.service autostart.
 override_dh_installsystemd:
-	dh_installsystemd --no-start
+	dh_installsystemd --no-enable --no-start
