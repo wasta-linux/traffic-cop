@@ -10,6 +10,9 @@ from gi.repository import Gtk
 from pathlib import Path
 
 
+VERSION = '1.0.3'
+
+
 def create_config_treeview(store):
     tree = Gtk.TreeView(model=store)
     #tree.set_grid_lines(Gtk.TreeViewGridLines.HORIZONTAL)
