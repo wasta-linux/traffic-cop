@@ -1,3 +1,9 @@
+traffic-cop (1.0.4.1) noble; urgency=medium
+
+  * Re-align app & pkg version numbers.
+
+ -- Nate Marti <nate_marti@sil.org>  Sat, 25 Nov 2023 09:38:51 +0100
+
 traffic-cop (1.0.4) noble; urgency=medium
 
   * Strip quotes from version string.

@@ -107,18 +107,18 @@ class TrafficCop(Gtk.Application):
         self.options = options.end().unpack()
 
         if 'version' in self.options:
-            # Get version number from debian/changelog.
-            if self.runmode == 'uninstalled':
-                changelog = Path(__file__).parents[1] / 'debian' / 'changelog'
-                with open(changelog) as f:
-                    first_line = f.readline()
-            else:
-                changelog = Path('/usr/share/doc/traffic-cop/changelog.gz')
-                with gzip.open(changelog) as f:
-                    first_line = f.readline().strip().decode()
-            # 2nd term in 1st line of changelog; also need to remove parentheses.
-            version = first_line.split()[1][1:-1]
-            print(f"traffic-cop {version}")
+            # # Get version number from debian/changelog.
+            # if self.runmode == 'uninstalled':
+            #     changelog = Path(__file__).parents[1] / 'debian' / 'changelog'
+            #     with open(changelog) as f:
+            #         first_line = f.readline()
+            # else:
+            #     changelog = Path('/usr/share/doc/traffic-cop/changelog.gz')
+            #     with gzip.open(changelog) as f:
+            #         first_line = f.readline().strip().decode()
+            # # 2nd term in 1st line of changelog; also need to remove parentheses.
+            # version = first_line.split()[1][1:-1]
+            print(f"traffic-cop {config.VERSION}")
             exit(0)
 
         if 'debug' in self.options:
