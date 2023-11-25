@@ -17,7 +17,7 @@ py3_pkg = 'trafficcop'
 with open('trafficcop/config.py') as f:
     for line in f:
         if line.startswith('VERSION'):
-            version = line.split('=')[1].strip()
+            version = line.split('=')[1].replace("'", "").strip()
             break
 
 setup(
