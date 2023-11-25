@@ -1,3 +1,9 @@
+traffic-cop (1.0.3) noble; urgency=medium
+
+  * Set python version in module to avoid version naming error for LP builds.
+
+ -- Nate Marti <nate_marti@sil.org>  Sat, 25 Nov 2023 09:13:41 +0100
+
 traffic-cop (1.0.2) jammy; urgency=medium
 
   * adding traffic-cop.preset to ensure vendor preset is to be disabled
