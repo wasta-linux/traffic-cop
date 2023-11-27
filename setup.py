@@ -7,12 +7,6 @@ from pathlib import Path
 deb_pkg = 'traffic-cop'
 py3_pkg = 'trafficcop'
 
-# # Get version number from debian/changelog.
-# changelog = Path(__file__).parents[0] / 'debian' / 'changelog'
-# with open(changelog) as f:
-#     first_line = f.readline()
-# # 2nd term in 1st line; need to remove parentheses.
-# version = first_line.split()[1][1:-1]
 # Get version from trafficcop.config.VERSION.
 with open('trafficcop/config.py') as f:
     for line in f:
