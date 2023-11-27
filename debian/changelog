@@ -1,3 +1,9 @@
+traffic-cop (1.0.5.1) noble; urgency=medium
+
+  * Add even more debug logging.
+
+ -- Nate Marti <nate_marti@sil.org>  Mon, 27 Nov 2023 14:54:04 +0100
+
 traffic-cop (1.0.5) noble; urgency=medium
 
   * Add more debug logging.
