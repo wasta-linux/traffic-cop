@@ -1,7 +1,6 @@
 """ Main GUI module. """
 
 import gi
-import gzip
 import logging
 import os
 import psutil
@@ -10,7 +9,7 @@ import re
 import shutil
 import subprocess
 import threading
-import time
+# import time
 
 from pathlib import Path
 current_file_path = Path(__file__)
@@ -107,17 +106,6 @@ class TrafficCop(Gtk.Application):
         self.options = options.end().unpack()
 
         if 'version' in self.options:
-            # # Get version number from debian/changelog.
-            # if self.runmode == 'uninstalled':
-            #     changelog = Path(__file__).parents[1] / 'debian' / 'changelog'
-            #     with open(changelog) as f:
-            #         first_line = f.readline()
-            # else:
-            #     changelog = Path('/usr/share/doc/traffic-cop/changelog.gz')
-            #     with gzip.open(changelog) as f:
-            #         first_line = f.readline().strip().decode()
-            # # 2nd term in 1st line of changelog; also need to remove parentheses.
-            # version = first_line.split()[1][1:-1]
             print(f"traffic-cop {config.VERSION}")
             exit(0)
 
@@ -256,8 +244,9 @@ class TrafficCop(Gtk.Application):
         pid, time, dev = utils.get_tt_info()
         if pid == -1:
             dev = '--'
-        self.label_iface.set_text(dev)
-        # logging.debug(f"Updated device name: {dev}")
+        if self.label_iface.get_text() != dev:
+            logging.info(f"Managed device: {dev}")
+            self.label_iface.set_text(dev)
 
     def update_config_time(self):
         self.label_applied.set_text(self.tt_start)
