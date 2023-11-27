@@ -146,12 +146,10 @@ class TrafficCop(Gtk.Application):
         self.fallback_config = self.get_config_files()[0]
         utils.ensure_config_file(self.default_config, self.config_file)
 
-        ###
         # Populate config viewport.
         self.treeview_config = self.update_treeview_config()
         self.treeview_config.show()
         self.vp_config.add(self.treeview_config)
-        ###
 
         # Update widgets and show window.
         self.update_info_widgets()
