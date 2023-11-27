@@ -70,9 +70,7 @@ def update_scopes(scopes, queue, store):
         scopes[scope]['now']['bytes_dn'] = b_dn
 
     # Update Global scope.
-    bytes = update_global_scope()
-    b_up = bytes[0]
-    b_dn = bytes[1]
+    b_up, b_dn = update_global_scope()
     if 'Global' not in scopes.keys():
         scopes['Global'] = {
                 'last': {
@@ -155,10 +153,10 @@ def match_cmdline_to_scope(exe_pid_usr, store, proc_list):
     cmdline_list = exe_pid_usr.split('/')
     # "exe" can be the path to an executable or "TCP"/"UDP".
     exe = '/'.join(cmdline_list[:-2])
-    logging.debug(f"exe: {exe}")
+    logging.debug(f"{exe=}")
     # "pid" will be "0" if "exe" is "TCP" or "UDP".
     pid = cmdline_list[-2]
-    logging.debug(f"pid: {pid}")
+    logging.debug(f"{pid=}")
 
     scope = None
     if exe == 'TCP':
@@ -189,20 +187,31 @@ def update_store_rates(store, rates_dict):
                     row[7] = ' '*4
                     row[8] = ' '*4
                 else:
-                    row[7] = '{:.0f}'.format(values[0])
+                    # row[7] = '{:.0f}'.format(values[0])
+                    row[7] = f"{values[0]:.0f}"
                     row[8] = values[1]
                 if values[2] <= 0:
                     row[9] = ' '*4
                     row[10] = ' '*4
                 else:
-                    row[9] = '{:.0f}'.format(values[2])
+                    # row[9] = '{:.0f}'.format(values[2])
+                    row[9] = f"{values[2]:.0f}"
                     row[10] = values[3]
                 break
 
 def calculate_data_rates(data):
-    elapsed = data['now']['time'] - data['last']['time']
-    bytes_up = data['now']['bytes_up'] - data['last']['bytes_up']
-    bytes_dn = data['now']['bytes_dn'] - data['last']['bytes_dn']
+    t1 = data['now']['time']
+    t0 = data['last']['time']
+    u1 = data['now']['bytes_up']
+    u0 = data['last']['bytes_up']
+    d1 = data['now']['bytes_dn']
+    d0 = data['last']['bytes_dn']
+    logging.debug(f"{t0=}; {t1=}")
+    logging.debug(f"{u0=}; {u1=}")
+    logging.debug(f"{d0=}; {d1=}")
+    elapsed = t1 - t0
+    bytes_up = u1 - u0
+    bytes_dn = d1 - d0
     rate_up = 0
     rate_dn = 0
     if elapsed > 0:

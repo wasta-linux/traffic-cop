@@ -44,7 +44,7 @@ def get_net_device():
             break
         except KeyError:
             device = None
-    logging.info(f"Network device: {device}")
+
     return device
 
 def get_nethogs_version():
@@ -70,9 +70,9 @@ def convert_human_to_epoch(human):
     if human:
         with setlocale(locale.LC_TIME, "C"):
             try:
-                str = time.strptime(human, '%a %b %d %H:%M:%S %Y') # Tue Oct 13 05:59:00 2020
+                s = time.strptime(human, '%a %b %d %H:%M:%S %Y') # Tue Oct 13 05:59:00 2020
                 # Convert object to epoch format.
-                epoch = time.mktime(str) # Tue 2020-10-13 05:59:00 WAT
+                epoch = time.mktime(s) # Tue 2020-10-13 05:59:00 WAT
             except ValueError as v:
                 logging.debug(repr(v))
                 epoch = ''
@@ -87,9 +87,9 @@ def convert_human_to_log(human):
     # Convert human to object.
     #   Doesn't work: prob b/c my locale is FR but human is reported in EN.
     with setlocale(locale.LC_TIME, "C"):
-        str = time.strptime(human, '%a %b %d %H:%M:%S %Y') # Tue Oct 13 05:59:00 2020
+        s = time.strptime(human, '%a %b %d %H:%M:%S %Y') # Tue Oct 13 05:59:00 2020
         # Convert object to log format.
-        log = time.strftime('%a %Y-%m-%d %H:%M%S %Z', str) # Tue 2020-10-13 05:59:00 WAT
+        log = time.strftime('%a %Y-%m-%d %H:%M%S %Z', s) # Tue 2020-10-13 05:59:00 WAT
         return log
 
 def convert_bytes_to_human(bytes_per_sec):
@@ -123,13 +123,13 @@ def get_tt_info(exe='/usr/bin/tt'):
             pass
     return -1, '', ''
 
-def get_file_mtime(file):
-    statinfo = os.stat(file)
+def get_file_mtime(f):
+    statinfo = os.stat(f)
     mtime = convert_epoch_to_human(statinfo.st_mtime)
-    logging.debug(f"{file} last modified: {mtime}")
+    logging.debug(f"{f} last modified: {mtime}")
     return mtime
 
-def wait_for_tt_start(exe='/usr/bin/tt', max=100):
+def wait_for_tt_start(exe='/usr/bin/tt', maxct=100):
     '''
     Wait for service status to start, otherwise update_service_props() may not
     get the correct info.
@@ -137,7 +137,7 @@ def wait_for_tt_start(exe='/usr/bin/tt', max=100):
     ct = 0
     # Initially assume that tt is not running.
     tt_pid, tt_start, tt_dev = -1, '', ''
-    while ct < max:
+    while ct < maxct:
         tt_pid, tt_start, tt_dev = get_tt_info(exe)
         if psutil.pid_exists(tt_pid):
             return tt_pid, tt_start, tt_dev
