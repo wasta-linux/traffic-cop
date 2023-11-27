@@ -341,6 +341,7 @@ def convert_dict_to_store(data_dict):
     store = Gtk.ListStore(str, str, str, str, str, int, int, str, str, str, str, str, str)
     for k, v in data_dict.items():
         l = convert_dict_to_list(k, v)
+        logging.debug(f"New ListStore line: {l}")
         l = convert_config_list_units(l) # in-place updating of list items
         l_iter = store.append(l)
     return store
