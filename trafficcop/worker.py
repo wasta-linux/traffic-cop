@@ -38,10 +38,9 @@ def handle_button_log_clicked():
     return
 
 def handle_button_config_clicked():
-    # Open config file in gedit.
-    cmd = ["gedit", "/etc/traffic-cop.yaml"]
-    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    # utils.print_result(cmd, result)
+    # Open config file in text editor.
+    cmd = ["gnome-text-editor", "/etc/traffic-cop.yaml"]
+    result = subprocess.run(cmd)
     logging.debug(f"command: '{' '.join(cmd)}'; exit status: {result.returncode}")
 
 def handle_config_changed():
@@ -98,6 +97,8 @@ def bw_updater():
                 continue
             
             data_rates = rates.calculate_data_rates(data)
+            if None in data_rates:
+                continue
 
             # Adjust the number to only show 3 digits; change units as necessary (KB/s, MB/s, GB/s).
             human_up = utils.convert_bytes_to_human(data_rates[0])
