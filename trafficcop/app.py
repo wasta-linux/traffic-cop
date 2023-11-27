@@ -139,7 +139,7 @@ class TrafficCop(Gtk.Application):
 
         # Start logging.
         utils.set_up_logging(self.log_level)
-        # logging.debug(f"do_activate start")
+        logging.info("Traffic-Cop GUI started.")
         logging.debug(f"CLI options: {self.options}")
 
         # Ensure config file exists.
