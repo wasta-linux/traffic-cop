@@ -21,7 +21,9 @@ Homepage: https://github.com/wasta-linux/traffic-cop
 Package: traffic-cop
 Architecture: all
 Depends:
+ diffutils,
  gnome-terminal,
+ gnome-text-editor|gedit,
  nethogs,
  python3,
  python3-gi,
