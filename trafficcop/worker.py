@@ -57,8 +57,10 @@ def parse_nethogs_to_queue(queue, main_window):
     #   on gateway device plus tc device.
     cmd = ['nethogs', '-t', '-v2', '-d' + str(delay), device]
     udp_support = utils.nethogs_supports_udp(utils.get_nethogs_version())
+    logging.debug(f"{udp_support=}")
     if udp_support:
         cmd.insert(1, '-C')
+    logging.debug(f"{cmd=}")
     stdout = subprocess.PIPE
     stderr = subprocess.STDOUT
     with subprocess.Popen(cmd, stdout=stdout, stderr=stderr, encoding='utf-8') as p:
@@ -67,12 +69,12 @@ def parse_nethogs_to_queue(queue, main_window):
             line = p.stdout.readline().rstrip()
             if line == '':
                 if p.poll() is None:
-                    # Output line is blank.
+                    # Output line is blank; process still running.
                     continue
                 else:
-                    # Process completed. (Shouldn't happen.)
+                    # Process completed (shouldn't happen).
                     break
-            elif line[0] == '/' or line.split()[0] == 'unknown':
+            elif line.startswith('/') or line.startswith('unknown'):
                 queue.put(line)
 
 def bw_updater():
@@ -100,6 +102,9 @@ def bw_updater():
             human_up = utils.convert_bytes_to_human(data_rates[0])
             human_dn = utils.convert_bytes_to_human(data_rates[1])
             rates_dict[scope] = [*human_up, *human_dn]
+        logging.debug(f"{rates_dict=}")
+        if len(rates_dict) == 0:
+            continue
 
         # Update the values shown in the treeview.
         GLib.idle_add(rates.update_store_rates, app.app.config_store, rates_dict)

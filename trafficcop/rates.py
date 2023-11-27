@@ -184,6 +184,7 @@ def update_store_rates(store, rates_dict):
     for row in store:
         for scope, values in rates_dict.items():
             if row[0] == scope:
+                logging.debug(f"{values=}")
                 if values[0] <= 0:
                     row[7] = ' '*4
                     row[8] = ' '*4
