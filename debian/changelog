@@ -1,3 +1,9 @@
+traffic-cop (1.0.6) noble; urgency=medium
+
+  * Don't run calculation until data usage is reported.
+
+ -- Nate Marti <nate_marti@sil.org>  Mon, 27 Nov 2023 20:20:47 +0100
+
 traffic-cop (1.0.5.1) noble; urgency=medium
 
   * Add even more debug logging.

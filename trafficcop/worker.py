@@ -93,9 +93,10 @@ def bw_updater():
         for scope, data in app.app.scopes.items():
             logging.debug(f"{scope=}")
             logging.debug(f"{data=}")
-            if not data['last']['time']:
+            # if not data['last']['time']:
+            if None in data.get('last').values() or None in data.get('now').values():
                 continue
-            # rates = utils.calculate_data_rates(data)
+            
             data_rates = rates.calculate_data_rates(data)
 
             # Adjust the number to only show 3 digits; change units as necessary (KB/s, MB/s, GB/s).
