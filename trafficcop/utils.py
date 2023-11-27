@@ -93,22 +93,23 @@ def convert_human_to_log(human):
         return log
 
 def convert_bytes_to_human(bytes_per_sec):
+    logging.debug(f"{bytes_per_sec=}")
     # "human" means "3 significant digits, changing power as necessary."
-    float = bytes_per_sec
+    rate = bytes_per_sec
     unit = 'B/s'
-    if len(str(int(float))) > 3:
+    if len(str(int(rate))) > 3:
         # Switch to KB.
-        float = float / 1000
+        rate = rate / 1000
         unit = 'KB/s'
-        if len(str(int(float))) > 3:
+        if len(str(int(rate))) > 3:
             # Switch to MB.
-            float = float / 1000
+            rate = rate / 1000
             unit = 'MB/s'
-            if len(str(int(float))) > 3:
+            if len(str(int(rate))) > 3:
                 # Switch to GB.
-                float = float / 1000
+                rate = rate / 1000
                 unit = 'GB/s'
-    return [float, unit]
+    return [rate, unit]
 
 def get_tt_info(exe='/usr/bin/tt'):
     procs = psutil.process_iter(attrs=['pid', 'cmdline', 'create_time'])

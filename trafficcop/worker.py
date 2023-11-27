@@ -89,6 +89,8 @@ def bw_updater():
         # Get the upload and download rates (B/s).
         rates_dict = {}
         for scope, data in app.app.scopes.items():
+            logging.debug(f"{scope=}")
+            logging.debug(f"{data=}")
             if not data['last']['time']:
                 continue
             # rates = utils.calculate_data_rates(data)
