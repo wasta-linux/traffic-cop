@@ -44,7 +44,7 @@ def get_net_device():
             break
         except KeyError:
             device = None
-    logging.debug(f"Network device: {device}")
+    logging.info(f"Network device: {device}")
     return device
 
 def get_nethogs_version():
@@ -53,7 +53,7 @@ def get_nethogs_version():
     stderr = subprocess.STDOUT
     r = subprocess.run(cmd, stdout=stdout, stderr=stderr, encoding='utf-8')
     version = r.stdout.split()[1]
-    logging.debug(f"nethogs version: {version}")
+    logging.info(f"nethogs version: {version}")
     return version
 
 def nethogs_supports_udp(version_string):
