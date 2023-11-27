@@ -1,3 +1,10 @@
+traffic-cop (1.0.7) noble; urgency=medium
+
+  * Clean up variable names.
+  * Use built-in text editor to edit config file.
+
+ -- Nate Marti <nate_marti@sil.org>  Mon, 27 Nov 2023 23:03:17 +0100
+
 traffic-cop (1.0.6) noble; urgency=medium
 
   * Don't run calculation until data usage is reported.
