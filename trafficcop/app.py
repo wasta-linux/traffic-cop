@@ -6,7 +6,6 @@ import os
 import psutil
 import queue
 import re
-import shutil
 import subprocess
 import sys
 import threading
@@ -20,10 +19,6 @@ from gi.repository import Gio
 from gi.repository import GLib
 from gi.repository import Gtk
 
-# from trafficcop import config
-# from trafficcop import handler
-# from trafficcop import utils
-# from trafficcop import worker
 from . import config
 from . import handler
 from . import utils
@@ -45,6 +40,10 @@ class TrafficCop(Gtk.Application):
         self.add_main_option(
             'debug', ord('d'), GLib.OptionFlags.NONE, GLib.OptionArg.NONE,
             'Print DEBUG info to stdout', None
+        )
+        self.add_main_option(
+            'reset', ord('r'), GLib.OptionFlags.NONE, GLib.OptionArg.NONE,
+            'Reset config file to default.', None
         )
 
         # Get UI location based on current file location.
@@ -118,6 +117,16 @@ class TrafficCop(Gtk.Application):
         if 'debug' in self.options:
             self.log_level=logging.DEBUG
 
+        if 'reset' in self.options:
+            # Ensure elevated privileges.
+            if os.geteuid() != 0:
+                bin_path = '/usr/bin/traffic-cop'
+                p = subprocess.run(['sudo', '/usr/bin/traffic-cop', '--reset'])
+                exit(p.returncode)
+
+            # Reset the config file.
+            utils.reset_config_file(self.default_config, self.config_file)
+
         # Activate app.
         self.activate()
 
@@ -140,7 +149,7 @@ class TrafficCop(Gtk.Application):
         self.svc_start_time = 'unknown'
 
         # Ensure config file exists.
-        self.fallback_config = self.get_config_files()[0]
+        # self.fallback_config = self.get_config_files()[0]
         utils.ensure_config_file(self.default_config, self.config_file)
 
         # Populate config viewport.
@@ -290,7 +299,7 @@ class TrafficCop(Gtk.Application):
         '''
         if not self.config_store:
             # App is just starting up; create the store.
-            self.config_store = config.convert_yaml_to_store(self.config_file, self.fallback_config)
+            self.config_store = config.convert_yaml_to_store(self.config_file)
 
         if self.tt_start:
             # Service is running.
@@ -305,7 +314,7 @@ class TrafficCop(Gtk.Application):
                 logging.warning("The config file has been modified since the service started.\nApplying the changes now.")
                 self.restart_service()
             else:
-                new_config_store = config.convert_yaml_to_store(self.config_file, self.fallback_config)
+                new_config_store = config.convert_yaml_to_store(self.config_file)
                 self.config_store = config.update_config_store(self.config_store, new_config_store)
 
         treeview_config = config.create_config_treeview(self.config_store)
@@ -347,29 +356,29 @@ class TrafficCop(Gtk.Application):
         self.update_info_widgets()
         self.treeview_config = self.update_treeview_config()
 
-    def get_config_files(self):
-        """
-        List all backup configs, default config, and current config file.
-        """
-        # /etc/traffic-cop-1.yaml.bak
-        # /etc/traffic-cop.yaml
-        # /etc/traffic-cop.yaml.bak
-        config_dir = self.config_file.parent
-        # Get initial backup config first.
-        config_files = [f for f in config_dir.glob('traffic-cop.yaml.bak*')]
-        # Add newer config backups.
-        newer = [f for f in config_dir.glob('traffic-cop-*.yaml.bak')]
-        config_files.extend(sorted(newer))
-        # Reverse the list order to put newest first.
-        config_files = config_files.copy()[::-1]
-        # Append default and current configs.
-        config_files.append(self.default_config)
-        config_files.append(self.config_file)
-        logging.info(f"Config files: {', '.join([str(f) for f in config_files])}")
-        return config_files
+    # def get_config_files(self):
+    #     """
+    #     List all backup configs, default config, and current config file.
+    #     """
+    #     # /etc/traffic-cop-1.yaml.bak
+    #     # /etc/traffic-cop.yaml
+    #     # /etc/traffic-cop.yaml.bak
+    #     config_dir = self.config_file.parent
+    #     # Get initial backup config first.
+    #     config_files = [f for f in config_dir.glob('traffic-cop.yaml.bak*')]
+    #     # Add newer config backups.
+    #     newer = [f for f in config_dir.glob('traffic-cop-*.yaml.bak')]
+    #     config_files.extend(sorted(newer))
+    #     # Reverse the list order to put newest first.
+    #     config_files = config_files.copy()[::-1]
+    #     # Append default and current configs.
+    #     config_files.append(self.default_config)
+    #     config_files.append(self.config_file)
+    #     logging.info(f"Config files: {', '.join([str(f) for f in config_files])}")
+    #     return config_files
 
     def get_user_confirmation(self):
-        text = "The current configuration file will be backed up first."
+        text = "The current configuration file will be overwritten."
         label = Gtk.Label(text)
         dialog = Gtk.Dialog(
             'Reset to default configuration?',

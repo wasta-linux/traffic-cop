@@ -11,10 +11,6 @@ import time
 from gi.repository import GLib
 from pathlib import Path
 
-# from trafficcop import app
-# from trafficcop import rates
-# from trafficcop import utils
-# from . import app
 from . import rates
 from . import utils
 

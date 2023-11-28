@@ -1,15 +1,10 @@
 """ Signal handler module. """
 
 import logging
-import shutil
 import subprocess
 import threading
 from pathlib import Path
 
-# from trafficcop import app
-# from trafficcop import utils
-# from trafficcop import worker
-# from . import app
 from . import utils
 from . import worker
 
@@ -49,16 +44,16 @@ class Handler():
 
     def on_button_config_clicked(self, *args):
         # NOTE: Button later renamed to "Edit..."
-        # Ensure that backup is made of current config.
-        logging.debug('Ensuring backup of current config.')
-        current = Path("/etc/traffic-cop.yaml")
-        utils.ensure_config_backup(current)
+        # # Ensure that backup is made of current config.
+        # logging.debug('Ensuring backup of current config.')
+        # current = Path("/etc/traffic-cop.yaml")
+        # utils.ensure_config_backup(current)
 
-        # Update fallback config file.
-        self.app.fallback_config = self.app.get_config_files()[0]
+        # # Update fallback config file.
+        # self.app.fallback_config = self.app.get_config_files()[0]
 
         target = worker.handle_button_config_clicked
-        t_config = threading.Thread(target=target, name='T-cfg')
+        t_config = threading.Thread(name='T-cfg', target=target)
         t_config.start()
         # Set apply button to "sensitive".
         self.app.button_apply.set_sensitive(True)
@@ -91,13 +86,13 @@ class Handler():
             logging.debug("Using default config.")
             return
 
-        # Ensure that backup is made of current config.
-        logging.debug('Ensuring backup of current config.')
-        utils.ensure_config_backup(current)
+        # # Ensure that backup is made of current config.
+        # logging.debug('Ensuring backup of current config.')
+        # utils.ensure_config_backup(current)
 
         # Copy /usr/share/traffic-cop/traffic-cop.yaml.default to /etc/traffic-cop.yaml;
         #   overwrite existing file.
         logging.debug('Setting config file to default.')
-        shutil.copyfile(default, current)
+        p = subprocess.run(['sudo', '/usr/bin/traffic-cop', '--reset'])
         # Restart the service to apply default configuration.
         self.app.restart_service()

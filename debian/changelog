@@ -1,3 +1,9 @@
+traffic-cop (1.1.2.3) noble; urgency=medium
+
+  * Reset config with command option.
+
+ -- Nate Marti <nate_marti@sil.org>  Tue, 28 Nov 2023 17:49:30 +0100
+
 traffic-cop (1.1.2.2) noble; urgency=medium
 
   * Improve app instantiation handling.

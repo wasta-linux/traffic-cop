@@ -2,7 +2,6 @@ import gi
 import logging
 import re
 import schema
-import shutil
 import yaml
 
 gi.require_version("Gtk", "3.0")
@@ -268,20 +267,19 @@ def validate_yaml(yaml_file):
 
     return status
 
-def convert_yaml_to_store(file, fallback_file, test=False):
-    logging.debug(f"Reading config from {file}")
+def convert_yaml_to_store(f, test=False):
+    logging.debug(f"Reading config from {f}")
 
     # Validate YAML file.
-    if not validate_yaml(file):
-        logging.error(f"Invalid config file: {file}")
-        # Use fallback file.
-        logging.error(f"Using previous config: {fallback_file}")
-        file = fallback_file
+    if not validate_yaml(f):
+        logging.error(f"Invalid config file: {f}")
+        # Use default config file.
+        logging.error(f"Resetting to default config.")
         if not test:
-            shutil.copyfile(file, '/etc/traffic-cop.yaml')
+            p = subprocess.run('sudo', '/usr/bin/traffic-cop', '--reset')
 
     # Get dict from yaml file.
-    with open(file, 'r') as stream:
+    with open(f, 'r') as stream:
         try:
             content = yaml.safe_load(stream)
         except Exception as e:
@@ -291,7 +289,7 @@ def convert_yaml_to_store(file, fallback_file, test=False):
 
     if not content:
         # Yaml file has no viable content.
-        logging.warning(f"\"{file}\" has no usable config.")
+        logging.warning(f"\"{f}\" has no usable config.")
         return ''
 
     # Move global config keys into their own dict under a 'Global' key.

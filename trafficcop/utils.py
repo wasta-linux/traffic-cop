@@ -156,47 +156,51 @@ def check_diff(file1, file2):
 def ensure_config_file(default_config_file, runtime_config_file):
     if not runtime_config_file.is_file():
         logging.debug(f"Copying {default_config_file} to {runtime_config_file}.")
-        shutil.copyfile(default_config_file, runtime_config_file)
+        p = subprocess.run(['sudo', '/usr/bin/traffic-cop', '--reset'])
 
-def ensure_config_backup(current):
-    '''
-    Make a backup of user config; add index to file name if other backup already exists.
-    '''
-    already = "Current config already backed up at"
-    name = current.stem
-    suffix = ".yaml.bak"
-    backup = current.with_suffix(suffix)
-    if not backup.exists():
-        shutil.copyfile(current, backup)
-        return True
-    diff = check_diff(current, backup)
-    if diff == 0:
-        logging.debug(f"{already} {backup}")
-        return True
-    # The backup file exists and is different from current config:
-    #   need to choose new backup file name and check again.
-    # Add index to name.
-    i = 1
-    # Set new backup file name.
-    backup = current.with_name(name + '-' + str(i)).with_suffix(suffix)
-    if not backup.exists():
-        shutil.copyfile(current, backup)
-        return True
-    diff = check_diff(current, backup)
-    if diff == 0:
-        logging.debug(already, backup)
-        return True
-    while backup.exists():
-        # Keep trying new indices until an available one is found.
-        i += 1
-        backup = current.with_name(name + '-' + str(i)).with_suffix(suffix)
-        if not backup.exists():
-            shutil.copyfile(current, backup)
-            return True
-        diff = check_diff(current, backup)
-        if diff == 0:
-            logging.debug(already, backup)
-            return True
+def reset_config_file(default, active):
+    # NOTE: This runs with elevated privileges.
+    shutil.copyfile(default, active)
+
+# def ensure_config_backup(current):
+#     '''
+#     Make a backup of user config; add index to file name if other backup already exists.
+#     '''
+#     already = "Current config already backed up at"
+#     name = current.stem
+#     suffix = ".yaml.bak"
+#     backup = current.with_suffix(suffix)
+#     if not backup.exists():
+#         shutil.copyfile(current, backup)
+#         return True
+#     diff = check_diff(current, backup)
+#     if diff == 0:
+#         logging.debug(f"{already} {backup}")
+#         return True
+#     # The backup file exists and is different from current config:
+#     #   need to choose new backup file name and check again.
+#     # Add index to name.
+#     i = 1
+#     # Set new backup file name.
+#     backup = current.with_name(name + '-' + str(i)).with_suffix(suffix)
+#     if not backup.exists():
+#         shutil.copyfile(current, backup)
+#         return True
+#     diff = check_diff(current, backup)
+#     if diff == 0:
+#         logging.debug(already, backup)
+#         return True
+#     while backup.exists():
+#         # Keep trying new indices until an available one is found.
+#         i += 1
+#         backup = current.with_name(name + '-' + str(i)).with_suffix(suffix)
+#         if not backup.exists():
+#             shutil.copyfile(current, backup)
+#             return True
+#         diff = check_diff(current, backup)
+#         if diff == 0:
+#             logging.debug(already, backup)
+#             return True
 
 def set_up_logging(log_level):
     # Define log file.
