@@ -3,7 +3,7 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "Traffic Cop"
+name = "traffic-cop"
 authors = [
     {name = "Nate Marti", email = "nate_marti@sil.org"},
 ]
@@ -19,7 +19,7 @@ traffic-cop = "trafficcop.app:main"
 #tt-wrapper = "bin/tt-wrapper"
 
 [tool.setuptools]
-packages = ["uniscape"]
+packages = ["trafficcop"]
 package-dir = {"" = "src"}
 license-files = ["LICENSE"]
 
@@ -27,5 +27,5 @@ license-files = ["LICENSE"]
 readme = {file = ["README.md"], content-type = "text/plain"}
 version = {attr = "trafficcop.config.VERSION"}
 
-[tool.setuptools.package-data]
-trafficcop = ["*.ico", "*.ttf"]
+#[tool.setuptools.package-data]
+#trafficcop = ["*.ico", "*.ttf"]
