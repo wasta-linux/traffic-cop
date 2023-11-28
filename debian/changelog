@@ -1,3 +1,9 @@
+traffic-cop (1.1.1) noble; urgency=medium
+
+  * Fix broken import.
+
+ -- Nate Marti <nate_marti@sil.org>  Tue, 28 Nov 2023 11:37:04 +0100
+
 traffic-cop (1.1) noble; urgency=medium
 
   * Change app to run as normal user.

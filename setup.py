@@ -1,5 +1,6 @@
 # https://docs.python.org/3/distutils/setupscript.html
 
+import glob
 from setuptools import setup
 
 deb_pkg = 'traffic-cop'
