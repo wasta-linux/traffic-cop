@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "Traffic Cop"
+authors = [
+    {name = "Nate Marti", email = "nate_marti@sil.org"},
+]
+requires-python = ">=3.8"
+#keywords = ["unicode", "convert", "lookup", "reference"]
+license = {file = "LICENSE"}
+dynamic = ["readme", "version"]
+
+[project.gui-scripts]
+traffic-cop = "trafficcop.app:main"
+
+#[project.scripts]
+#tt-wrapper = "bin/tt-wrapper"
+
+[tool.setuptools]
+packages = ["uniscape"]
+package-dir = {"" = "src"}
+license-files = ["LICENSE"]
+
+[tool.setuptools.dynamic]
+readme = {file = ["README.md"], content-type = "text/plain"}
+version = {attr = "trafficcop.config.VERSION"}
+
+[tool.setuptools.package-data]
+trafficcop = ["*.ico", "*.ttf"]
