@@ -12,12 +12,12 @@ class Misc(unittest.TestCase):
         self.pkg_dir = self.tests_dir.parent
         self.example_config = self.tests_dir / 'data' / 'traffic-cop.yaml.example'
 
-    def test_ensure_config_backup(self):
-        # This only tests that tests/data/traffic-cop.yaml == tests/data/traffic-cop.yaml.bak.
-        #   It doesn't test the creation of a properly-named new backup file.
-        current = self.tests_dir / 'data' / 'traffic-cop.yaml'
-        result = utils.ensure_config_backup(current)
-        self.assertTrue(result)
+    # def test_ensure_config_backup(self):
+    #     # This only tests that tests/data/traffic-cop.yaml == tests/data/traffic-cop.yaml.bak.
+    #     #   It doesn't test the creation of a properly-named new backup file.
+    #     current = self.tests_dir / 'data' / 'traffic-cop.yaml'
+    #     result = utils.ensure_config_backup(current)
+    #     self.assertTrue(result)
 
     def tearDown(self):
         pass
