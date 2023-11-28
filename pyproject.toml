@@ -10,7 +10,8 @@ authors = [
 requires-python = ">=3.8"
 #keywords = ["unicode", "convert", "lookup", "reference"]
 license = {file = "LICENSE"}
-dynamic = ["readme", "version"]
+readme = "README.md"
+dynamic = ["version"]
 
 [project.gui-scripts]
 traffic-cop = "trafficcop.app:main"
@@ -20,11 +21,10 @@ traffic-cop = "trafficcop.app:main"
 
 [tool.setuptools]
 packages = ["trafficcop"]
-package-dir = {"" = "src"}
-license-files = ["LICENSE"]
+#license-files = ["LICENSE"]
 
 [tool.setuptools.dynamic]
-readme = {file = ["README.md"], content-type = "text/plain"}
+#readme = {file = ["README.md"], content-type = "text/plain"}
 version = {attr = "trafficcop.config.VERSION"}
 
 #[tool.setuptools.package-data]
