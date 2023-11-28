@@ -8,6 +8,7 @@ import queue
 import re
 import shutil
 import subprocess
+import sys
 import threading
 # import time
 
@@ -101,7 +102,7 @@ class TrafficCop(Gtk.Application):
         self.button_apply.set_sensitive(False)
 
         # Connect GUI signals to Handler class.
-        self.builder.connect_signals(handler.Handler())
+        self.builder.connect_signals(handler.Handler(self))
 
     def do_command_line(self, command_line):
         '''
@@ -158,7 +159,7 @@ class TrafficCop(Gtk.Application):
         t_nethogs.start()
 
         # Start bandwidth rate updater.
-        t_bw_updater = threading.Thread(target=worker.bw_updater, name='T-bw')
+        t_bw_updater = threading.Thread(name='T-bw', target=worker.bw_updater, args=(self,))
         t_bw_updater.start()
 
         # # Verify execution with elevated privileges.
@@ -180,10 +181,10 @@ class TrafficCop(Gtk.Application):
             "--no-pager",
         ]
         # status_output = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        status_output = subprocess.run(cmd)
-        logging.debug(f"{' '.join(cmd)}; exit status: {status_output.returncode}")
+        systemctl_p = subprocess.run(cmd, capture_output=True, encoding='UTF8')
+        logging.debug(f"{' '.join(cmd)}; exit status: {systemctl_p.returncode}")
         # utils.print_result(cmd, status_output)
-        if status_output.returncode != 0:
+        if systemctl_p.returncode != 0:
             # Status output error. Probably due to kernel incompatibility after update.
             #   Fall back to trying "systemctl status" command instead.
             self.unit_file_state = 'unknown'
@@ -192,10 +193,10 @@ class TrafficCop(Gtk.Application):
             cmd.pop(1)
             cmd.insert(1, "status")
             # status_output = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            status_output = subprocess.run(cmd, capture_output=True, encoding='UTF8')
+            systemctl_p = subprocess.run(cmd, capture_output=True, encoding='UTF8')
             # utils.print_result(cmd, status_output)
-            logging.debug(f"{' '.join(cmd)}; exit status: {status_output.returncode}")
-            output_list = status_output.stdout.splitlines()
+            logging.debug(f"{' '.join(cmd)}; exit status: {systemctl_p.returncode}")
+            output_list = systemctl_p.stdout.splitlines()
             #print(output_list)
             upat = '\s+Loaded: loaded \(/etc/systemd/system/traffic-cop.service; (.*);.*'
             apat = '\s+Active: (.*) since .*'
@@ -212,7 +213,7 @@ class TrafficCop(Gtk.Application):
                     pass
 
         # Continue with processing of "systemctl show" command output.
-        output_list = status_output.stdout.decode().splitlines()
+        output_list = systemctl_p.stdout.splitlines()
 
         # Parse output for unit state and active state.
         toggle_unit_state = self.builder.get_object('toggle_unit_state')
@@ -396,3 +397,4 @@ class TrafficCop(Gtk.Application):
 
 def main():
     app = TrafficCop()
+    app.run(sys.argv)

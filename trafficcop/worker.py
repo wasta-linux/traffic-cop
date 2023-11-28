@@ -14,12 +14,12 @@ from pathlib import Path
 # from trafficcop import app
 # from trafficcop import rates
 # from trafficcop import utils
-from . import app
+# from . import app
 from . import rates
 from . import utils
 
 
-def handle_button_log_clicked():
+def handle_button_log_clicked(app):
     # Follow the log since service start time in a terminal window.
     cmd = [
         "gnome-terminal",
@@ -29,9 +29,9 @@ def handle_button_log_clicked():
         "--follow",
         "--output=cat",
         "--no-pager",
-        "--since=\'" + app.app.svc_start_time + "\'",
+        "--since=\'" + app.svc_start_time + "\'",
     ]
-    if app.app.svc_start_time == 'unknown':
+    if app.svc_start_time == 'unknown':
         # Likely due to a kernel/systemd incompatibility.
         cmd.pop() # to remove the "--since" option
     cmd_txt = " ".join(cmd)
@@ -79,20 +79,20 @@ def parse_nethogs_to_queue(queue, main_window):
             elif line.startswith('/') or line.startswith('unknown'):
                 queue.put(line)
 
-def bw_updater():
-    while app.app.window.is_visible():
+def bw_updater(app):
+    while app.window.is_visible():
         time.sleep(1.5)
         # Update the device name.
-        GLib.idle_add(app.app.update_device_name)
+        GLib.idle_add(app.update_device_name)
 
         # Get all applicable cmdlines & bytes transferred for each scope in config.
         # Sum the total sent for each scope, as well as the total received and give it a timestamp.
-        app.app.scopes = rates.update_scopes(app.app.scopes, app.app.net_hogs_q, app.app.config_store)
-        logging.debug(f"Current GUI scopes: {app.app.scopes}")
+        app.scopes = rates.update_scopes(app.scopes, app.net_hogs_q, app.config_store)
+        logging.debug(f"Current GUI scopes: {app.scopes}")
 
         # Get the upload and download rates (B/s).
         rates_dict = {}
-        for scope, data in app.app.scopes.items():
+        for scope, data in app.scopes.items():
             logging.debug(f"{scope=}")
             logging.debug(f"{data=}")
             # if not data['last']['time']:
@@ -112,4 +112,4 @@ def bw_updater():
             continue
 
         # Update the values shown in the treeview.
-        GLib.idle_add(rates.update_store_rates, app.app.config_store, rates_dict)
+        GLib.idle_add(rates.update_store_rates, app.config_store, rates_dict)
