@@ -1,3 +1,9 @@
+traffic-cop (1.0.8) noble; urgency=medium
+
+  * Fix failing tests due to bad var.
+
+ -- Nate Marti <nate_marti@sil.org>  Tue, 28 Nov 2023 05:37:29 +0100
+
 traffic-cop (1.0.7) noble; urgency=medium
 
   * Clean up variable names.

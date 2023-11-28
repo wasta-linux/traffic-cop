@@ -62,11 +62,11 @@ class TtInfo(unittest.TestCase):
         self.assertGreater(info[0], 0)
 
     def test_wait_for_tt_fail(self):
-        info = utils.wait_for_tt_start(exe=self.invalid_exe, max=5)
+        info = utils.wait_for_tt_start(exe=self.invalid_exe, maxct=5)
         self.assertEqual(info[0], -1)
 
     def test_wait_for_tt_pass(self):
-        info = utils.wait_for_tt_start(exe=self.valid_exe, max=5)
+        info = utils.wait_for_tt_start(exe=self.valid_exe, maxct=5)
         self.assertGreater(info[0], 0)
 
     def tearDown(self):
