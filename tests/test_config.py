@@ -17,7 +17,7 @@ class Yaml(unittest.TestCase):
         self.data_dir = tests_dir / 'data'
         self.fallback_file = self.data_dir / 'traffic-cop.yaml.default'
         default_yaml_file = self.data_dir / 'traffic-cop.yaml.default'
-        self.default_store = config.convert_yaml_to_store(default_yaml_file, self.fallback_file, test=True)
+        self.default_store = config.convert_yaml_to_store(default_yaml_file, test=True)
 
     def test_bad_syntax_empty_file(self):
         yaml_file = self.data_dir / 'empty.yaml'
@@ -51,7 +51,7 @@ class Yaml(unittest.TestCase):
 
     def test_convert_bad_syntax(self):
         yaml_file = self.data_dir / 'bad_syntax.yaml'
-        store = config.convert_yaml_to_store(yaml_file, self.fallback_file, test=True)
+        store = config.convert_yaml_to_store(yaml_file, test=True)
         self.assertNotEqual(store, '')
         for row in store:
             # Ensure row has the correct number of columns.
