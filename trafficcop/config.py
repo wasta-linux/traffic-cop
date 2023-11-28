@@ -10,7 +10,7 @@ from gi.repository import Gtk
 from pathlib import Path
 
 
-VERSION = '1.0.8'
+VERSION = '1.1'
 
 
 def create_config_treeview(store):

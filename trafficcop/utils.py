@@ -171,7 +171,7 @@ def ensure_config_backup(current):
         return True
     diff = check_diff(current, backup)
     if diff == 0:
-        logging.debug(already, backup)
+        logging.debug(f"{already} {backup}")
         return True
     # The backup file exists and is different from current config:
     #   need to choose new backup file name and check again.
@@ -200,7 +200,8 @@ def ensure_config_backup(current):
 
 def set_up_logging(log_level):
     # Define log file.
-    log_dir = Path('/var', 'log', 'traffic-cop')
+    # log_dir = Path('/var', 'log', 'traffic-cop')
+    log_dir = Path('~', '.traffic-cop').expanduser()
     log_dir.mkdir(parents=True, exist_ok=True)
     log_file_path = log_dir / 'traffic-cop.log'
 

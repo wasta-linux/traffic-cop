@@ -19,10 +19,15 @@ from gi.repository import Gio
 from gi.repository import GLib
 from gi.repository import Gtk
 
-from trafficcop import config
-from trafficcop import handler
-from trafficcop import utils
-from trafficcop import worker
+# from trafficcop import config
+# from trafficcop import handler
+# from trafficcop import utils
+# from trafficcop import worker
+from . import config
+from . import handler
+from . import utils
+from . import worker
+
 
 
 class TrafficCop(Gtk.Application):
@@ -119,16 +124,19 @@ class TrafficCop(Gtk.Application):
         '''
         do_activate is the displaying of the window. It runs last after do_command_line.
         '''
-        # Verify execution with elevated privileges.
-        if os.geteuid() != 0:
-            self.args.insert(0, 'pkexec')
-            subprocess.run(self.args)
-            exit()
+        # # Verify execution with elevated privileges.
+        # if os.geteuid() != 0:
+        #     self.args.insert(0, 'pkexec')
+        #     subprocess.run(self.args)
+        #     exit()
 
         # Start logging.
         utils.set_up_logging(self.log_level)
         logging.info("Traffic-Cop GUI started.")
         logging.debug(f"CLI options: {self.options}")
+
+        # Initialize variables.
+        self.svc_start_time = 'unknown'
 
         # Ensure config file exists.
         self.fallback_config = self.get_config_files()[0]
@@ -171,7 +179,8 @@ class TrafficCop(Gtk.Application):
             "traffic-cop.service",
             "--no-pager",
         ]
-        status_output = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        # status_output = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        status_output = subprocess.run(cmd)
         logging.debug(f"{' '.join(cmd)}; exit status: {status_output.returncode}")
         # utils.print_result(cmd, status_output)
         if status_output.returncode != 0:
@@ -182,10 +191,11 @@ class TrafficCop(Gtk.Application):
             self.svc_start_time = 'unknown'
             cmd.pop(1)
             cmd.insert(1, "status")
-            status_output = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            # status_output = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            status_output = subprocess.run(cmd, capture_output=True, encoding='UTF8')
             # utils.print_result(cmd, status_output)
             logging.debug(f"{' '.join(cmd)}; exit status: {status_output.returncode}")
-            output_list = status_output.stdout.decode().splitlines()
+            output_list = status_output.stdout.splitlines()
             #print(output_list)
             upat = '\s+Loaded: loaded \(/etc/systemd/system/traffic-cop.service; (.*);.*'
             apat = '\s+Active: (.*) since .*'
@@ -308,14 +318,16 @@ class TrafficCop(Gtk.Application):
         self.update_button_states()
 
     def stop_service(self):
-        cmd = ["systemctl", "stop", "traffic-cop.service"]
+        # cmd = ["systemctl", "stop", "traffic-cop.service"]
+        cmd = ["pkexec", "systemctl", "stop", "traffic-cop.service"]
         result = subprocess.run(cmd)
         logging.debug(f"{' '.join(cmd)}; exit status: {result.returncode}")
         # utils.print_result(cmd, result)
         self.update_info_widgets()
 
     def start_service(self):
-        cmd = ["systemctl", "start", "traffic-cop.service"]
+        # cmd = ["systemctl", "start", "traffic-cop.service"]
+        cmd = ["pkexec", "systemctl", "start", "traffic-cop.service"]
         result = subprocess.run(cmd)
         # utils.print_result(cmd, result)
         logging.debug(f"{' '.join(cmd)}; exit status: {result.returncode}")
@@ -324,7 +336,8 @@ class TrafficCop(Gtk.Application):
         self.treeview_config = self.update_treeview_config()
 
     def restart_service(self):
-        cmd = ["systemctl", "restart", "traffic-cop.service"]
+        # cmd = ["systemctl", "restart", "traffic-cop.service"]
+        cmd = ["pkexec", "systemctl", "restart", "traffic-cop.service"]
         result = subprocess.run(cmd)
         logging.debug(f"{' '.join(cmd)}; exit status: {result.returncode}")
         # utils.print_result(cmd, result)
@@ -381,4 +394,5 @@ class TrafficCop(Gtk.Application):
             return False
 
 
-app = TrafficCop()
+def main():
+    app = TrafficCop()

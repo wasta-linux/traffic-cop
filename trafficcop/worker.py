@@ -11,9 +11,12 @@ import time
 from gi.repository import GLib
 from pathlib import Path
 
-from trafficcop import app
-from trafficcop import rates
-from trafficcop import utils
+# from trafficcop import app
+# from trafficcop import rates
+# from trafficcop import utils
+from . import app
+from . import rates
+from . import utils
 
 
 def handle_button_log_clicked():
@@ -32,14 +35,14 @@ def handle_button_log_clicked():
         # Likely due to a kernel/systemd incompatibility.
         cmd.pop() # to remove the "--since" option
     cmd_txt = " ".join(cmd)
-    result = subprocess.run(cmd_txt, shell=True)
-    # print(f"{cmd} -> {result.returncode}")
+    # result = subprocess.run(cmd_txt, shell=True)
+    result = subprocess.run(cmd)
     logging.debug(f"command: '{' '.join(cmd)}'; exit status: {result.returncode}")
     return
 
 def handle_button_config_clicked():
     # Open config file in text editor.
-    cmd = ["gnome-text-editor", "/etc/traffic-cop.yaml"]
+    cmd = ["env", "SUDO_EDITOR=/usr/bin/gnome-text-editor", "sudoedit", "/etc/traffic-cop.yaml"]
     result = subprocess.run(cmd)
     logging.debug(f"command: '{' '.join(cmd)}'; exit status: {result.returncode}")
 

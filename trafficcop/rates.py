@@ -5,7 +5,8 @@ import psutil
 import re
 import time
 
-from trafficcop import utils
+# from trafficcop import utils
+from . import utils
 
 def update_global_scope():
     '''

@@ -1,3 +1,10 @@
+traffic-cop (1.1) noble; urgency=medium
+
+  * Change app to run as normal user.
+  * Switch to pyproject.toml.
+
+ -- Nate Marti <nate_marti@sil.org>  Tue, 28 Nov 2023 11:20:06 +0100
+
 traffic-cop (1.0.8) noble; urgency=medium
 
   * Fix failing tests due to bad var.

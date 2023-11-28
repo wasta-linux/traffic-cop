@@ -6,9 +6,12 @@ import subprocess
 import threading
 from pathlib import Path
 
-from trafficcop import app
-from trafficcop import utils
-from trafficcop import worker
+# from trafficcop import app
+# from trafficcop import utils
+# from trafficcop import worker
+from . import app
+from . import utils
+from . import worker
 
 
 class Handler():

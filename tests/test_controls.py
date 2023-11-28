@@ -11,13 +11,16 @@ from pathlib import Path
 from trafficcop import app
 #from trafficcop import config
 from trafficcop import utils
+# from . import app
+# #from . import config
+# from . import utils
 
 # Assert*() methods here:
 # https://docs.python.org/3/library/unittest.html?highlight=pytest#unittest.TestCase
 
 class ActivationToggle(unittest.TestCase):
     def setUp(self):
-        self.app = app.app
+        self.app = app.TrafficCop()
         self.stop = ['systemctl', 'stop', 'traffic-cop.service']
         self.start = ['systemctl', 'start', 'traffic-cop.service']
 
