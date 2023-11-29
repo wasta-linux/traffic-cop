@@ -51,7 +51,7 @@ def parse_nethogs_to_queue(queue, main_window):
     device = utils.get_net_device()
     # If no device is given, then all devices are monitored, which double-counts
     #   on gateway device plus tc device.
-    cmd = ['nethogs', '-t', '-v2', '-d' + str(delay), device]
+    cmd = ['pkexec', 'nethogs', '-t', '-v2', '-d' + str(delay), device]
     udp_support = utils.nethogs_supports_udp(utils.get_nethogs_version())
     logging.debug(f"{udp_support=}")
     if udp_support:
