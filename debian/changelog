@@ -1,3 +1,9 @@
+traffic-cop (1.1.2.6) noble; urgency=medium
+
+  * Reinstate setup.py to be compatible with focal's dh-python.
+
+ -- Nate Marti <nate_marti@sil.org>  Wed, 29 Nov 2023 15:37:34 +0100
+
 traffic-cop (1.1.2.5) noble; urgency=medium
 
   * Don't start inactive service on config Apply.

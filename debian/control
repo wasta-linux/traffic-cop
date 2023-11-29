@@ -14,8 +14,7 @@ Build-Depends:
  python3-schema,
  python3-setuptools,
  python3-yaml,
- dh-python,
- pybuild-plugin-pyproject
+ dh-python
 Standards-Version: 3.9.7
 Homepage: https://github.com/wasta-linux/traffic-cop
 
