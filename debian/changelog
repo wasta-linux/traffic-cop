@@ -1,3 +1,10 @@
+traffic-cop (1.1.2.5) noble; urgency=medium
+
+  * Don't start inactive service on config Apply.
+  * Explicit build-dep for pyproject (needed for jammy & focal).
+
+ -- Nate Marti <nate_marti@sil.org>  Wed, 29 Nov 2023 12:00:25 +0100
+
 traffic-cop (1.1.2.4) noble; urgency=medium
 
   * Fix mystery TypeError; improve toggle switch handling.
