@@ -14,6 +14,8 @@ class Handler():
         self.app = app
 
     def gtk_widget_destroy(self, *args):
+        for t in self.app.threads:
+            t.join(timeout=0.5)
         self.app.quit()
 
     def on_toggle_unit_state_state_set(self, widget, state):
@@ -41,15 +43,18 @@ class Handler():
 
     def on_button_log_clicked(self, *args):
         target = worker.handle_button_log_clicked
-        t_log = threading.Thread(name='T-log', target=target, args=(self.app,))
-        t_log.start()
+        self.app.t_log = threading.Thread(name='T-log', target=target, args=(self.app,))
+        self.app.t_log.start()
+        self.app.threads.append(self.app.t_log)
 
     def on_button_config_clicked(self, *args):
         # NOTE: Button later renamed to "Edit..."
 
-        target = worker.handle_button_config_clicked
-        t_config = threading.Thread(name='T-cfg', target=target)
-        t_config.start()
+        rc = worker.handle_button_config_clicked()
+        # target = worker.handle_button_config_clicked
+        # self.app.t_config = threading.Thread(name='T-cfg', target=target)
+        # self.app.t_config.start()
+        # self.app.threads.append(self.app.t_config)
         # Set apply button to "sensitive".
         self.app.button_apply.set_sensitive(True)
 

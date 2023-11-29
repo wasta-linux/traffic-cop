@@ -59,6 +59,7 @@ class TrafficCop(Gtk.Application):
         self.default_config = Path("/usr/share/traffic-cop/traffic-cop.yaml.default")
         self.config_store = ''
         self.net_hogs_q = queue.Queue()
+        self.threads = []
         self.main_pid = os.getpid()
         self.managed_ports = {}
         self.scopes = {}
@@ -162,12 +163,14 @@ class TrafficCop(Gtk.Application):
         # Start tracking operations (self.window must be shown first).
         target = worker.parse_nethogs_to_queue
         args = self.net_hogs_q, self.window
-        t_nethogs = threading.Thread(target=target, args=args, name='T-nh')
-        t_nethogs.start()
+        self.t_nethogs = threading.Thread(target=target, args=args, name='T-nh')
+        self.t_nethogs.start()
+        self.threads.append(self.t_nethogs)
 
         # Start bandwidth rate updater.
-        t_bw_updater = threading.Thread(name='T-bw', target=worker.bw_updater, args=(self,))
-        t_bw_updater.start()
+        self.t_bw_updater = threading.Thread(name='T-bw', target=worker.bw_updater, args=(self,))
+        self.t_bw_updater.start()
+        self.threads.append(self.t_bw_updater)
 
     def update_service_props(self):
         # Get true service start time.
