@@ -3,19 +3,20 @@
  "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
  "http://www.freedesktop.org/software/polkit/policyconfig-1.dtd">
 <policyconfig>
+  <vendor>Wasta-Linux</vendor>
+  <vendor_url>wastalinux.org</vendor_url>
+  <icon_name>traffic-cop</icon_name>
 
-  <action id="org.wasta.apps.traffic-cop">
-    <description>Manage bandwidth usage by app or process.</description>
-    <message>Authentication is required to run Traffic Cop</message>
-    <vendor>Wasta-Linux</vendor>
-    <vendor_url>sites.google.com/site/wastalinux/</vendor_url>
-    <icon_name>traffic-cop</icon_name>
+  <action id="org.wasta.apps.traffic-cop.reset">
+    <description>Reset Traffic Cop config</description>
+    <message>Authentication is required to reset Traffic Cop config file.</message>
     <defaults>
       <allow_any>auth_admin_keep</allow_any>
       <allow_inactive>no</allow_inactive>
       <allow_active>auth_admin_keep</allow_active>
     </defaults>
     <annotate key="org.freedesktop.policykit.exec.path">/usr/bin/traffic-cop</annotate>
+    <annotate key="org.freedesktop.policykit.exec.argv1">--reset</annotate>
     <annotate key="org.freedesktop.policykit.exec.allow_gui">true</annotate>
   </action>
 </policyconfig>
