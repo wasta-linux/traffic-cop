@@ -27,6 +27,7 @@ from . import worker
 
 
 class TrafficCop(Gtk.Application):
+    # Ref: https://python-gtk-3-tutorial.readthedocs.io/en/latest/application.html
     def __init__(self):
         super().__init__(
             application_id='org.wasta.apps.traffic-cop',
@@ -121,24 +122,21 @@ class TrafficCop(Gtk.Application):
             # Ensure elevated privileges.
             if os.geteuid() != 0:
                 bin_path = '/usr/bin/traffic-cop'
-                p = subprocess.run(['sudo', '/usr/bin/traffic-cop', '--reset'])
+                p = subprocess.run(['/usr/bin/traffic-cop', '--reset'])
                 exit(p.returncode)
 
             # Reset the config file.
             utils.reset_config_file(self.default_config, self.config_file)
+            exit()
 
         # Activate app.
         self.activate()
+        return 0
 
     def do_activate(self):
         '''
         do_activate is the displaying of the window. It runs last after do_command_line.
         '''
-        # # Verify execution with elevated privileges.
-        # if os.geteuid() != 0:
-        #     self.args.insert(0, 'pkexec')
-        #     subprocess.run(self.args)
-        #     exit()
 
         # Start logging.
         utils.set_up_logging(self.log_level)
@@ -149,7 +147,6 @@ class TrafficCop(Gtk.Application):
         self.svc_start_time = 'unknown'
 
         # Ensure config file exists.
-        # self.fallback_config = self.get_config_files()[0]
         utils.ensure_config_file(self.default_config, self.config_file)
 
         # Populate config viewport.
@@ -171,86 +168,11 @@ class TrafficCop(Gtk.Application):
         t_bw_updater = threading.Thread(name='T-bw', target=worker.bw_updater, args=(self,))
         t_bw_updater.start()
 
-        # # Verify execution with elevated privileges.
-        # if os.geteuid() != 0:
-        #     bin = '/usr/bin/traffic-cop'
-        #     print("traffic-cop needs elevated privileges; e.g.:\n\n$ pkexec", bin, "\n$ sudo", bin)
-        #     exit(1)
-        # logging.debug(f"do_activate end")
-
     def update_service_props(self):
         # Get true service start time.
         self.tt_pid, self.tt_start, self.tt_dev = utils.get_tt_info()
-
         # Get state of systemd service.
-        cmd = [
-            "systemctl",
-            "show",
-            "traffic-cop.service",
-            "--no-pager",
-        ]
-        # status_output = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        systemctl_p = subprocess.run(cmd, capture_output=True, encoding='UTF8')
-        logging.debug(f"{' '.join(cmd)}; exit status: {systemctl_p.returncode}")
-        # utils.print_result(cmd, status_output)
-        if systemctl_p.returncode != 0:
-            # Status output error. Probably due to kernel incompatibility after update.
-            #   Fall back to trying "systemctl status" command instead.
-            self.unit_file_state = 'unknown'
-            self.active_state = 'unknown'
-            self.svc_start_time = 'unknown'
-            cmd.pop(1)
-            cmd.insert(1, "status")
-            # status_output = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            systemctl_p = subprocess.run(cmd, capture_output=True, encoding='UTF8')
-            # utils.print_result(cmd, status_output)
-            logging.debug(f"{' '.join(cmd)}; exit status: {systemctl_p.returncode}")
-            output_list = systemctl_p.stdout.splitlines()
-            #print(output_list)
-            upat = '\s+Loaded: loaded \(/etc/systemd/system/traffic-cop.service; (.*);.*'
-            apat = '\s+Active: (.*) since .*'
-            for line in output_list:
-                try:
-                    match = re.match(upat, line)
-                    self.unit_file_state = match.group(1)
-                except:
-                    pass
-                try:
-                    match = re.match(apat, line)
-                    self.active_state = match.group(1).split()[0]
-                except:
-                    pass
-
-        # Continue with processing of "systemctl show" command output.
-        output_list = systemctl_p.stdout.splitlines()
-
-        # Parse output for unit state and active state.
-        toggle_unit_state = self.builder.get_object('toggle_unit_state')
-        toggle_active = self.builder.get_object('toggle_active')
-        upat = '^UnitFileState=.*$'
-        apat = '^ActiveState=.*$'
-        tpat = '^ExecMainStartTimestamp=.*$'
-        for line in output_list:
-            try:
-                match = re.match(upat, line)
-                self.unit_file_state = match.group().split('=')[1]
-                continue
-            except:
-                pass
-            try:
-                match = re.match(apat, line)
-                self.active_state = match.group().split('=')[1]
-                continue
-            except:
-                pass
-            try:
-                match = re.match(tpat, line)
-                # The format for self.tt_start (Tue Oct 13 06:15:14 2020) isn't
-                #   compatible with the log file viewer. (Tue 2020-10-13 05:59:00 WAT)
-                self.svc_start_time = match.group().split('=')[1]
-                continue
-            except:
-                pass
+        self.unit_file_state, self.active_state, self.svc_start_time = utils.get_systemd_service_props()
 
     def update_state_toggles(self):
         # Update toggle buttons according to current states.
@@ -328,54 +250,33 @@ class TrafficCop(Gtk.Application):
         self.update_button_states()
 
     def stop_service(self):
-        # cmd = ["systemctl", "stop", "traffic-cop.service"]
-        cmd = ["pkexec", "systemctl", "stop", "traffic-cop.service"]
-        result = subprocess.run(cmd)
-        logging.debug(f"{' '.join(cmd)}; exit status: {result.returncode}")
-        # utils.print_result(cmd, result)
+        rc = utils.run_command(["systemctl", "stop", "traffic-cop.service"])
         self.update_info_widgets()
+        if rc != 0:
+            return False
+        else:
+            return True
 
     def start_service(self):
-        # cmd = ["systemctl", "start", "traffic-cop.service"]
-        cmd = ["pkexec", "systemctl", "start", "traffic-cop.service"]
-        result = subprocess.run(cmd)
-        # utils.print_result(cmd, result)
-        logging.debug(f"{' '.join(cmd)}; exit status: {result.returncode}")
+        rc = utils.run_command(["systemctl", "start", "traffic-cop.service"])
+        if rc != 0:
+            self.update_info_widgets()
+            return False
         self.tt_pid, self.tt_start, self.tt_dev = utils.wait_for_tt_start()
         self.update_info_widgets()
         self.treeview_config = self.update_treeview_config()
+        return True
 
     def restart_service(self):
-        # cmd = ["systemctl", "restart", "traffic-cop.service"]
-        cmd = ["pkexec", "systemctl", "restart", "traffic-cop.service"]
-        result = subprocess.run(cmd)
-        logging.debug(f"{' '.join(cmd)}; exit status: {result.returncode}")
-        # utils.print_result(cmd, result)
+        rc = utils.run_command(["systemctl", "restart", "traffic-cop.service"])
+        if rc != 0:
+            self.update_info_widgets()
+            return False
         self.tt_pid, self.tt_start, self.tt_dev = utils.wait_for_tt_start()
         # Check service status and update widgets.
         self.update_info_widgets()
         self.treeview_config = self.update_treeview_config()
-
-    # def get_config_files(self):
-    #     """
-    #     List all backup configs, default config, and current config file.
-    #     """
-    #     # /etc/traffic-cop-1.yaml.bak
-    #     # /etc/traffic-cop.yaml
-    #     # /etc/traffic-cop.yaml.bak
-    #     config_dir = self.config_file.parent
-    #     # Get initial backup config first.
-    #     config_files = [f for f in config_dir.glob('traffic-cop.yaml.bak*')]
-    #     # Add newer config backups.
-    #     newer = [f for f in config_dir.glob('traffic-cop-*.yaml.bak')]
-    #     config_files.extend(sorted(newer))
-    #     # Reverse the list order to put newest first.
-    #     config_files = config_files.copy()[::-1]
-    #     # Append default and current configs.
-    #     config_files.append(self.default_config)
-    #     config_files.append(self.config_file)
-    #     logging.info(f"Config files: {', '.join([str(f) for f in config_files])}")
-    #     return config_files
+        return True
 
     def get_user_confirmation(self):
         text = "The current configuration file will be overwritten."

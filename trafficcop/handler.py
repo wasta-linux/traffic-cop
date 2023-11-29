@@ -23,16 +23,19 @@ class Handler():
             cmd = ["systemctl", "enable", "traffic-cop.service"]
         elif state == False:
             cmd = ["systemctl", "disable", "traffic-cop.service"]
-        subprocess.run(cmd)
+        p = subprocess.run(cmd)
         # Ensure that toggle button matches true state.
         self.app.update_state_toggles()
 
     def on_toggle_active_state_set(self, widget, state):
         # Apply new state to the service.
-        if state == True:
-            self.app.start_service()
-        elif state == False:
-            self.app.stop_service()
+        current_status = utils.get_systemd_service_props()[1]
+        if state == True and current_status != 'active':
+            if not self.app.start_service():
+                self.app.toggle_active.set_state(False)
+        elif state == False and current_status != 'inactive':
+            if not self.app.stop_service():
+                self.app.toggle_active.set_state(True)
 
     def on_button_restart_clicked(self, folder_obj):
         self.app.restart_service()
@@ -44,13 +47,6 @@ class Handler():
 
     def on_button_config_clicked(self, *args):
         # NOTE: Button later renamed to "Edit..."
-        # # Ensure that backup is made of current config.
-        # logging.debug('Ensuring backup of current config.')
-        # current = Path("/etc/traffic-cop.yaml")
-        # utils.ensure_config_backup(current)
-
-        # # Update fallback config file.
-        # self.app.fallback_config = self.app.get_config_files()[0]
 
         target = worker.handle_button_config_clicked
         t_config = threading.Thread(name='T-cfg', target=target)
@@ -86,13 +82,10 @@ class Handler():
             logging.debug("Using default config.")
             return
 
-        # # Ensure that backup is made of current config.
-        # logging.debug('Ensuring backup of current config.')
-        # utils.ensure_config_backup(current)
-
         # Copy /usr/share/traffic-cop/traffic-cop.yaml.default to /etc/traffic-cop.yaml;
         #   overwrite existing file.
         logging.debug('Setting config file to default.')
-        p = subprocess.run(['sudo', '/usr/bin/traffic-cop', '--reset'])
-        # Restart the service to apply default configuration.
-        self.app.restart_service()
+        p = subprocess.run(['/usr/bin/traffic-cop', '--reset'])
+        # Restart the service, if running, to apply default configuration.
+        if self.app.active_state == 'active':
+            self.app.restart_service()

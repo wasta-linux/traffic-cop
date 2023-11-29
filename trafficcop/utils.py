@@ -111,6 +111,49 @@ def convert_bytes_to_human(bytes_per_sec):
                 unit = 'GB/s'
     return [rate, unit]
 
+def get_systemd_service_props():
+    unit_file_state = 'unknown'
+    active_state = 'unknown'
+    svc_start_time = 'unknown'
+
+    cmd = [
+        "systemctl",
+        "show",
+        "traffic-cop.service",
+        "--no-pager",
+    ]
+    p = subprocess.run(cmd, capture_output=True, encoding='UTF8')
+    if p.returncode != 0:
+        # Status output error. Probably due to kernel incompatibility after update.
+        #   Fall back to trying "systemctl status" command instead.
+        cmd[1] = "status"
+        p_status = subprocess.run(cmd, capture_output=True, encoding='UTF8')
+        output_list = p_status.stdout.splitlines()
+        upat = '\s+Loaded: loaded \(/etc/systemd/system/traffic-cop.service; (.*);.*'
+        apat = '\s+Active: (.*) since .*'
+        for line in output_list:
+            try:
+                match = re.match(upat, line)
+                unit_file_state = match.group(1)
+            except:
+                pass
+            try:
+                match = re.match(apat, line)
+                active_state = match.group(1).split()[0]
+            except:
+                pass
+
+    # Continue with processing of "systemctl show" command output.
+    for line in p.stdout.splitlines():
+        if line.startswith('UnitFileState='):
+            unit_file_state = line.split('=')[1]
+        elif line.startswith('ActiveState='):
+            active_state = line.split('=')[1]
+        elif line.startswith('ExecMainStartTimestamp='):
+            svc_start_time = line.split('=')[1]
+
+    return (unit_file_state, active_state, svc_start_time)
+
 def get_tt_info(exe='/usr/bin/tt'):
     procs = psutil.process_iter(attrs=['pid', 'cmdline', 'create_time'])
     for proc in procs:
@@ -156,51 +199,18 @@ def check_diff(file1, file2):
 def ensure_config_file(default_config_file, runtime_config_file):
     if not runtime_config_file.is_file():
         logging.debug(f"Copying {default_config_file} to {runtime_config_file}.")
-        p = subprocess.run(['sudo', '/usr/bin/traffic-cop', '--reset'])
+        p = subprocess.run(['/usr/bin/traffic-cop', '--reset'])
 
 def reset_config_file(default, active):
     # NOTE: This runs with elevated privileges.
     shutil.copyfile(default, active)
 
-# def ensure_config_backup(current):
-#     '''
-#     Make a backup of user config; add index to file name if other backup already exists.
-#     '''
-#     already = "Current config already backed up at"
-#     name = current.stem
-#     suffix = ".yaml.bak"
-#     backup = current.with_suffix(suffix)
-#     if not backup.exists():
-#         shutil.copyfile(current, backup)
-#         return True
-#     diff = check_diff(current, backup)
-#     if diff == 0:
-#         logging.debug(f"{already} {backup}")
-#         return True
-#     # The backup file exists and is different from current config:
-#     #   need to choose new backup file name and check again.
-#     # Add index to name.
-#     i = 1
-#     # Set new backup file name.
-#     backup = current.with_name(name + '-' + str(i)).with_suffix(suffix)
-#     if not backup.exists():
-#         shutil.copyfile(current, backup)
-#         return True
-#     diff = check_diff(current, backup)
-#     if diff == 0:
-#         logging.debug(already, backup)
-#         return True
-#     while backup.exists():
-#         # Keep trying new indices until an available one is found.
-#         i += 1
-#         backup = current.with_name(name + '-' + str(i)).with_suffix(suffix)
-#         if not backup.exists():
-#             shutil.copyfile(current, backup)
-#             return True
-#         diff = check_diff(current, backup)
-#         if diff == 0:
-#             logging.debug(already, backup)
-#             return True
+def run_command(command_tokens):
+    p = subprocess.run(command_tokens, capture_output=True, encoding='UTF8')
+    logging.debug(p.stdout)
+    if p.returncode != 0:
+        logging.error(p.stderr)
+    return p.returncode
 
 def set_up_logging(log_level):
     # Define log file.
