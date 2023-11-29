@@ -38,9 +38,7 @@ def handle_button_log_clicked(app):
 
 def handle_button_config_clicked():
     # Open config file in text editor.
-    cmd = ["env", "SUDO_EDITOR=/usr/bin/gnome-text-editor", "sudoedit", "/etc/traffic-cop.yaml"]
-    result = subprocess.run(cmd)
-    logging.debug(f"command: '{' '.join(cmd)}'; exit status: {result.returncode}")
+    rc = utils.run_command(["/usr/bin/gnome-text-editor", "admin:///etc/traffic-cop.yaml"])
 
 def handle_config_changed():
     pass
