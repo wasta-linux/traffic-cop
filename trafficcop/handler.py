@@ -14,7 +14,6 @@ class Handler():
         self.app = app
 
     def gtk_widget_destroy(self, *args):
-        #print(threading.enumerate(), 'threads')
         self.app.quit()
 
     def on_toggle_unit_state_state_set(self, widget, state):
@@ -60,9 +59,13 @@ class Handler():
 
     def on_button_apply_clicked(self, button):
         # Update the config file variable.
-        self.app.config_file = Path('/etc/traffic-cop.yaml')
-        # Restart the service to apply updated configuration.
-        self.app.restart_service()
+        if self.app.active_state == 'active':
+            # Restart the service to apply updated configuration.
+            self.app.restart_service()
+        else:
+            # Check service status and update widgets.
+            # self.app.update_info_widgets()
+            self.app.treeview_config = self.app.update_treeview_config()
         # Disable the button again.
         button.set_sensitive(False)
 

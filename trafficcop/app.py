@@ -54,6 +54,7 @@ class TrafficCop(Gtk.Application):
 
         # Define app-wide variables.
         self.tt_pid, self.tt_start, self.tt_dev = utils.get_tt_info()
+        self.unit_file_state, self.active_state, self.svc_start_time = utils.get_systemd_service_props()
         self.config_file = Path('/etc/traffic-cop.yaml')
         self.default_config = Path("/usr/share/traffic-cop/traffic-cop.yaml.default")
         self.config_store = ''
