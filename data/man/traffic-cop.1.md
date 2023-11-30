@@ -1,6 +1,6 @@
 % Traffic Cop
 % Nate Marti
-% January 2022
+% December 2023
 
 # NAME
 Traffic Cop - Manage bandwidth usage by app or process.
@@ -14,6 +14,9 @@ Traffic Cop - Manage bandwidth usage by app or process.
 
 **-d**, **--debug**
 : Print DEBUG info to stdout.
+
+**-r**, **--reset**
+: Reset config file to default.
 
 **-V**, **--version**
 : Print traffic-cop version number and exit.
