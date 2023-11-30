@@ -1,3 +1,10 @@
+traffic-cop (1.1.2.8) noble; urgency=medium
+
+  * Improve performance with threading changes.
+  * Fix Config reset bug/freeze.
+
+ -- Nate Marti <nate_marti@sil.org>  Thu, 30 Nov 2023 10:12:15 +0100
+
 traffic-cop (1.1.2.7) noble; urgency=medium
 
   * Add nethogs action to policykit.
