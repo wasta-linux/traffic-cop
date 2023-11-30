@@ -5,11 +5,9 @@ import gi
 import logging
 import psutil
 import subprocess
-import sys
 import time
 
 from gi.repository import GLib
-from pathlib import Path
 
 from . import rates
 from . import utils

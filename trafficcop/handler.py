@@ -49,9 +49,9 @@ class Handler():
             "--follow",
             "--output=cat",
             "--no-pager",
-            "--since=\'" + app.svc_start_time + "\'",
+            "--since=\'" + self.app.svc_start_time + "\'",
         ]
-        if app.svc_start_time == 'unknown':
+        if self.app.svc_start_time == 'unknown':
             cmd.pop() # remove the "--since" option
         cmd_txt = " ".join(cmd)
         subprocess.Popen(cmd_txt, shell=True) # terminal closes immediately without shell=True
@@ -68,8 +68,6 @@ class Handler():
             # Restart the service to apply updated configuration.
             self.app.restart_service()
         else:
-            self.app.config_store = config.convert_yaml_to_store(self.app.config_file)
-            # self.app.update_info_widgets()
             self.app.treeview_config = self.app.update_treeview_config()
         # Disable the button again.
         button.set_sensitive(False)
