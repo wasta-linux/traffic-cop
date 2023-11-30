@@ -269,7 +269,7 @@ def validate_yaml(yaml_file):
     return status
 
 def convert_yaml_to_store(f, test=False):
-    logging.debug(f"Reading config from {f}")
+    logging.info(f"Reading config from {f}")
 
     # Validate YAML file.
     if not validate_yaml(f):

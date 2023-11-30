@@ -24,6 +24,7 @@ def update_scopes(scopes, queue, store):
     '''
     Retrieve items from nethogs queue and show updated download and upload rates.
     '''
+    # logging.debug(f"rates.update_scopes({scopes}, {queue}, {store})")
     # Get time of current iteration.
     epoch = time.time()
 
