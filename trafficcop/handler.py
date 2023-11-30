@@ -91,7 +91,7 @@ class Handler():
         # Copy /usr/share/traffic-cop/traffic-cop.yaml.default to /etc/traffic-cop.yaml;
         #   overwrite existing file.
         logging.debug('Setting config file to default.')
-        rc = utils.run_command(['/usr/bin/traffic-cop', '--reset'])
+        rc = utils.run_command(['pkexec', '/usr/bin/traffic-cop', '--reset'])
 
         # Update window and restart service, if active.
         self.on_button_apply_clicked(self.app.button_apply)
