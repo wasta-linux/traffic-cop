@@ -59,7 +59,6 @@ class TrafficCop(Gtk.Application):
         self.default_config = Path("/usr/share/traffic-cop/traffic-cop.yaml.default")
         self.config_store = ''
         self.net_hogs_q = queue.Queue()
-        self.threads = []
         self.main_pid = os.getpid()
         self.managed_ports = {}
         self.scopes = {}
@@ -123,8 +122,7 @@ class TrafficCop(Gtk.Application):
         if 'reset' in self.options:
             # Ensure elevated privileges.
             if os.geteuid() != 0:
-                bin_path = '/usr/bin/traffic-cop'
-                p = subprocess.run(['/usr/bin/traffic-cop', '--reset'])
+                p = subprocess.run(['pkexec', '/usr/bin/traffic-cop', '--reset'])
                 exit(p.returncode)
 
             # Reset the config file.
@@ -164,13 +162,13 @@ class TrafficCop(Gtk.Application):
         target = worker.parse_nethogs_to_queue
         args = self.net_hogs_q, self.window
         self.t_nethogs = threading.Thread(target=target, args=args, name='T-nh')
+        self.t_nethogs.daemon = True
         self.t_nethogs.start()
-        self.threads.append(self.t_nethogs)
 
         # Start bandwidth rate updater.
         self.t_bw_updater = threading.Thread(name='T-bw', target=worker.bw_updater, args=(self,))
+        self.t_bw_updater.daemon = True
         self.t_bw_updater.start()
-        self.threads.append(self.t_bw_updater)
 
     def update_service_props(self):
         # Get true service start time.
@@ -239,12 +237,12 @@ class TrafficCop(Gtk.Application):
             if config_epoch > tt_epoch:
                 logging.warning("The config file has been modified since the service started.\nApplying the changes now.")
                 self.restart_service()
-            else:
-                new_config_store = config.convert_yaml_to_store(self.config_file)
-                self.config_store = config.update_config_store(self.config_store, new_config_store)
+                return config.create_config_treeview(self.config_store)
 
-        treeview_config = config.create_config_treeview(self.config_store)
-        return treeview_config
+        new_config_store = config.convert_yaml_to_store(self.config_file)
+        self.config_store = config.update_config_store(self.config_store, new_config_store)
+
+        return config.create_config_treeview(self.config_store)
 
     def update_info_widgets(self):
         self.update_service_props()
