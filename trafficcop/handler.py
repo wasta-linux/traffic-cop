@@ -5,8 +5,8 @@ import subprocess
 import threading
 from pathlib import Path
 
+from . import config
 from . import utils
-from . import worker
 
 
 class Handler():
@@ -14,8 +14,6 @@ class Handler():
         self.app = app
 
     def gtk_widget_destroy(self, *args):
-        for t in self.app.threads:
-            t.join(timeout=0.5)
         self.app.quit()
 
     def on_toggle_unit_state_state_set(self, widget, state):
@@ -42,33 +40,35 @@ class Handler():
         self.app.restart_service()
 
     def on_button_log_clicked(self, *args):
-        target = worker.handle_button_log_clicked
-        self.app.t_log = threading.Thread(name='T-log', target=target, args=(self.app,))
-        self.app.t_log.start()
-        self.app.threads.append(self.app.t_log)
+        # Follow the log since service start time in a terminal window.
+        cmd = [
+            "gnome-terminal",
+            "--",
+            "journalctl",
+            "--unit=traffic-cop.service",
+            "--follow",
+            "--output=cat",
+            "--no-pager",
+            "--since=\'" + app.svc_start_time + "\'",
+        ]
+        if app.svc_start_time == 'unknown':
+            cmd.pop() # remove the "--since" option
+        cmd_txt = " ".join(cmd)
+        subprocess.Popen(cmd_txt, shell=True) # terminal closes immediately without shell=True
 
     def on_button_config_clicked(self, *args):
         # NOTE: Button later renamed to "Edit..."
-
-        rc = worker.handle_button_config_clicked()
-        # target = worker.handle_button_config_clicked
-        # self.app.t_config = threading.Thread(name='T-cfg', target=target)
-        # self.app.t_config.start()
-        # self.app.threads.append(self.app.t_config)
+        subprocess.Popen(["/usr/bin/gnome-text-editor", "admin:///etc/traffic-cop.yaml"])
         # Set apply button to "sensitive".
         self.app.button_apply.set_sensitive(True)
 
-        #target = worker.handle_config_changed
-        #t_restart = threading.Thread(target=target)
-        #t_restart.start()
-
     def on_button_apply_clicked(self, button):
-        # Update the config file variable.
+        # Check service status and update widgets.
         if self.app.active_state == 'active':
             # Restart the service to apply updated configuration.
             self.app.restart_service()
         else:
-            # Check service status and update widgets.
+            self.app.config_store = config.convert_yaml_to_store(self.app.config_file)
             # self.app.update_info_widgets()
             self.app.treeview_config = self.app.update_treeview_config()
         # Disable the button again.
@@ -93,7 +93,7 @@ class Handler():
         # Copy /usr/share/traffic-cop/traffic-cop.yaml.default to /etc/traffic-cop.yaml;
         #   overwrite existing file.
         logging.debug('Setting config file to default.')
-        p = subprocess.run(['/usr/bin/traffic-cop', '--reset'])
-        # Restart the service, if running, to apply default configuration.
-        if self.app.active_state == 'active':
-            self.app.restart_service()
+        rc = utils.run_command(['/usr/bin/traffic-cop', '--reset'])
+
+        # Update window and restart service, if active.
+        self.on_button_apply_clicked(self.app.button_apply)

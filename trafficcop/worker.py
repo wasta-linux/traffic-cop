@@ -15,37 +15,6 @@ from . import rates
 from . import utils
 
 
-def handle_button_log_clicked(app):
-    # Follow the log since service start time in a terminal window.
-    cmd = [
-        "gnome-terminal",
-        "--",
-        "journalctl",
-        "--unit=traffic-cop.service",
-        "--follow",
-        "--output=cat",
-        "--no-pager",
-        "--since=\'" + app.svc_start_time + "\'",
-    ]
-    if app.svc_start_time == 'unknown':
-        # Likely due to a kernel/systemd incompatibility.
-        cmd.pop() # to remove the "--since" option
-    cmd_txt = " ".join(cmd)
-    # result = subprocess.run(cmd_txt, shell=True)
-    result = subprocess.run(cmd)
-    logging.debug(f"command: '{' '.join(cmd)}'; exit status: {result.returncode}")
-    return
-
-def handle_button_config_clicked():
-    # Open config file in text editor.
-    rc = utils.run_command(["/usr/bin/gnome-text-editor", "admin:///etc/traffic-cop.yaml"])
-
-def handle_config_changed():
-    pass
-    #app.app.update_service_props()
-    #read_time = app.app.tt_start
-    #print("Service Start Time =", read_time)
-
 def parse_nethogs_to_queue(queue, main_window):
     delay = 1
     device = utils.get_net_device()
@@ -55,7 +24,7 @@ def parse_nethogs_to_queue(queue, main_window):
     udp_support = utils.nethogs_supports_udp(utils.get_nethogs_version())
     logging.debug(f"{udp_support=}")
     if udp_support:
-        cmd.insert(1, '-C')
+        cmd.insert(2, '-C')
     logging.debug(f"{cmd=}")
     stdout = subprocess.PIPE
     stderr = subprocess.STDOUT
