@@ -1,3 +1,9 @@
+traffic-cop (1.1.2.9) noble; urgency=medium
+
+  * Fix error when opening log viewer.
+
+ -- Nate Marti <nate_marti@sil.org>  Thu, 30 Nov 2023 12:09:30 +0100
+
 traffic-cop (1.1.2.8) noble; urgency=medium
 
   * Improve performance with threading changes.
