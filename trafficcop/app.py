@@ -161,12 +161,12 @@ class TrafficCop(Gtk.Application):
         # Start tracking operations (self.window must be shown first).
         target = worker.parse_nethogs_to_queue
         args = self.net_hogs_q, self.window
-        self.t_nethogs = threading.Thread(target=target, args=args, name='T-nh')
+        self.t_nethogs = threading.Thread(target=target, args=args, name='T-nh', daemon=True)
         self.t_nethogs.daemon = True
         self.t_nethogs.start()
 
         # Start bandwidth rate updater.
-        self.t_bw_updater = threading.Thread(name='T-bw', target=worker.bw_updater, args=(self,))
+        self.t_bw_updater = threading.Thread(name='T-bw', target=worker.bw_updater, args=(self,), daemon=True)
         self.t_bw_updater.daemon = True
         self.t_bw_updater.start()
 
