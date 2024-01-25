@@ -269,7 +269,8 @@ class TrafficCop(Gtk.Application):
         self.update_button_states()
 
     def stop_service(self):
-        rc = utils.run_command(["systemctl", "stop", "traffic-cop.service"])
+        cmd = ["pkexec", "systemctl", "stop", "traffic-cop.service"]
+        rc = utils.run_command(cmd)
         self.update_info_widgets()
         if rc != 0:
             return False
@@ -277,7 +278,8 @@ class TrafficCop(Gtk.Application):
             return True
 
     def start_service(self):
-        rc = utils.run_command(["systemctl", "start", "traffic-cop.service"])
+        cmd = ["pkexec", "systemctl", "start", "traffic-cop.service"]
+        rc = utils.run_command(cmd)
         if rc != 0:
             self.update_info_widgets()
             return False
@@ -287,7 +289,8 @@ class TrafficCop(Gtk.Application):
         return True
 
     def restart_service(self):
-        rc = utils.run_command(["systemctl", "restart", "traffic-cop.service"])
+        cmd = ["pkexec", "systemctl", "restart", "traffic-cop.service"]
+        rc = utils.run_command(cmd)
         if rc != 0:
             self.update_info_widgets()
             return False

@@ -21,9 +21,9 @@ class Handler():
     def on_toggle_unit_state_state_set(self, widget, state):
         # Apply new state to the service.
         if state is True:
-            cmd = ["systemctl", "enable", "traffic-cop.service"]
+            cmd = ["pkexec", "systemctl", "enable", "traffic-cop.service"]
         elif state is False:
-            cmd = ["systemctl", "disable", "traffic-cop.service"]
+            cmd = ["pkexec", "systemctl", "disable", "traffic-cop.service"]
         subprocess.run(cmd)
         # Ensure that toggle button matches true state.
         self.app.update_state_toggles()

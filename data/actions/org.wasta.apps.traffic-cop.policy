@@ -43,4 +43,15 @@
     <annotate key="org.freedesktop.policykit.exec.path">/usr/bin/kill</annotate>
   </action>
 
+  <action id="org.wasta.apps.traffic-cop.systemctl">
+    <description>Manage systemctl service</description>
+    <message>Authentication is required to manage systemctl services.</message>
+    <defaults>
+      <allow_any>auth_admin_keep</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/bin/systemctl</annotate>
+  </action>
+
 </policyconfig>
