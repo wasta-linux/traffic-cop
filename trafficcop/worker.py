@@ -13,7 +13,7 @@ from . import rates
 from . import utils
 
 
-def parse_nethogs_to_queue(queue, main_window):
+def parse_nethogs_to_queue(queue):
     delay = 1
     device = utils.get_net_device()
     # If no device is given, then all devices are monitored, which double-counts
@@ -27,17 +27,10 @@ def parse_nethogs_to_queue(queue, main_window):
     stdout = subprocess.PIPE
     stderr = subprocess.STDOUT
     with subprocess.Popen(cmd, stdout=stdout, stderr=stderr, encoding='utf-8') as p:
-        while main_window.is_visible():
+        while p.poll() is None:
             # There is a long wait for each line: sometimes nearly 2 seconds!
             line = p.stdout.readline().rstrip()
-            if line == '':
-                if p.poll() is None:
-                    # Output line is blank; process still running.
-                    continue
-                else:
-                    # Process completed (shouldn't happen).
-                    break
-            elif line.startswith('/') or line.startswith('unknown'):
+            if line.startswith('/') or line.startswith('unknown'):
                 queue.put(line)
 
 def bw_updater(app):

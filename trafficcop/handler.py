@@ -1,6 +1,7 @@
 """ Signal handler module. """
 
 import logging
+import psutil
 import subprocess
 import threading
 from pathlib import Path
@@ -14,6 +15,9 @@ class Handler():
         self.app = app
 
     def gtk_widget_destroy(self, *args):
+        p = psutil.Process(self.app.app_pid)
+        for c in p.children():
+            subprocess.run(['pkexec', 'kill', str(c.pid)])
         self.app.quit()
 
     def on_toggle_unit_state_state_set(self, widget, state):

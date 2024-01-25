@@ -53,6 +53,7 @@ class TrafficCop(Gtk.Application):
             self.ui_dir = str(current_file_path.parents[1] / 'data' / 'ui')
 
         # Define app-wide variables.
+        self.app_pid = os.getpid()
         self.tt_pid, self.tt_start, self.tt_dev = utils.get_tt_info()
         self.unit_file_state, self.active_state, self.svc_start_time = utils.get_systemd_service_props()
         self.config_file = Path('/etc/traffic-cop.yaml')
@@ -159,15 +160,21 @@ class TrafficCop(Gtk.Application):
         self.window.show()
 
         # Start tracking operations (self.window must be shown first).
-        target = worker.parse_nethogs_to_queue
-        args = self.net_hogs_q, self.window
-        self.t_nethogs = threading.Thread(target=target, args=args, name='T-nh', daemon=True)
-        self.t_nethogs.daemon = True
+        self.t_nethogs = threading.Thread(
+            name='T-nh',
+            target=worker.parse_nethogs_to_queue,
+            args=(self.net_hogs_q,),
+            daemon=True,
+        )
         self.t_nethogs.start()
 
         # Start bandwidth rate updater.
-        self.t_bw_updater = threading.Thread(name='T-bw', target=worker.bw_updater, args=(self,), daemon=True)
-        self.t_bw_updater.daemon = True
+        self.t_bw_updater = threading.Thread(
+            name='T-bw',
+            target=worker.bw_updater,
+            args=(self,),
+            daemon=True,
+        )
         self.t_bw_updater.start()
 
     def update_service_props(self):
