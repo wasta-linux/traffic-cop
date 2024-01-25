@@ -4,6 +4,7 @@ import logging
 import netifaces
 import os
 import psutil
+import re
 import shutil
 import subprocess
 import sys
@@ -19,13 +20,16 @@ def setlocale(*args, **kw):
     yield locale.setlocale(*args, **kw)
     locale.setlocale(locale.LC_ALL, saved)
 
+
 def print_result(cmd, result):
     print(f"'{' '.join(cmd)}' -> {result.returncode}")
+
 
 def get_net_device():
     '''
     Return the gateway internet device.
-    If there are multiple gateways found, then the highest priority device is returned:
+    If there are multiple gateways found, then the highest priority device is
+    returned:
         1. Bluetooth (AF_BLUETOOTH)
         2. Cellular (AF_PPPOX)
         3. IPv6 (AF_INET6)
@@ -47,6 +51,7 @@ def get_net_device():
 
     return device
 
+
 def get_nethogs_version():
     cmd = ['nethogs', '-V']
     stdout = subprocess.PIPE
@@ -56,23 +61,27 @@ def get_nethogs_version():
     logging.info(f"nethogs version: {version}")
     return version
 
+
 def nethogs_supports_udp(version_string):
     if version.parse(version_string) >= version.parse('0.8.6'):
         return True
     else:
         return False
 
+
 def convert_epoch_to_human(epoch):
     human = time.ctime(epoch)
     return human
+
 
 def convert_human_to_epoch(human):
     if human:
         with setlocale(locale.LC_TIME, "C"):
             try:
-                s = time.strptime(human, '%a %b %d %H:%M:%S %Y') # Tue Oct 13 05:59:00 2020
+                # Ex: Tue Oct 13 05:59:00 2020
+                s = time.strptime(human, '%a %b %d %H:%M:%S %Y')
                 # Convert object to epoch format.
-                epoch = time.mktime(s) # Tue 2020-10-13 05:59:00 WAT
+                epoch = time.mktime(s)  # Tue 2020-10-13 05:59:00 WAT
             except ValueError as v:
                 logging.debug(repr(v))
                 epoch = ''
@@ -83,14 +92,17 @@ def convert_human_to_epoch(human):
         epoch = human
     return epoch
 
+
 def convert_human_to_log(human):
     # Convert human to object.
     #   Doesn't work: prob b/c my locale is FR but human is reported in EN.
     with setlocale(locale.LC_TIME, "C"):
-        s = time.strptime(human, '%a %b %d %H:%M:%S %Y') # Tue Oct 13 05:59:00 2020
-        # Convert object to log format.
-        log = time.strftime('%a %Y-%m-%d %H:%M%S %Z', s) # Tue 2020-10-13 05:59:00 WAT
+        # Ex: Tue Oct 13 05:59:00 2020
+        s = time.strptime(human, '%a %b %d %H:%M:%S %Y')
+        # Convert object to log format; ex: Tue 2020-10-13 05:59:00 WAT
+        log = time.strftime('%a %Y-%m-%d %H:%M%S %Z', s)
         return log
+
 
 def convert_bytes_to_human(bytes_per_sec):
     logging.debug(f"{bytes_per_sec=}")
@@ -111,6 +123,7 @@ def convert_bytes_to_human(bytes_per_sec):
                 unit = 'GB/s'
     return [rate, unit]
 
+
 def get_systemd_service_props():
     unit_file_state = 'unknown'
     active_state = 'unknown'
@@ -124,23 +137,23 @@ def get_systemd_service_props():
     ]
     p = subprocess.run(cmd, capture_output=True, encoding='UTF8')
     if p.returncode != 0:
-        # Status output error. Probably due to kernel incompatibility after update.
-        #   Fall back to trying "systemctl status" command instead.
+        # Status output error. Probably due to kernel incompatibility after
+        # update. Fall back to trying "systemctl status" command instead.
         cmd[1] = "status"
         p_status = subprocess.run(cmd, capture_output=True, encoding='UTF8')
         output_list = p_status.stdout.splitlines()
-        upat = '\s+Loaded: loaded \(/etc/systemd/system/traffic-cop.service; (.*);.*'
-        apat = '\s+Active: (.*) since .*'
+        upat = r'\s+Loaded: loaded \(/etc/systemd/system/traffic-cop.service; (.*);.*'  # noqa: E501
+        apat = r'\s+Active: (.*) since .*'
         for line in output_list:
             try:
                 match = re.match(upat, line)
                 unit_file_state = match.group(1)
-            except:
+            except AttributeError:
                 pass
             try:
                 match = re.match(apat, line)
                 active_state = match.group(1).split()[0]
-            except:
+            except AttributeError:
                 pass
 
     # Continue with processing of "systemctl show" command output.
@@ -154,6 +167,7 @@ def get_systemd_service_props():
 
     return (unit_file_state, active_state, svc_start_time)
 
+
 def get_tt_info(exe='/usr/bin/tt'):
     procs = psutil.process_iter(attrs=['pid', 'cmdline', 'create_time'])
     for proc in procs:
@@ -162,15 +176,22 @@ def get_tt_info(exe='/usr/bin/tt'):
                 proc.dev = proc.cmdline()[2]
                 proc.start = convert_epoch_to_human(proc.create_time())
                 return proc.pid, proc.start, proc.dev
-        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess, IndexError):
+        except (
+            psutil.NoSuchProcess,
+            psutil.AccessDenied,
+            psutil.ZombieProcess,
+            IndexError
+        ):
             pass
     return -1, '', ''
+
 
 def get_file_mtime(f):
     statinfo = os.stat(f)
     mtime = convert_epoch_to_human(statinfo.st_mtime)
     logging.debug(f"{f} last modified: {mtime}")
     return mtime
+
 
 def wait_for_tt_start(exe='/usr/bin/tt', maxct=100):
     '''
@@ -188,6 +209,7 @@ def wait_for_tt_start(exe='/usr/bin/tt', maxct=100):
         ct += 1
     return tt_pid, tt_start, tt_dev
 
+
 def check_diff(file1, file2):
     result = subprocess.run(
         ["diff", file1, file2],
@@ -196,14 +218,18 @@ def check_diff(file1, file2):
     )
     return result.returncode
 
+
 def ensure_config_file(default_config_file, runtime_config_file):
     if not runtime_config_file.is_file():
-        logging.debug(f"Copying {default_config_file} to {runtime_config_file}.")
-        p = subprocess.run(['/usr/bin/traffic-cop', '--reset'])
+        msg = f"Copying {default_config_file} to {runtime_config_file}."
+        logging.debug(msg)
+        subprocess.run(['/usr/bin/traffic-cop', '--reset'])
+
 
 def reset_config_file(default, active):
     # NOTE: This runs with elevated privileges.
     shutil.copyfile(default, active)
+
 
 def run_command(command_tokens):
     p = subprocess.run(command_tokens, capture_output=True, encoding='UTF8')
@@ -211,6 +237,7 @@ def run_command(command_tokens):
     if p.returncode != 0:
         logging.error(p.stderr)
     return p.returncode
+
 
 def set_up_logging(log_level):
     # Define log file.

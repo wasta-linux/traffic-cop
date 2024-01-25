@@ -7,6 +7,7 @@ import time
 
 from . import utils
 
+
 def update_global_scope():
     '''
     Update system bandwidth usage for the Global scope.
@@ -20,9 +21,11 @@ def update_global_scope():
     bytes_dn = net_io[dev].bytes_recv
     return [bytes_up, bytes_dn]
 
+
 def update_scopes(scopes, queue, store):
     '''
-    Retrieve items from nethogs queue and show updated download and upload rates.
+    Retrieve items from nethogs queue and show updated download and upload
+    rates.
     '''
     # logging.debug(f"rates.update_scopes({scopes}, {queue}, {store})")
     # Get time of current iteration.
@@ -47,7 +50,7 @@ def update_scopes(scopes, queue, store):
         b_dn = int(float(line[-1]))
         if b_up == 0 and b_dn == 0:
             # No traffic to track.
-            logging.debug(f"Not updating GUI for 0-byte traffic.")
+            logging.debug("Not updating GUI for 0-byte traffic.")
             continue
         scope = match_cmdline_to_scope(exe_pid_usr, store, proc_list)
         if not scope:
@@ -88,6 +91,7 @@ def update_scopes(scopes, queue, store):
     logging.debug(f"Updated data: {scopes}")
     return scopes
 
+
 def get_proc_info_from_pid(pid, proc_list):
     # Match pid to process_iter.
     proc_info = {}
@@ -102,26 +106,30 @@ def get_proc_info_from_pid(pid, proc_list):
     logging.debug(f"Process info for pid {pid}: {proc_info}")
     return proc_info
 
+
 def get_configured_scopes(store):
     # Get scope names, match-type, and match-str from store.
     scopes = {}
     for row in store:
-        if row[0] == 'Global' or row[0] == 'unknown TCP' or row[0] == 'unknown UDP':
+        if row[0] in ['Global', 'unknown TCP', 'unknown UDP']:
             continue
         scopes[row[0]] = row[11:]
     logging.debug(f"Configured scopes: {scopes}")
     return scopes
 
+
 def match_proc_to_scope(proc, scopes):
     scope = None
     for s, data in scopes.items():
         if data[0] == 'name' or data[0] == 'cmdline':
-            # See if scope 'name' or 'cmdline' matches proc 'name' or 'cmdline'.
+            # Check if scope 'name' or 'cmdline' matches proc 'name' or
+            # 'cmdline'.
             target_string = proc[data[0]]
             if data[0] == 'cmdline':
                 # cmdline property from psutil given as list instead of string.
                 target_string = ' '.join(proc[data[0]])
-            logging.debug(f"Checking if \"{data[1]}\" matches \"{target_string}\"")
+            msg = f"Checking if \"{data[1]}\" matches \"{target_string}\""
+            logging.debug(msg)
             match = re.match(data[1], target_string)
             if match:
                 scope = s
@@ -139,10 +147,12 @@ def match_proc_to_scope(proc, scopes):
     logging.debug(f"Process \"{proc}\" matched to scope \"{scope}\"")
     return scope
 
+
 def match_cmdline_to_scope(exe_pid_usr, store, proc_list):
     """
     Return Traffic Cop scope that matches pid of each line of nethogs output.
-    This scope is used for displaying each process' traffic in the Traffic Cop window.
+    This scope is used for displaying each process' traffic in the Traffic Cop
+    window.
     Match (scope) options:
     - None (default)
     - unknown TCP
@@ -172,13 +182,14 @@ def match_cmdline_to_scope(exe_pid_usr, store, proc_list):
             scopes = get_configured_scopes(store)
             if scopes:
                 scope = match_proc_to_scope(matched_proc, scopes)
-
-    logging.debug(f"nethogs line \"{exe_pid_usr}\" matched to scope \"{scope}\"")
+    msg = f"nethogs line \"{exe_pid_usr}\" matched to scope \"{scope}\""
+    logging.debug(msg)
     return scope
 
+
 def update_store_rates(store, rates_dict):
-    # WARNING: This assumes the scopes in rates_dict are the same as those in store.
-    #   In other words it assumes that the store hasn't changed.
+    # WARNING: This assumes the scopes in rates_dict are the same as those in
+    # store. In other words it assumes that the store hasn't changed.
     logging.debug(f"New bandwidth rates for GUI: {rates_dict}")
     for row in store:
         for scope, values in rates_dict.items():
@@ -199,6 +210,7 @@ def update_store_rates(store, rates_dict):
                     row[9] = f"{values[2]:.0f}"
                     row[10] = values[3]
                 break
+
 
 def calculate_data_rates(data):
     t1 = data['now']['time']

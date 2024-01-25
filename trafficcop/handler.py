@@ -3,10 +3,8 @@
 import logging
 import psutil
 import subprocess
-import threading
 from pathlib import Path
 
-from . import config
 from . import utils
 
 
@@ -22,21 +20,21 @@ class Handler():
 
     def on_toggle_unit_state_state_set(self, widget, state):
         # Apply new state to the service.
-        if state == True:
+        if state is True:
             cmd = ["systemctl", "enable", "traffic-cop.service"]
-        elif state == False:
+        elif state is False:
             cmd = ["systemctl", "disable", "traffic-cop.service"]
-        p = subprocess.run(cmd)
+        subprocess.run(cmd)
         # Ensure that toggle button matches true state.
         self.app.update_state_toggles()
 
     def on_toggle_active_state_set(self, widget, state):
         # Apply new state to the service.
         current_status = utils.get_systemd_service_props()[1]
-        if state == True and current_status != 'active':
+        if state is True and current_status != 'active':
             if not self.app.start_service():
                 self.app.toggle_active.set_state(False)
-        elif state == False and current_status != 'inactive':
+        elif state is False and current_status != 'inactive':
             if not self.app.stop_service():
                 self.app.toggle_active.set_state(True)
 
@@ -56,13 +54,14 @@ class Handler():
             "--since=\'" + self.app.svc_start_time + "\'",
         ]
         if self.app.svc_start_time == 'unknown':
-            cmd.pop() # remove the "--since" option
+            cmd.pop()  # remove the "--since" option
         cmd_txt = " ".join(cmd)
-        subprocess.Popen(cmd_txt, shell=True) # terminal closes immediately without shell=True
+        subprocess.Popen(cmd_txt, shell=True)  # shell=True keeps terminal open
 
     def on_button_config_clicked(self, *args):
         # NOTE: Button later renamed to "Edit..."
-        subprocess.Popen(["/usr/bin/gnome-text-editor", "admin:///etc/traffic-cop.yaml"])
+        cmd = ["/usr/bin/gnome-text-editor", "admin:///etc/traffic-cop.yaml"]
+        subprocess.Popen(cmd)
         # Set apply button to "sensitive".
         self.app.button_apply.set_sensitive(True)
 
@@ -92,10 +91,10 @@ class Handler():
             logging.debug("Using default config.")
             return
 
-        # Copy /usr/share/traffic-cop/traffic-cop.yaml.default to /etc/traffic-cop.yaml;
-        #   overwrite existing file.
+        # Copy /usr/share/traffic-cop/traffic-cop.yaml.default to
+        # /etc/traffic-cop.yaml; overwrite existing file.
         logging.debug('Setting config file to default.')
-        rc = utils.run_command(['pkexec', '/usr/bin/traffic-cop', '--reset'])
+        utils.run_command(['pkexec', '/usr/bin/traffic-cop', '--reset'])
 
         # Update window and restart service, if active.
         self.on_button_apply_clicked(self.app.button_apply)

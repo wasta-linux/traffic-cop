@@ -6,8 +6,8 @@ import subprocess
 import yaml
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
-from pathlib import Path
+from gi.repository import Gtk       # noqa: E402
+from pathlib import Path            # noqa: E402
 
 
 VERSION = '1.1.2'
@@ -15,7 +15,6 @@ VERSION = '1.1.2'
 
 def create_config_treeview(store):
     tree = Gtk.TreeView(model=store)
-    #tree.set_grid_lines(Gtk.TreeViewGridLines.HORIZONTAL)
     r_left = Gtk.CellRendererText()
     r_left.set_alignment(0.0, 0.0)
     r_center = Gtk.CellRendererText()
@@ -61,6 +60,7 @@ def create_config_treeview(store):
     tree.append_column(c_up_u)
     return tree
 
+
 def update_config_store(store, new_store):
     # For each row in new_store:
     for nrow in new_store:
@@ -88,14 +88,14 @@ def update_config_store(store, new_store):
             nscope = nrow[0]
             if scope == nscope:
                 match = True
-                #break
         if not match:
             # ...remove old store row.
             store.remove(row.iter)
     return store
 
+
 def convert_dict_to_list(name, v_dict):
-    if not type(v_dict) == dict:
+    if not type(v_dict) is dict:
         # Scope (Global or Process) not given valid config.
         v_dict = {}
 
@@ -106,14 +106,14 @@ def convert_dict_to_list(name, v_dict):
     up_min = v_dict.get('upload-minimum', '')
     dn_pri = v_dict.get('download-priority', 9)
     up_pri = v_dict.get('upload-priority', 9)
-    dn_rate = ' '*4 #'{:.2f}'.format(0)
-    dn_unit = ' '*4 #'B/s'
-    up_rate = ' '*4 #'{:.2f}'.format(0)
-    up_unit = ' '*4 #'B/s'
+    dn_rate = ' '*4  # '{:.2f}'.format(0)
+    dn_unit = ' '*4  # 'B/s'
+    up_rate = ' '*4  # '{:.2f}'.format(0)
+    up_unit = ' '*4  # 'B/s'
 
     # The match section can theoretically be any of the attributes that
-    #   psutil.process exposes. This could get really complicated. Just going to
-    #   support 'name', 'exe', and 'cmdline'. Others seem less useful.
+    #   psutil.process exposes. This could get really complicated. Just going
+    #   to support 'name', 'exe', and 'cmdline'. Others seem less useful.
     # List of possible attributes:
     #   https://psutil.readthedocs.io/en/latest/index.html#psutil.Process.as_dict
     # Get match type and match string.
@@ -144,6 +144,7 @@ def convert_dict_to_list(name, v_dict):
     logging.debug(f"Process data for {name}: {info_list}")
     return info_list
 
+
 def convert_config_rates_to_human(config):
     '''
     Takes single string of numbers+letters and outputs a list:
@@ -162,7 +163,7 @@ def convert_config_rates_to_human(config):
        - bit = bits per second
        - bps = bytes per second
     '''
-    re_qty = re.match('^[0-9]+', config)
+    # re_qty = re.match('^[0-9]+', config)
     re_full = re.match('(^[0-9]+)([kmgt]?[i]?)([bipst]{3,})$', config)
     qty = float(re_full.group(1))   # 128, etc.
     pref_in = re_full.group(2)      # k or ki, etc.
@@ -174,8 +175,8 @@ def convert_config_rates_to_human(config):
 
     pref_out = ''
     if len(pref_in) == 2 and pref_in[1] == 'i':
-         # Take BINARY bytes * 1000/1024 to get SI bytes.
-         qty = qty*1000/1024
+        # Take BINARY bytes * 1000/1024 to get SI bytes.
+        qty = qty*1000/1024
 
     if pref_in == 'k' or pref_in == 'ki':
         pref_out = 'K'
@@ -201,6 +202,7 @@ def convert_config_rates_to_human(config):
     unit_out = pref_out + 'B/s'
     return ["{:.0f}".format(qty), unit_out]
 
+
 def convert_config_list_units(c_list):
     # 0: scope
     # 1: max down
@@ -208,12 +210,13 @@ def convert_config_list_units(c_list):
     # 3: min down
     # 4: min up
     c_list = c_list.copy()
-    for i in range(1,5):
+    for i in range(1, 5):
         if not c_list[i]:
             continue
         h_list = convert_config_rates_to_human(c_list[i])
         c_list[i] = ' '.join(h_list)
     return c_list
+
 
 def validate_yaml(yaml_file):
     """
@@ -268,6 +271,7 @@ def validate_yaml(yaml_file):
 
     return status
 
+
 def convert_yaml_to_store(f, test=False):
     logging.info(f"Reading config from {f}")
 
@@ -275,7 +279,7 @@ def convert_yaml_to_store(f, test=False):
     if not validate_yaml(f):
         logging.error(f"Invalid config file: {f}")
         # Use default config file.
-        logging.error(f"Resetting to default config.")
+        logging.error("Resetting to default config.")
         if not test:
             p = subprocess.run('/usr/bin/traffic-cop', '--reset')
 
@@ -336,11 +340,15 @@ def convert_yaml_to_store(f, test=False):
     store = convert_dict_to_store(config_dict)
     return store
 
+
 def convert_dict_to_store(data_dict):
-    store = Gtk.ListStore(str, str, str, str, str, int, int, str, str, str, str, str, str)
+    store = Gtk.ListStore(
+        str, str, str, str, str, int,
+        int, str, str, str, str, str, str,
+    )
     for k, v in data_dict.items():
-        l = convert_dict_to_list(k, v)
-        logging.debug(f"New ListStore line: {l}")
-        l = convert_config_list_units(l) # in-place updating of list items
-        l_iter = store.append(l)
+        lst = convert_dict_to_list(k, v)
+        logging.debug(f"New ListStore line: {lst}")
+        lst = convert_config_list_units(lst)  # in-place updating of list items
+        store.append(lst)
     return store

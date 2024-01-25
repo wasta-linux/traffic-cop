@@ -3,31 +3,28 @@
 import gi
 import logging
 import os
-import psutil
 import queue
-import re
 import subprocess
 import sys
 import threading
-# import time
 
 from pathlib import Path
 current_file_path = Path(__file__)
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gio
-from gi.repository import GLib
-from gi.repository import Gtk
+from gi.repository import Gio       # noqa: E402
+from gi.repository import GLib      # noqa: E402
+from gi.repository import Gtk       # noqa: E402
 
-from . import config
-from . import handler
-from . import utils
-from . import worker
-
+from . import config                # noqa: E402
+from . import handler               # noqa: E402
+from . import utils                 # noqa: E402
+from . import worker                # noqa: E402
 
 
 class TrafficCop(Gtk.Application):
-    # Ref: https://python-gtk-3-tutorial.readthedocs.io/en/latest/application.html
+    # Ref:
+    # https://python-gtk-3-tutorial.readthedocs.io/en/latest/application.html
     def __init__(self):
         super().__init__(
             application_id='org.wasta.apps.traffic-cop',
@@ -49,15 +46,18 @@ class TrafficCop(Gtk.Application):
 
         # Get UI location based on current file location.
         self.ui_dir = '/usr/share/traffic-cop/ui'
-        if str(current_file_path.parents[1]) != '/usr/lib/python3/dist-packages':
+        pkgs = '/usr/lib/python3/dist-packages'
+        if str(current_file_path.parents[1]) != pkgs:
             self.ui_dir = str(current_file_path.parents[1] / 'data' / 'ui')
 
         # Define app-wide variables.
         self.app_pid = os.getpid()
         self.tt_pid, self.tt_start, self.tt_dev = utils.get_tt_info()
-        self.unit_file_state, self.active_state, self.svc_start_time = utils.get_systemd_service_props()
+        props = utils.get_systemd_service_props()
+        self.unit_file_state, self.active_state, self.svc_start_time = props
         self.config_file = Path('/etc/traffic-cop.yaml')
-        self.default_config = Path("/usr/share/traffic-cop/traffic-cop.yaml.default")
+        cfg = Path("/usr/share/traffic-cop/traffic-cop.yaml.default")
+        self.default_config = cfg
         self.config_store = ''
         self.net_hogs_q = queue.Queue()
         self.main_pid = os.getpid()
@@ -66,11 +66,11 @@ class TrafficCop(Gtk.Application):
 
     def do_startup(self):
         '''
-        do_startup is the setting up of the app, either for "activate" or for "open".
-        It runs just after __init__.
+        do_startup is the setting up of the app, either for "activate" or for
+        "open". It runs just after __init__.
         '''
         # Set log level.
-        self.log_level=logging.INFO
+        self.log_level = logging.INFO
 
         # Define builder and its widgets.
         Gtk.Application.do_startup(self)
@@ -118,12 +118,13 @@ class TrafficCop(Gtk.Application):
             exit(0)
 
         if 'debug' in self.options:
-            self.log_level=logging.DEBUG
+            self.log_level = logging.DEBUG
 
         if 'reset' in self.options:
             # Ensure elevated privileges.
             if os.geteuid() != 0:
-                p = subprocess.run(['pkexec', '/usr/bin/traffic-cop', '--reset'])
+                cmd = ['pkexec', '/usr/bin/traffic-cop', '--reset']
+                p = subprocess.run(cmd)
                 exit(p.returncode)
 
             # Reset the config file.
@@ -136,7 +137,8 @@ class TrafficCop(Gtk.Application):
 
     def do_activate(self):
         '''
-        do_activate is the displaying of the window. It runs last after do_command_line.
+        do_activate is the displaying of the window. It runs last after
+        do_command_line.
         '''
 
         # Start logging.
@@ -181,7 +183,8 @@ class TrafficCop(Gtk.Application):
         # Get true service start time.
         self.tt_pid, self.tt_start, self.tt_dev = utils.get_tt_info()
         # Get state of systemd service.
-        self.unit_file_state, self.active_state, self.svc_start_time = utils.get_systemd_service_props()
+        props = utils.get_systemd_service_props()
+        self.unit_file_state, self.active_state, self.svc_start_time = props
 
     def update_state_toggles(self):
         # Update toggle buttons according to current states.
@@ -207,15 +210,15 @@ class TrafficCop(Gtk.Application):
         # TODO: I need a way to "watch" the config file if setting the "Apply"
         #   button to "sensitive" is ever going to work.
         # Update "Apply" button to be insensitive.
-        #self.button_apply.set_sensitive(False)
+        # self.button_apply.set_sensitive(False)
         # Update "Reset..." button to be insensitive.
         self.button_reset.set_sensitive(False)
 
         # Set "Apply" button to proper state.
-        #config_mtime = utils.get_file_mtime(self.config_file)
-        #if self.tt_start and config_mtime > self.tt_start:
-            # Update "Apply" button to be sensitive.
-            #self.button_apply.set_sensitive(True)
+        # config_mtime = utils.get_file_mtime(self.config_file)
+        # if self.tt_start and config_mtime > self.tt_start:
+        #     Update "Apply" button to be sensitive.
+        #     self.button_apply.set_sensitive(True)
 
         # Set "Reset..." button to proper state.
         diff_configs = utils.check_diff(self.config_file, self.default_config)
@@ -225,8 +228,8 @@ class TrafficCop(Gtk.Application):
 
     def update_treeview_config(self):
         '''
-        This handles both initial config display and updating the display if the
-        config file is edited externally.
+        This handles both initial config display and updating the display if
+        the config file is edited externally.
         '''
         if not self.config_store:
             # App is just starting up; create the store.
@@ -234,20 +237,27 @@ class TrafficCop(Gtk.Application):
 
         if self.tt_start:
             # Service is running.
-            # Check if modified time of config file is newer than last service restart.
+            # Check if modified time of config file is newer than last service
+            # restart.
             #   The config could have been externally modified. If so, those
-            #   changes could be shown here in the app without them actually having
-            #   been applied.
+            #   changes could be shown here in the app without them actually
+            #   having been applied.
             config_mtime = utils.get_file_mtime(self.config_file)
             config_epoch = utils.convert_human_to_epoch(config_mtime)
             tt_epoch = utils.convert_human_to_epoch(self.tt_start)
             if config_epoch > tt_epoch:
-                logging.warning("The config file has been modified since the service started.\nApplying the changes now.")
+                logging.warning(
+                    "The config file has been modified since the service"
+                    "started.\nApplying the changes now."
+                )
                 self.restart_service()
                 return config.create_config_treeview(self.config_store)
 
         new_config_store = config.convert_yaml_to_store(self.config_file)
-        self.config_store = config.update_config_store(self.config_store, new_config_store)
+        self.config_store = config.update_config_store(
+            self.config_store,
+            new_config_store,
+        )
 
         return config.create_config_treeview(self.config_store)
 
@@ -293,8 +303,13 @@ class TrafficCop(Gtk.Application):
         dialog = Gtk.Dialog(
             'Reset to default configuration?',
             self.window,
-            None, #Gtk.Dialog.DESTROY_WITH_PARENT,
-            (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_OK, Gtk.ResponseType.OK)
+            None,  # Gtk.Dialog.DESTROY_WITH_PARENT,
+            (
+                Gtk.STOCK_CANCEL,
+                Gtk.ResponseType.CANCEL,
+                Gtk.STOCK_OK,
+                Gtk.ResponseType.OK,
+            )
         )
         hmarg = 80
         vmarg = 20
