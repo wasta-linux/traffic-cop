@@ -1,3 +1,10 @@
+traffic-cop (1.2) noble; urgency=medium
+
+  * Allow auto-authenticating through pkexec.
+  * Conform to PEP8.
+
+ -- Nate Marti <nate_marti@sil.org>  Thu, 25 Jan 2024 16:19:55 +0100
+
 traffic-cop (1.1.3) noble; urgency=medium
 
   * Run threads as daemons to avoid orphaning them.
