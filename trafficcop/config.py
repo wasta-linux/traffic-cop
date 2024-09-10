@@ -281,7 +281,7 @@ def convert_yaml_to_store(f, test=False):
         # Use default config file.
         logging.error("Resetting to default config.")
         if not test:
-            p = subprocess.run('/usr/bin/traffic-cop', '--reset')
+            p = subprocess.run(['/usr/bin/traffic-cop', '--reset'])
 
     # Get dict from yaml file.
     with open(f, 'r') as stream:
