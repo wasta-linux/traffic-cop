@@ -17,10 +17,13 @@ if bin_parent_dir.stem != 'usr':
     sys.path.insert(0, modules_dir)
     runmode = 'uninstalled'
 
-# Set NO_AT_BRIDGE env variable in order to mute spurious dbind-WARNING while importing module.
+# Set NO_AT_BRIDGE env variable in order to mute spurious dbind-WARNING while
+# importing module.
 orig = getenv("NO_AT_BRIDGE")
 environ["NO_AT_BRIDGE"] = '1'
-from trafficcop import app
+
+from trafficcop import app  # noqa: E402
+
 if orig:
     environ["NO_AT_BRIDGE"] = orig
 else:

@@ -27,7 +27,8 @@ setup(
     },
     # Handling direct file installation here rather than with debian/install.
     data_files=[
-        ('share/polkit-1/actions', ['data/actions/org.wasta.apps.traffic-cop.policy']),
+        ('share/polkit-1/actions',
+            ['data/actions/org.wasta.apps.traffic-cop.policy']),
         ('share/icons/hicolor/scalable/apps', ['data/icons/traffic-cop.svg']),
         ('share/traffic-cop/ui', ['data/ui/mainwindow.glade']),
         ('share/traffic-cop', ['data/traffic-cop.yaml.default']),
