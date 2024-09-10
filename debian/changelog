@@ -1,3 +1,9 @@
+traffic-cop (1.2.1) noble; urgency=medium
+
+  * Fix syntax error preventing reinitialization of config file. 
+
+ -- Nate Marti <nate_marti@sil.org>  Tue, 10 Sep 2024 14:15:33 +0100
+
 traffic-cop (1.2) noble; urgency=medium
 
   * Allow auto-authenticating through pkexec.
