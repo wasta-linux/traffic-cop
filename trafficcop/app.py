@@ -122,6 +122,11 @@ class TrafficCop(Gtk.Application):
         if 'debug' in self.options:
             self.log_level = logging.DEBUG
 
+        # Start logging.
+        utils.set_up_logging(self.log_level)
+        logging.info("Traffic-Cop started.")
+        logging.debug(f"CLI options: {self.options}")
+
         if 'reset' in self.options:
             # Ensure elevated privileges.
             if os.geteuid() != 0:
@@ -154,10 +159,10 @@ class TrafficCop(Gtk.Application):
         do_command_line.
         '''
 
-        # Start logging.
-        utils.set_up_logging(self.log_level)
-        logging.info("Traffic-Cop GUI started.")
-        logging.debug(f"CLI options: {self.options}")
+        # # Start logging.
+        # utils.set_up_logging(self.log_level)
+        # logging.info("Traffic-Cop GUI started.")
+        # logging.debug(f"CLI options: {self.options}")
 
         # Initialize variables.
         self.svc_start_time = 'unknown'

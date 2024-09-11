@@ -1,3 +1,9 @@
+traffic-cop (1.2.7) noble; urgency=medium
+
+  * Start logging during CLI handling.
+
+ -- Nate Marti <nate_marti@sil.org>  Wed, 11 Sep 2024 20:09:45 +0100
+
 traffic-cop (1.2.6) noble; urgency=medium
 
   * Ensure pkexec is used when '--reset' is called by the app.
