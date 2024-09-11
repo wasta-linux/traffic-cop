@@ -1,3 +1,9 @@
+traffic-cop (1.2.2) noble; urgency=medium
+
+  * Rework config reset code to avoid "Failed to register" error.
+
+ -- Nate Marti <nate_marti@sil.org>  Wed, 11 Sep 2024 10:09:16 +0100
+
 traffic-cop (1.2.1) noble; urgency=medium
 
   * Fix syntax error preventing reinitialization of config file. 
