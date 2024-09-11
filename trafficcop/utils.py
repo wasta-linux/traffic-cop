@@ -63,7 +63,8 @@ def get_nethogs_version():
 
 
 def nethogs_supports_udp(version_string):
-    if version.parse(version_string) >= version.parse('0.8.6'):
+    base_version = version_string.split('-')[0]
+    if version.parse(base_version) >= version.parse('0.8.6'):
         return True
     else:
         return False
