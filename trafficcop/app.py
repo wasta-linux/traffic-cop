@@ -116,7 +116,7 @@ class TrafficCop(Gtk.Application):
 
         if 'version' in self.options:
             print(f"traffic-cop {config.VERSION}")
-            self.quit(rc)
+            self.quit()
             sys.exit(rc)
 
         if 'debug' in self.options:
@@ -129,7 +129,7 @@ class TrafficCop(Gtk.Application):
                 cmd = ['pkexec', '/usr/bin/traffic-cop', '--reset']
                 subprocess.Popen(cmd)
                 # Kill original process.
-                self.quit(rc)
+                self.quit()
                 sys.exit(rc)
 
             # Reset the config file.
@@ -141,7 +141,7 @@ class TrafficCop(Gtk.Application):
                 msg = f"Failed to reset config file: {self.config_file}"
                 logging.critical(msg)
                 rc = 1
-            self.quit(rc)
+            self.quit()
             sys.exit(rc)
 
         # Activate app.
@@ -164,7 +164,7 @@ class TrafficCop(Gtk.Application):
 
         # Ensure config file exists.
         if utils.ensure_config_file(self.default_config, self.config_file):
-            self.quit(0)
+            self.quit()
             sys.exit(0)
 
         # Populate config viewport.
