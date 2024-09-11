@@ -10,7 +10,7 @@ from gi.repository import Gtk       # noqa: E402
 from pathlib import Path            # noqa: E402
 
 
-VERSION = '1.2.5'
+VERSION = '1.2.6'
 
 
 def create_config_treeview(store):
