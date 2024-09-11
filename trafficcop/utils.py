@@ -229,7 +229,7 @@ def ensure_config_file(default_config_file, runtime_config_file):
         # time leads to this error: "Failed to register: Timeout was reached"
         # So we need to exit the current process while also launching the reset
         # process, then re-launching the GUI.
-        subprocess.Popen(['/usr/bin/traffic-cop', '--reset'])
+        subprocess.Popen(['pkexec', '/usr/bin/traffic-cop', '--reset'])
         return True
 
 

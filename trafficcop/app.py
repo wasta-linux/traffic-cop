@@ -125,15 +125,15 @@ class TrafficCop(Gtk.Application):
         if 'reset' in self.options:
             # Ensure elevated privileges.
             if os.geteuid() != 0:
-                # Re-launch with pkexec.
-                cmd = ['pkexec', '/usr/bin/traffic-cop', '--reset']
-                subprocess.Popen(cmd)
-                # Kill original process.
+                rc = 1
+                msg = "Please rerun the command with pkexec or sudo."
+                logging.critial(msg)
                 self.quit()
                 sys.exit(rc)
 
             # Reset the config file.
             r = utils.reset_config_file(self.default_config, self.config_file)
+            logging.debug(f"'reset' return value: '{r}'; type: '{type(r)}'")
             if isinstance(r, str) and len(r) > 0:
                 # Success b/c shutil.filecopy returned dest path; launch GUI.
                 subprocess.Popen(['/usr/bin/traffic-cop'])
