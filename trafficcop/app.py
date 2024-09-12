@@ -132,16 +132,24 @@ class TrafficCop(Gtk.Application):
             if os.geteuid() != 0:
                 rc = 1
                 msg = "Please rerun the command with pkexec or sudo."
-                logging.critial(msg)
+                logging.critical(msg)
                 self.quit()
                 sys.exit(rc)
 
             # Reset the config file.
-            r = utils.reset_config_file(self.default_config, self.config_file)
-            logging.debug(f"'reset' return value: '{r}'; type: '{type(r)}'")
-            if isinstance(r, Path):
-                # Success b/c shutil.filecopy returned dest path; launch GUI.
-                subprocess.Popen(['/usr/bin/traffic-cop'])
+            d = utils.reset_config_file(self.default_config, self.config_file)
+            logging.debug(f"'reset' return value: '{d}'; type: '{type(d)}'")
+            if d.is_file():
+                # shutil.filecopy returned dest path & file exists; launch GUI.
+                logging.info("Config successfully reset. Re-launching GUI.")
+                uid = int(os.getenv('PKEXEC_UID'))
+                if not isinstance(uid, int):
+                    logging.critical("Failed to get UID.")
+                    self.quit()
+                    sys.exit(1)
+                user = utils.get_user_from_uid(uid)
+                cmd = ['pkexec', f'--user={user}', '/usr/bin/traffic-cop']
+                subprocess.Popen(cmd)
             else:
                 msg = f"Failed to reset config file: {self.config_file}"
                 logging.critical(msg)

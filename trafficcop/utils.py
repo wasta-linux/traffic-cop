@@ -4,6 +4,7 @@ import logging
 import netifaces
 import os
 import psutil
+import pwd
 import re
 import shutil
 import subprocess
@@ -275,3 +276,7 @@ def set_up_logging(log_level):
 
     # Print is better than logging for quick comprehension.
     print(f'traffic-cop log: {log_file_path}')
+
+
+def get_user_from_uid(uid):
+    return pwd.getpwuid(uid).pw_name
