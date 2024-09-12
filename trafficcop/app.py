@@ -128,6 +128,7 @@ class TrafficCop(Gtk.Application):
         logging.debug(f"CLI options: {self.options}")
 
         if 'reset' in self.options:
+            logging.debug("User has chosen to reset config file.")
             # Ensure elevated privileges.
             if os.geteuid() != 0:
                 rc = 1
@@ -148,6 +149,7 @@ class TrafficCop(Gtk.Application):
                     self.quit()
                     sys.exit(1)
                 user = utils.get_user_from_uid(uid)
+                logging.debug("running pkexec --user=USER traffic-cop")
                 cmd = ['pkexec', f'--user={user}', '/usr/bin/traffic-cop']
                 subprocess.Popen(cmd)
             else:
@@ -176,7 +178,9 @@ class TrafficCop(Gtk.Application):
         self.svc_start_time = 'unknown'
 
         # Ensure config file exists.
-        if utils.ensure_config_file(self.default_config, self.config_file):
+        if not utils.ensure_config_file(self.config_file):
+            # Exit GUI; config file is copied in new process; GUI will be
+            # re-launched after the copy.
             self.quit()
             sys.exit(0)
 

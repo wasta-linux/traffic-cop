@@ -221,21 +221,23 @@ def check_diff(file1, file2):
     return result.returncode
 
 
-def ensure_config_file(default_config_file, runtime_config_file):
+def ensure_config_file(runtime_config_file):
     if not runtime_config_file.is_file():
-        msg = f"Copying {default_config_file} to {runtime_config_file}."
-        logging.debug(msg)
         # Running as separate process so that pkexec can be invoked. However,
         # it seems that having another traffic-cop process running at the same
         # time leads to this error: "Failed to register: Timeout was reached"
         # So we need to exit the current process while also launching the reset
         # process, then re-launching the GUI.
         subprocess.Popen(['pkexec', '/usr/bin/traffic-cop', '--reset'])
+        return False
+    else:
         return True
 
 
 def reset_config_file(default, active):
     # NOTE: This runs with elevated privileges.
+    msg = f'Copying defaul config "{default}" to "{active}".'
+    logging.info(msg)
     return shutil.copyfile(default, active)
 
 
