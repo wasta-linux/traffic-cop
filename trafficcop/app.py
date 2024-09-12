@@ -139,7 +139,7 @@ class TrafficCop(Gtk.Application):
             # Reset the config file.
             r = utils.reset_config_file(self.default_config, self.config_file)
             logging.debug(f"'reset' return value: '{r}'; type: '{type(r)}'")
-            if isinstance(r, str) and len(r) > 0:
+            if isinstance(r, Path):
                 # Success b/c shutil.filecopy returned dest path; launch GUI.
                 subprocess.Popen(['/usr/bin/traffic-cop'])
             else:
