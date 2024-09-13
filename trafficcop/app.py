@@ -95,11 +95,6 @@ class TrafficCop(Gtk.Application):
         self.add_window(self.window)
         self.window.set_icon_name('traffic-cop')
 
-        # # Populate config viewport.
-        # self.treeview_config = self.update_treeview_config()
-        # self.treeview_config.show()
-        # self.vp_config.add(self.treeview_config)
-
         # Populate widget data.
         self.button_apply.set_sensitive(False)
 
@@ -141,18 +136,8 @@ class TrafficCop(Gtk.Application):
             d = utils.reset_config_file(self.default_config, self.config_file)
             logging.debug(f"'reset' return value: '{d}'; type: '{type(d)}'")
             if d.is_file():
-                # shutil.filecopy returned dest path & file exists; launch GUI.
+                # shutil.filecopy returned dest path & file exists.
                 logging.info("Config file successfully reset.")
-                # logging.info("Config successfully reset. Re-launching GUI.")
-                # uid = int(os.getenv('PKEXEC_UID'))
-                # if not isinstance(uid, int):
-                #     logging.critical("Failed to get UID.")
-                #     self.quit()
-                #     sys.exit(1)
-                # user = utils.get_user_from_uid(uid)
-                # logging.debug(f"running 'pkexec --user {user} traffic-cop'")
-                # cmd = ['pkexec', '--user', user, '/usr/bin/traffic-cop']
-                # subprocess.Popen(cmd)
             else:
                 msg = f"Failed to reset config file: {self.config_file}"
                 logging.critical(msg)
@@ -170,21 +155,11 @@ class TrafficCop(Gtk.Application):
         do_command_line.
         '''
 
-        # # Start logging.
-        # utils.set_up_logging(self.log_level)
-        # logging.info("Traffic-Cop GUI started.")
-        # logging.debug(f"CLI options: {self.options}")
-
         # Initialize variables.
         self.svc_start_time = 'unknown'
 
         # Ensure config file exists.
-        if not utils.ensure_config_file(self.config_file):
-            # Exit GUI; config file is copied in new process; GUI will be
-            # re-launched after the copy.
-            # self.quit()
-            # sys.exit(0)
-            pass
+        utils.ensure_config_file(self.config_file)
 
         # Populate config viewport.
         self.treeview_config = self.update_treeview_config()

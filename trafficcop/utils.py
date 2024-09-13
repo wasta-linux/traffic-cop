@@ -223,12 +223,6 @@ def check_diff(file1, file2):
 
 def ensure_config_file(runtime_config_file):
     if not runtime_config_file.is_file():
-        # Running as separate process so that pkexec can be invoked. However,
-        # it seems that having another traffic-cop process running at the same
-        # time leads to this error: "Failed to register: Timeout was reached"
-        # So we need to exit the current process while also launching the reset
-        # process, then re-launching the GUI.
-        # subprocess.Popen(['pkexec', 'traffic-cop', '--reset'])
         subprocess.run(['pkexec', 'traffic-cop', '--reset'])
         return False
     else:
@@ -252,8 +246,10 @@ def run_command(command_tokens):
 
 def set_up_logging(log_level):
     # Define log file.
-    # log_dir = Path('/var', 'log', 'traffic-cop')
-    log_dir = Path('~', '.traffic-cop').expanduser()
+    if os.getuid() == 0:
+        log_dir = Path('/var/log/traffic-cop')
+    else:
+        log_dir = Path('~/.local/state/traffic-cop').expanduser()
     log_dir.mkdir(parents=True, exist_ok=True)
     log_file_path = log_dir / 'traffic-cop.log'
 

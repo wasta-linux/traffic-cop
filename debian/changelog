@@ -1,3 +1,9 @@
+traffic-cop (1.2.12) noble; urgency=medium
+
+  * Update log file location.
+
+ -- Nate Marti <nate_marti@sil.org>  Fri, 13 Sep 2024 18:12:16 +0100
+
 traffic-cop (1.2.11) noble; urgency=medium
 
   * Use --reset in-process with auto-authentication.

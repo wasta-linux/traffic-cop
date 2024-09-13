@@ -18,7 +18,7 @@
     </defaults>
     <annotate key="org.freedesktop.policykit.exec.path">/usr/bin/traffic-cop</annotate>
     <annotate key="org.freedesktop.policykit.exec.argv1">--reset</annotate>
-    <!-- <annotate key="org.freedesktop.policykit.exec.allow_gui">true</annotate> -->
+    <annotate key="org.freedesktop.policykit.exec.allow_gui">true</annotate>
   </action>
 
   <action id="org.wasta.apps.traffic-cop.nethogs">
