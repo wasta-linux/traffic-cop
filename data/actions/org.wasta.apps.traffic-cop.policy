@@ -14,11 +14,11 @@
     <defaults>
       <allow_any>auth_admin_keep</allow_any>
       <allow_inactive>no</allow_inactive>
-      <allow_active>auth_admin_keep</allow_active>
+      <allow_active>yes</allow_active>
     </defaults>
     <annotate key="org.freedesktop.policykit.exec.path">/usr/bin/traffic-cop</annotate>
     <annotate key="org.freedesktop.policykit.exec.argv1">--reset</annotate>
-    <annotate key="org.freedesktop.policykit.exec.allow_gui">true</annotate>
+    <!-- <annotate key="org.freedesktop.policykit.exec.allow_gui">true</annotate> -->
   </action>
 
   <action id="org.wasta.apps.traffic-cop.nethogs">

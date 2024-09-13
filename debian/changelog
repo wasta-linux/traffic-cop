@@ -1,3 +1,9 @@
+traffic-cop (1.2.11) noble; urgency=medium
+
+  * Use --reset in-process with auto-authentication.
+
+ -- Nate Marti <nate_marti@sil.org>  Fri, 13 Sep 2024 15:30:03 +0100
+
 traffic-cop (1.2.10) noble; urgency=medium
 
   * Add additional log output.

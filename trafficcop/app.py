@@ -4,7 +4,7 @@ import gi
 import logging
 import os
 import queue
-import subprocess
+# import subprocess
 import sys
 import threading
 
@@ -142,16 +142,17 @@ class TrafficCop(Gtk.Application):
             logging.debug(f"'reset' return value: '{d}'; type: '{type(d)}'")
             if d.is_file():
                 # shutil.filecopy returned dest path & file exists; launch GUI.
-                logging.info("Config successfully reset. Re-launching GUI.")
-                uid = int(os.getenv('PKEXEC_UID'))
-                if not isinstance(uid, int):
-                    logging.critical("Failed to get UID.")
-                    self.quit()
-                    sys.exit(1)
-                user = utils.get_user_from_uid(uid)
-                logging.debug("running pkexec --user=USER traffic-cop")
-                cmd = ['pkexec', f'--user={user}', '/usr/bin/traffic-cop']
-                subprocess.Popen(cmd)
+                logging.info("Config file successfully reset.")
+                # logging.info("Config successfully reset. Re-launching GUI.")
+                # uid = int(os.getenv('PKEXEC_UID'))
+                # if not isinstance(uid, int):
+                #     logging.critical("Failed to get UID.")
+                #     self.quit()
+                #     sys.exit(1)
+                # user = utils.get_user_from_uid(uid)
+                # logging.debug(f"running 'pkexec --user {user} traffic-cop'")
+                # cmd = ['pkexec', '--user', user, '/usr/bin/traffic-cop']
+                # subprocess.Popen(cmd)
             else:
                 msg = f"Failed to reset config file: {self.config_file}"
                 logging.critical(msg)
@@ -181,8 +182,9 @@ class TrafficCop(Gtk.Application):
         if not utils.ensure_config_file(self.config_file):
             # Exit GUI; config file is copied in new process; GUI will be
             # re-launched after the copy.
-            self.quit()
-            sys.exit(0)
+            # self.quit()
+            # sys.exit(0)
+            pass
 
         # Populate config viewport.
         self.treeview_config = self.update_treeview_config()
