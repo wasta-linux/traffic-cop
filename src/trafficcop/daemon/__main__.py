@@ -1,8 +1,8 @@
 """traffic-copd: the Traffic Cop daemon.
 
 Runs as root. Loads the config (writing the default first if there is
-none), applies the limits, and keeps them up to date until SIGTERM or
-SIGINT, when it removes every rule it added.
+none), applies the limits, keeps them up to date and answers clients on its
+socket until SIGTERM or SIGINT, when it removes every rule it added.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from pathlib import Path
 
 from trafficcop import __version__
 from trafficcop.common import config, paths
-from trafficcop.daemon import nft, supervisor
+from trafficcop.daemon import nft, server, supervisor
 
 log = logging.getLogger("trafficcop.daemon")
 
@@ -34,12 +34,14 @@ def load_or_create(path: Path) -> config.Config:
     return config.load(path)
 
 
-async def _run(cfg: config.Config) -> None:
+async def _run(cfg: config.Config, config_path: Path, socket_path: Path) -> None:
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGTERM, signal.SIGINT):
         loop.add_signal_handler(sig, stop.set)
-    await supervisor.run(supervisor.Supervisor(cfg), stop)
+    sup = supervisor.Supervisor(cfg)
+    api = server.Server(sup, socket_path, config_path)
+    await server.serve(api, lambda: supervisor.run(sup, stop))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -48,6 +50,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--config", type=Path, help=f"config file (default: {paths.get().config})"
+    )
+    parser.add_argument(
+        "--socket", type=Path, help=f"API socket (default: {paths.get().socket})"
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="log debug output")
     parser.add_argument("--version", action="version", version=__version__)
@@ -73,7 +78,7 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     try:
-        asyncio.run(_run(cfg))
+        asyncio.run(_run(cfg, path, args.socket or paths.get().socket))
     except nft.NftError as e:
         log.error("couldn't load the nftables rules: %s", e)
         return 1

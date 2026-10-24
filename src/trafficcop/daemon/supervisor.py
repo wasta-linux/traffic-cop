@@ -10,6 +10,10 @@ WAN interface and loads the nft table for the config's apps. After that,
   move the tc setup when it changes, or retry it if it failed.
 * ``sample`` (every ``METER_INTERVAL``): read the counters into ``usage``.
 
+``pause`` removes the shaping but keeps metering; ``resume`` restores it.
+``apply_config`` switches to a new config while running (marks, rules and
+shaping are rebuilt; per-app totals carry over for apps that remain).
+
 ``Supervisor.stop`` removes everything again. A failure in one check is
 logged and doesn't stop the others; the next run of that check tries again.
 
@@ -82,6 +86,7 @@ class Supervisor:
         self.meter = Meter(self.marks, self._read_counters)
         self.usage: dict[str, Usage] = {}
         self.shaped: str | None = None  # interface the tc setup is on
+        self.paused = False
         self._tc_error: str | None = None
 
     # --- Lifecycle ---------------------------------------------------------------
@@ -109,11 +114,48 @@ class Supervisor:
                 log.info("%s: limiting %s", app, _unit_name(cgroup))
 
     def stop(self) -> None:
-        if self.shaped:
-            self.system.teardown_tc(self.shaped)
-            self.shaped = None
+        self._unshape()
         self.system.teardown_nft()
         log.info("removed all rules")
+
+    # --- Commands ----------------------------------------------------------------
+
+    def pause(self) -> None:
+        """Stop shaping. Apps are still detected and metered."""
+        if self.paused:
+            return
+        self.paused = True
+        self._unshape()
+        log.info("paused: not shaping any traffic")
+
+    def resume(self) -> None:
+        if not self.paused:
+            return
+        self.paused = False
+        log.info("resumed")
+        self._shape()
+
+    def apply_config(self, config: Config) -> None:
+        """Switch to ``config``: rebuild the marks, nft table and shaping.
+
+        Raises ``nft.NftError`` if the new table can't be loaded; the old
+        config then stays in force.
+        """
+        old = (self.config, self.marks, self.detector)
+        self._unshape()
+        self.config = config
+        self.marks = nft.assign_marks(config)
+        self.detector = Detector(config, self.detector.proc)
+        try:
+            self._load_table()
+        except nft.NftError:
+            self.config, self.marks, self.detector = old
+            self._shape()
+            raise
+        self.meter.restarted(self.marks)
+        log.info("applied a new config (apps: %d)", len(config.apps))
+        self._log_changes(old[2].current, self.detector.current)
+        self._shape()
 
     # --- Periodic checks -----------------------------------------------------------
 
@@ -144,11 +186,9 @@ class Supervisor:
             log.info(
                 "WAN interface: %s -> %s", before or "none", self.wan.current or "none"
             )
-        if self.wan.current == self.shaped and self._tc_error is None:
+        if self.paused or (self.wan.current == self.shaped and self._tc_error is None):
             return
-        if self.shaped:
-            self.system.teardown_tc(self.shaped)
-            self.shaped = None
+        self._unshape()
         self._shape()
 
     def sample(self) -> None:
@@ -186,7 +226,14 @@ class Supervisor:
                 if attempt == _NFT_ATTEMPTS:
                     raise
 
+    def _unshape(self) -> None:
+        if self.shaped:
+            self.system.teardown_tc(self.shaped)
+            self.shaped = None
+
     def _shape(self) -> None:
+        if self.paused:
+            return
         wan = self.wan.current
         if wan is None:
             self._tc_error = None

@@ -1,110 +1,12 @@
 import asyncio
 import logging
-from collections.abc import Mapping
-from pathlib import Path
 
 import pytest
 
+from tests.unit.fakes import CFG, SNAPD, ZOOM, ZOOM2, FakeSystem
 from trafficcop.common import config
-from trafficcop.daemon import nft, supervisor, tc
+from trafficcop.daemon import nft, supervisor
 from trafficcop.daemon.meter import Usage
-
-APPS = "user.slice/user-1000.slice/user@1000.service/app.slice"
-ZOOM = f"{APPS}/app-gnome-Zoom-1234.scope"
-ZOOM2 = f"{APPS}/app-gnome-Zoom-5678.scope"
-SNAPD = "system.slice/snapd.service"
-
-CFG = config.loads(
-    """
-version: 2
-apps:
-  Zoom:
-    download: 100kbps
-    upload: 100kbps
-    match: [{exe: /opt/zoom/zoom}]
-  Snap Updates:
-    download: 1mbit
-    match: [{service: snapd}]
-"""
-)
-
-
-class FakeSystem(supervisor.System):
-    """Records what the supervisor asks for; set the attributes to steer it."""
-
-    def __init__(self):
-        self.wan: str | None = "wlp2s0"
-        self.counters: dict[str, tuple[int, int]] = {}
-        self.upload_counters: dict[str, tuple[int, int]] = {}
-        self.nft_failures = 0  # fail this many apply_nft calls first
-        self.tc_error: str | None = None
-        self.log: list[tuple[str, ...]] = []
-
-    def apply_nft(self, script: str) -> None:
-        if self.nft_failures:
-            self.nft_failures -= 1
-            raise nft.NftError("Error: cgroupv2 path fails: No such file or directory")
-        kind = "ruleset" if script.startswith("table") else "update"
-        self.log.append(("nft", kind, script))
-
-    def read_counters(self) -> dict[str, tuple[int, int]]:
-        return self.counters
-
-    def read_upload_counters(self, wan: str) -> dict[str, tuple[int, int]]:
-        return self.upload_counters
-
-    def setup_tc(self, config: config.Config, marks: Mapping[str, int], wan: str):
-        if self.tc_error:
-            raise tc.TcError(self.tc_error)
-        self.log.append(("setup_tc", wan))
-
-    def teardown_tc(self, wan: str) -> None:
-        self.log.append(("teardown_tc", wan))
-
-    def teardown_nft(self) -> None:
-        self.log.append(("teardown_nft",))
-
-    def wan_device(self) -> str | None:
-        return self.wan
-
-    def calls(self, *kinds: str) -> list[tuple[str, ...]]:
-        return [c[:2] if c[0] == "nft" else c for c in self.log if c[0] in kinds]
-
-
-class FakeProc:
-    def __init__(self, root: Path):
-        self.path = root / "proc"
-        self.path.mkdir()
-
-    def add(self, pid: int, cgroup: str, name: str, exe: str) -> None:
-        d = self.path / str(pid)
-        d.mkdir()
-        (d / "cgroup").write_text(f"0::/{cgroup}\n")
-        (d / "comm").write_text(name + "\n")
-        (d / "cmdline").write_text(exe + "\0")
-
-    def remove(self, pid: int) -> None:
-        for f in (self.path / str(pid)).iterdir():
-            f.unlink()
-        (self.path / str(pid)).rmdir()
-
-
-@pytest.fixture
-def proc(tmp_path: Path) -> FakeProc:
-    p = FakeProc(tmp_path)
-    p.add(100, ZOOM, "zoom", "/opt/zoom/zoom")
-    p.add(200, SNAPD, "snapd", "/usr/lib/snapd/snapd")
-    return p
-
-
-@pytest.fixture
-def system() -> FakeSystem:
-    return FakeSystem()
-
-
-@pytest.fixture
-def sup(system: FakeSystem, proc: FakeProc) -> supervisor.Supervisor:
-    return supervisor.Supervisor(CFG, system, proc.path)
 
 
 def test_start(sup: supervisor.Supervisor, system: FakeSystem, caplog):
@@ -299,3 +201,67 @@ def test_run_survives_unexpected_errors(sup, system: FakeSystem, monkeypatch, ca
     asyncio.run(main())
     assert "unexpected error in check_apps" in caplog.text
     assert system.log[-1] == ("teardown_nft",)
+
+
+def test_pause_and_resume(sup: supervisor.Supervisor, system: FakeSystem, caplog):
+    sup.start()
+    system.log.clear()
+    sup.pause()
+    assert system.log == [("teardown_tc", "wlp2s0")]
+    assert sup.paused and sup.shaped is None
+    sup.pause()  # already paused: nothing more
+    assert len(system.log) == 1
+
+    system.wan = "proton0"  # the WAN can change while paused
+    sup.check_wan()
+    assert system.calls("setup_tc") == []
+    assert sup.wan.current == "proton0"
+
+    sup.resume()
+    assert system.calls("setup_tc") == [("setup_tc", "proton0")]
+    assert not sup.paused and sup.shaped == "proton0"
+
+
+def test_paused_still_meters(sup: supervisor.Supervisor, system: FakeSystem):
+    sup.start()
+    sup.pause()
+    system.counters = {"down_1": (3, 900)}
+    sup.sample()
+    assert sup.usage["Zoom"].down_total == 900
+
+
+def test_apply_config(sup: supervisor.Supervisor, system: FakeSystem, caplog):
+    sup.start()
+    system.counters = {"up_1": (5, 4000)}
+    sup.sample()
+    system.log.clear()
+    new = config.loads(
+        "version: 2\napps:\n"
+        "  Firefox: {download: 1mbit, match: [{snap: firefox}]}\n"
+        "  Zoom: {upload: 1mbit, match: [{exe: /opt/zoom/zoom}]}\n"
+    )
+    with caplog.at_level(logging.INFO):
+        sup.apply_config(new)
+    assert system.calls("teardown_tc", "nft", "setup_tc") == [
+        ("teardown_tc", "wlp2s0"),
+        ("nft", "ruleset"),
+        ("setup_tc", "wlp2s0"),
+    ]
+    assert sup.marks == {"Firefox": 0x01000000, "Zoom": 0x02000000}
+    assert "Snap Updates: snapd.service ended" in caplog.text
+
+    system.counters = {"up_2": (1, 500)}  # Zoom moved to slot 2; table rebuilt
+    sup.sample()
+    assert sup.usage["Zoom"].up_total == 4500  # its total carried over
+    assert "Snap Updates" not in sup.usage
+
+
+def test_apply_config_failure_keeps_the_old_config(sup, system: FakeSystem):
+    sup.start()
+    old_marks = sup.marks
+    system.log.clear()
+    system.nft_failures = 3
+    with pytest.raises(nft.NftError):
+        sup.apply_config(config.loads("version: 2\napps: {}\n"))
+    assert sup.config is CFG and sup.marks == old_marks
+    assert sup.shaped == "wlp2s0"  # shaping restored

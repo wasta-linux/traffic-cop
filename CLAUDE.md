@@ -149,7 +149,7 @@ traffic-cop/
 │   ├── common/
 │   │   ├── config.py          # schema, load/validate, rate parsing
 │   │   ├── paths.py           # snap vs development locations; only place that knows
-│   │   ├── protocol.py        # API messages, socket path, versioning
+│   │   ├── protocol.py        # API messages (JSON lines), versioning, client call()
 │   │   └── traffic-cop.yaml.default   # package data (or put in daemon/)
 │   ├── daemon/                # traffic-copd
 │   │   ├── __main__.py        # startup, signals, teardown on exit
@@ -257,4 +257,6 @@ stub `main()`.
 - **Minimum kernel** for `socket cgroupv2` in the output hook (believed to be
   ~5.13+); check on the oldest supported release.
 - Where the default config lives: `common/` vs `daemon/`.
-- Exact `SO_PEERCRED` policy (which groups may write).
+- `SO_PEERCRED` policy: decided for now (root, or a member of `sudo`, `admin`
+  or `wheel`, read from the caller's `/proc/<pid>/status`; see `server.py`).
+  Revisit if the GUI needs per-user permissions.

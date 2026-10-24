@@ -39,6 +39,7 @@ supported; they're rejected with a message saying so.
 
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass
 from importlib import resources
@@ -321,6 +322,42 @@ def load(path: str | Path) -> Config:
     except OSError as e:
         raise ConfigError(f"{path}: cannot read config: {e.strerror}") from None
     return loads(text, source=str(path))
+
+
+_SAVED_HEADER = """\
+### traffic-cop configuration file.
+# Written by traffic-copd. Change it with traffic-cop-ctl or the Traffic Cop
+# app; edits made here are read on the next "traffic-cop-ctl reload".
+# The packaged default config explains every setting.
+
+"""
+
+
+def dumps(config: Config) -> str:
+    """Return ``config`` as YAML text that ``loads`` reads back unchanged."""
+    body = yaml.safe_dump(
+        config.to_dict(), sort_keys=False, allow_unicode=True, default_flow_style=False
+    )
+    assert isinstance(body, str)  # safe_dump returns text when given no stream
+    return _SAVED_HEADER + body
+
+
+def save(config: Config, path: str | Path) -> None:
+    """Write ``config`` to ``path`` atomically (readers never see half a file).
+
+    Comments in the file being replaced are lost.
+    """
+    path = Path(path)
+    tmp = path.with_name(f".{path.name}.tmp")
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(dumps(config))
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+    except OSError as e:
+        tmp.unlink(missing_ok=True)
+        raise ConfigError(f"{path}: cannot write config: {e.strerror}") from None
 
 
 def default_text() -> str:

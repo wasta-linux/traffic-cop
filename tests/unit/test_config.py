@@ -234,3 +234,27 @@ def test_v1_config_is_rejected():
 def test_missing_version():
     with pytest.raises(ConfigError, match="missing 'version: 2'"):
         config.loads("apps: {}\n")
+
+
+# --- Saving -----------------------------------------------------------------------
+
+
+def test_dumps_round_trips():
+    cfg = config.load_default()
+    text = config.dumps(cfg)
+    assert text.startswith("### traffic-cop configuration file.")
+    assert config.loads(text) == cfg
+
+
+def test_save(tmp_path):
+    path = tmp_path / "traffic-cop.yaml"
+    path.write_text("# old\n")
+    cfg = config.loads(GOOD)
+    config.save(cfg, path)
+    assert config.load(path) == cfg
+    assert [p.name for p in tmp_path.iterdir()] == ["traffic-cop.yaml"]  # no temp file
+
+
+def test_save_failure(tmp_path):
+    with pytest.raises(ConfigError, match="cannot write config"):
+        config.save(config.loads(GOOD), tmp_path / "missing-dir" / "x.yaml")
