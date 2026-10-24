@@ -1,22 +1,77 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "traffic-cop"
+description = "Set and monitor per-app bandwidth limits."
+readme = "README.md"
 authors = [
     {name = "Nate Marti", email = "nate_marti@sil.org"},
 ]
-requires-python = ">=3.8"
 license = {file = "LICENSE"}
-readme = "README.md"
+requires-python = ">=3.10"
 dynamic = ["version"]
+classifiers = [
+    "Environment :: X11 Applications :: GTK",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Networking :: Monitoring",
+]
+dependencies = [
+    "PyYAML>=5.4",
+    "schema>=0.7",
+    "psutil>=5.9",      # process exe/cmdline lookups in the detector
+]
+
+[project.optional-dependencies]
+gui = [
+    "PyGObject>=3.42",
+]
+dev = [
+    "pytest>=7",
+    "pytest-cov",
+    "ruff",
+]
+
+[project.urls]
+Homepage = "https://github.com/wasta-linux/traffic-cop"
+Issues = "https://github.com/wasta-linux/traffic-cop/issues"
+
+[project.scripts]
+traffic-copd = "trafficcop.daemon.__main__:main"
+traffic-cop-ctl = "trafficcop.cli.__main__:main"
 
 [project.gui-scripts]
-traffic-cop = "trafficcop.app:main"
-
-[tool.setuptools]
-packages = ["trafficcop"]
+traffic-cop = "trafficcop.gui.__main__:main"
 
 [tool.setuptools.dynamic]
-version = {attr = "trafficcop.config.VERSION"}
+version = {attr = "trafficcop.__version__"}
+
+# [tool.setuptools.packages.find]
+# where = ["src"]
+
+[tool.setuptools.package-data]
+# Ship these inside the package so they can be found with
+# importlib.resources rather than hard-coded /usr/share paths.
+"trafficcop.gui" = ["ui/*.glade"]
+"trafficcop.common" = ["traffic-cop.yaml.default"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --ignore=tests/legacy"
+markers = [
+    "integration: needs root; runs real nft/tc inside a network namespace",
+]
+
+[tool.coverage.run]
+source = ["trafficcop"]
+branch = true
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]

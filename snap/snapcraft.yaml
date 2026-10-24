@@ -1,0 +1,19 @@
+name: wasta-traffic-cop
+base: core26
+confinement: devmode
+grade: devel
+
+platforms:
+  amd64:
+  arm64:
+
+apps:
+  wasta-traffic-cop:
+    command: bin/traffic-cop
+    plugs:
+      - network
+
+parts:
+  wasta-traffic-cop:
+    plugin: python
+    source: .
