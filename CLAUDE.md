@@ -23,8 +23,8 @@ nethogs doesn't report UDP reliably, and many VoIP apps (Zoom, Skype) use UDP.
 
 ## Goal
 
-Rebuild it so it can ship as a **strict-confinement snap**, while still being
-able to build a deb from the same source. The work is being done step by
+Rebuild it to ship as a **strict-confinement snap**. The snap is the only
+package; building a deb is no longer a goal. The work is being done step by
 step, starting with a daemon and CLI; the GUI comes last.
 
 ## Supported systems
@@ -39,7 +39,7 @@ relies on:
 - **Per-app units.** Snap and flatpak apps get their own unit on any such
   desktop (snapd and flatpak create them). Other apps do only if the desktop
   launches them that way: GNOME (`app-gnome-*.scope`) does, and so do
-  terminal tabs in VTE terminals. On desktops that don't, deb apps all land in
+  terminal tabs in VTE terminals. On desktops that don't, other apps all land in
   the login `session-N.scope` and can't be told apart, so only snap, flatpak
   and named-service apps can be limited there.
 - **Kernel/userspace:** nftables with `socket cgroupv2` in the output hook
@@ -47,15 +47,15 @@ relies on:
 
 Tested so far: Ubuntu with GNOME (kernel 7.0, nftables 1.1.6, Python 3.14).
 Not yet tested: KDE (believed to create per-app units), Cinnamon/Mint, Xfce,
-MATE. Packaging: the snap targets Ubuntu and other snapd distros; the deb
-covers distros without snapd, such as Mint.
+MATE. Packaging: snap only, so it needs a distro with snapd. Mint blocks
+snapd by default, so Mint users would have to enable it first.
 
 ## Architecture decisions
 
 **Privilege split.** One root daemon (`traffic-copd`) does everything
 privileged: owns the config, detects apps, applies rules, meters traffic.
 Clients (`traffic-cop-ctl` CLI now, GTK GUI later) never need root; they talk
-to the daemon over a Unix socket in `$SNAP_COMMON` (or `/run` for the deb).
+to the daemon over a Unix socket in `$SNAP_COMMON`.
 The daemon authorizes callers with `SO_PEERCRED`: anyone can read status and
 rates; only `sudo`/`admin` group members can change config or pause/resume.
 (System D-Bus + polkit was considered; it's possible later but needs extra
@@ -130,7 +130,7 @@ traffic-cop/
 │   ├── __init__.py            # __version__ = "2.0.0.dev0"
 │   ├── common/
 │   │   ├── config.py          # schema, load/validate, rate parsing
-│   │   ├── paths.py           # snap vs deb locations; only place that knows
+│   │   ├── paths.py           # snap vs development locations; only place that knows
 │   │   ├── protocol.py        # API messages, socket path, versioning
 │   │   └── traffic-cop.yaml.default   # package data (or put in daemon/)
 │   ├── daemon/                # traffic-copd
@@ -146,15 +146,13 @@ traffic-cop/
 │   ├── cli/__main__.py        # traffic-cop-ctl: status/rates/pause/resume/reload
 │   ├── gui/                   # traffic-cop (later): app, window, client, ui/*.glade
 │   └── legacy/                # old modules, reference only; never imported
-├── data/                      # desktop file, icon, systemd unit (for the deb)
+├── data/                      # desktop file, icon
 ├── tests/
 │   ├── unit/                  # no root: config, detector (fake cgroup tree), command generation
 │   ├── integration/           # root: real nft/tc in a network namespace (veth pair)
-│   ├── data/                  # old good/bad config samples, still useful
 │   └── legacy/                # old tests, ignored by pytest
 ├── tools/zoom-limit.sh        # working proof of concept
-├── snap/                      # snapcraft.yaml, hooks/install
-└── debian/
+└── snap/                      # snapcraft.yaml, hooks/install
 ```
 
 ## pyproject.toml (already on the branch)
@@ -165,17 +163,14 @@ traffic-cop/
 - Dependencies: PyYAML, psutil. Extras: `gui` (PyGObject), `dev`
   (pytest, pytest-cov, ruff).
 - The daemon also needs `python3-nftables` (the official libnftables
-  bindings), which isn't on PyPI: it's a deb dependency, and the snap must
-  stage it (it pulls in `libnftables1`). `nft.py` imports it lazily, so the
+  bindings), which isn't on PyPI: the snap must stage it (it pulls in
+  `libnftables1`). `nft.py` imports it lazily, so the
   unit tests run without it.
 - Entry points: `traffic-copd`, `traffic-cop-ctl` (scripts); `traffic-cop`
   (gui-scripts).
 - Package data: `gui/ui/*.glade`, the default config. Load these with
   `importlib.resources`, never hardcoded `/usr/share` paths.
 - pytest marker `integration`; add `--ignore=tests/legacy` to `addopts`.
-- Ubuntu 22.04's setuptools (59) can't read `[project]`. Either keep a
-  minimal `setup.py` shim for 22.04 debs or drop 22.04 and use
-  `pybuild-plugin-pyproject`. **Undecided.**
 
 ## Dev environment
 
@@ -187,6 +182,7 @@ python3 -m venv --system-site-packages .venv && . .venv/bin/activate
 pip install -e '.[dev]'
 pytest -m "not integration"
 sudo .venv/bin/traffic-copd          # sudo resets PATH, so use the full path
+                                     # (dev paths: /var/lib/traffic-cop-dev, /run/traffic-cop-dev)
 sudo .venv/bin/pytest -m integration
 ```
 
@@ -204,7 +200,7 @@ stub `main()`.
 5. `daemon/supervisor.py` + `daemon/server.py`
 6. `cli/`
 7. Port the GUI onto `gui/client.py`
-8. Packaging: snap and deb
+8. Packaging: snap
 
 ## Open questions
 

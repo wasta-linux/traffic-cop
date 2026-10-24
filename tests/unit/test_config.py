@@ -1,13 +1,9 @@
-import logging
 import re
-from pathlib import Path
 
 import pytest
 
 from trafficcop.common import config
 from trafficcop.common.config import ConfigError, format_rate, parse_rate
-
-DATA = Path(__file__).parent.parent / "data"
 
 
 def get_app(cfg: config.Config, name: str) -> config.App:
@@ -224,53 +220,17 @@ def test_app_limit():
         config.parse({"version": 2, "apps": apps})
 
 
-# --- v1 migration -------------------------------------------------------------
+# --- v1 configs ---------------------------------------------------------------
 
 
-def test_migrate_v1_sample(caplog):
-    with caplog.at_level(logging.WARNING):
-        cfg = config.load(DATA / "traffic-cop.yaml")
-    assert "ignoring global settings" in caplog.text
-    assert "ignoring priorities" in caplog.text
-
-    assert [a.name for a in cfg.apps] == [
-        "Speedtest",
-        "Skype",
-        "Insync",
-        "Spotify",
-        "Zoom",
-    ]
-    assert not get_app(cfg, "Speedtest").limited  # priority only in v1
-    insync = get_app(cfg, "Insync")
-    assert insync.download == 800_000
-    assert insync.match[0].exe == "/usr/lib/insync/insync"
+def test_v1_config_is_rejected():
+    v1 = "download: 3mbit\nprocesses:\n  Zoom:\n    match: [{exe: /opt/zoom/zoom}]\n"
+    with pytest.raises(
+        ConfigError, match="Traffic Cop 1.x config, which isn't supported"
+    ):
+        config.loads(v1)
 
 
-def test_migrate_v1_default():
-    cfg = config.load(DATA / "traffic-cop.yaml.default")
-    assert [a.name for a in cfg.apps] == ["Speedtest", "Skype", "Zoom"]
-    assert get_app(cfg, "Zoom").match[0].exe == "/opt/zoom/zoom"
-
-
-def test_migrate_v1_merges_predicates():
-    data = {"processes": {"X": {"match": [{"cmdline": ".*x.*"}, {"name": "x"}]}}}
-    assert config.migrate_v1(data)["apps"]["X"]["match"] == [
-        {"cmdline": ".*x.*", "name": "x"}
-    ]
-    app = get_app(config.parse(data), "X")
-    assert fullmatch(app.match[0].cmdline, "/usr/bin/x --new-window")
-
-
-@pytest.mark.parametrize(
-    ("name", "message"),
-    [
-        ("bad_syntax.yaml", r"processes\.Fake: expected a mapping"),
-        ("bad_syntax_indent.yaml", r"processes\.Fake: expected a mapping"),
-        ("bad_syntax_no_match.yaml", r"processes\.Firefox\.match"),
-        ("bad_syntax_wrong_parameter.yaml", "unknown key 'dl'"),
-        ("empty.yaml", "config is empty"),
-    ],
-)
-def test_bad_samples(name, message):
-    with pytest.raises(ConfigError, match=message):
-        config.load(DATA / name)
+def test_missing_version():
+    with pytest.raises(ConfigError, match="missing 'version: 2'"):
+        config.loads("apps: {}\n")

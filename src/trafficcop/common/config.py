@@ -33,14 +33,12 @@ Rates use tc units, which are case-sensitive here: ``kbit`` is kilobits per
 second but ``kbps`` is kilo*bytes* per second. A unit is required. Parsed
 rates are stored as integer bits per second.
 
-Version 1 files (the TrafficToll format, with a ``processes`` key) are
-migrated when loaded. Global limits, minimums and priorities have no
-equivalent yet, so they are dropped with a warning.
+Version 1 files (the 1.x TrafficToll format, with a ``processes`` key) aren't
+supported; they're rejected with a message saying so.
 """
 
 from __future__ import annotations
 
-import logging
 import re
 from dataclasses import dataclass
 from importlib import resources
@@ -49,8 +47,6 @@ from typing import Any
 
 import yaml
 from yaml.constructor import ConstructorError
-
-log = logging.getLogger(__name__)
 
 VERSION = 2
 DEFAULT_CONFIG_NAME = "traffic-cop.yaml.default"
@@ -61,17 +57,6 @@ _APP_UNIT_KEYS = ("snap", "flatpak", "scope")  # only for units in app.slice
 _REGEX_KEYS = frozenset({"name", "cmdline", "scope"})
 _APP_KEYS = ("download", "upload", "match")
 _TOP_KEYS = ("version", "apps")
-
-_V1_GLOBAL_KEYS = (
-    "download",
-    "upload",
-    "download-minimum",
-    "upload-minimum",
-    "download-priority",
-    "upload-priority",
-)
-_V1_APP_KEYS = ("download", "upload", "download-priority", "upload-priority", "match")
-_V1_MATCH_KEYS = ("exe", "name", "cmdline")
 
 
 class ConfigError(ValueError):
@@ -272,10 +257,7 @@ def _parse_app(name: Any, data: Any) -> App:
 
 
 def parse(data: Any) -> Config:
-    """Validate a config dict (from YAML or the API) and build a Config.
-
-    Version 1 dicts are migrated first.
-    """
+    """Validate a config dict (from YAML or the API) and build a Config."""
     if data is None:
         # Most likely a truncated file. Refuse it rather than silently lift
         # every limit; 'apps: {}' is the explicit way to configure nothing.
@@ -283,7 +265,12 @@ def parse(data: Any) -> Config:
     if not isinstance(data, dict):
         raise ConfigError("config: expected a mapping at the top level")
     if "version" not in data:
-        data = migrate_v1(data)
+        if "processes" in data:
+            raise ConfigError(
+                "config: this is a Traffic Cop 1.x config, which isn't supported;"
+                " start again from the default config"
+            )
+        raise ConfigError(f"config: missing 'version: {VERSION}'")
     _check_keys(data, _TOP_KEYS, "config")
     if data["version"] != VERSION:
         raise ConfigError(
@@ -295,54 +282,6 @@ def parse(data: Any) -> Config:
     if len(apps) > MAX_APPS:
         raise ConfigError(f"apps: at most {MAX_APPS} apps are supported")
     return Config(apps=tuple(_parse_app(n, a) for n, a in apps.items()))
-
-
-def migrate_v1(data: dict[Any, Any]) -> dict[str, Any]:
-    """Convert a version 1 (TrafficToll) config dict to version 2.
-
-    Settings without a v2 equivalent are dropped with a logged warning.
-    Matching is not validated here beyond what is needed to convert it;
-    ``parse`` validates the result.
-    """
-    _check_keys(data, (*_V1_GLOBAL_KEYS, "processes"), "config")
-    dropped = [k for k in _V1_GLOBAL_KEYS if k in data]
-    if dropped:
-        log.warning(
-            "config v1: ignoring global settings not supported in v2: %s",
-            ", ".join(dropped),
-        )
-
-    apps = {}
-    for name, proc in (data.get("processes") or {}).items():
-        where = f"processes.{name}"
-        if not isinstance(proc, dict):
-            raise ConfigError(f"{where}: expected a mapping with 'match' and limits")
-        _check_keys(proc, _V1_APP_KEYS, where)
-        if "download-priority" in proc or "upload-priority" in proc:
-            log.warning("config v1: %s: ignoring priorities (unsupported in v2)", where)
-
-        # In v1 every predicate in the list had to match (AND). In v2 that is
-        # a single entry with several keys.
-        match = proc.get("match")
-        if not isinstance(match, list) or not match:
-            raise ConfigError(f"{where}.match: expected a non-empty list of predicates")
-        merged: dict[str, Any] = {}
-        for i, pred in enumerate(match):
-            if not isinstance(pred, dict):
-                raise ConfigError(f"{where}.match[{i}]: expected a mapping")
-            _check_keys(pred, _V1_MATCH_KEYS, f"{where}.match[{i}]")
-            for key, value in pred.items():
-                if key in merged:
-                    raise ConfigError(f"{where}.match: {key!r} given more than once")
-                merged[key] = value
-
-        app: dict[str, Any] = {"match": [merged]}
-        for key in ("download", "upload"):
-            if proc.get(key) is not None:
-                app[key] = proc[key]
-        apps[name] = app
-
-    return {"version": VERSION, "apps": apps}
 
 
 # --- Loading ------------------------------------------------------------------
