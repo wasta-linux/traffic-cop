@@ -10,13 +10,18 @@ Everything lives in one table, ``inet trafficcop``::
             socket cgroupv2 level 5 "user.slice/.../app-gnome-Zoom-1234.scope"
                 meta mark set meta mark and 0xc0ffffff or 0x01000000
                 ct mark set ct mark and 0xc0ffffff or 0x01000000
-                counter name "up_1"
+                oifname != "lo" counter name "up_1"
         }
         chain input {               # count replies on the app's connections
             type filter hook input priority mangle; policy accept;
-            ct mark and 0x3f000000 == 0x01000000 counter name "down_1"
+            iifname != "lo" ct mark and 0x3f000000 == 0x01000000
+                counter name "down_1"
         }
     }
+
+Loopback traffic is marked (harmlessly) but not counted: it never reaches
+the network, and each packet would be counted both ways. Traffic to the
+local network is counted, though tc only shapes the WAN interface.
 
 Traffic Cop owns only the mark bits in ``MARK_MASK`` (bits 24-29). Each app
 gets a slot from 1 to 63 there, and 0 means "not ours". Rules set and test
@@ -125,7 +130,7 @@ def _output_rules(
                 f'socket cgroupv2 level {cgroup_level(clean)} "{clean}" '
                 f"meta mark set meta mark and {_KEEP:#010x} or {mark:#010x} "
                 f"ct mark set ct mark and {_KEEP:#010x} or {mark:#010x} "
-                f'counter name "{up}"'
+                f'oifname != "lo" counter name "{up}"'
             )
     return rules
 
@@ -160,7 +165,7 @@ def build_ruleset(
     for mark in marks.values():
         _, down = counter_names(mark)
         lines.append(
-            f"        ct mark and {MARK_MASK:#010x} == {mark:#010x}"
+            f'        iifname != "lo" ct mark and {MARK_MASK:#010x} == {mark:#010x}'
             f' counter name "{down}"'
         )
     lines += ["    }", "}"]

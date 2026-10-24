@@ -106,12 +106,14 @@ def test_ruleset_matches_proof_of_concept():
         "    chain output {\n"
         "        type filter hook output priority mangle; policy accept;\n"
         f'        socket cgroupv2 level 5 "{ZOOM_CG}" {SET_ZOOM}'
-        ' counter name "up_1"\n'
+        ' oifname != "lo" counter name "up_1"\n'
         "    }\n"
         "    chain input {\n"
         "        type filter hook input priority mangle; policy accept;\n"
-        '        ct mark and 0x3f000000 == 0x01000000 counter name "down_1"\n'
-        '        ct mark and 0x3f000000 == 0x02000000 counter name "down_2"\n'
+        '        iifname != "lo" ct mark and 0x3f000000 == 0x01000000'
+        ' counter name "down_1"\n'
+        '        iifname != "lo" ct mark and 0x3f000000 == 0x02000000'
+        ' counter name "down_2"\n'
         "    }\n"
         "}\n"
     )
@@ -132,9 +134,9 @@ def test_ruleset_several_scopes_per_app():
     rules = [line.strip() for line in script.splitlines() if "cgroupv2" in line]
     assert rules == [
         f'socket cgroupv2 level 2 "system.slice/a.scope" {SET_SPOTIFY}'
-        ' counter name "up_2"',
+        ' oifname != "lo" counter name "up_2"',
         f'socket cgroupv2 level 2 "system.slice/b.scope" {SET_SPOTIFY}'
-        ' counter name "up_2"',
+        ' oifname != "lo" counter name "up_2"',
     ]
 
 
@@ -154,7 +156,7 @@ def test_output_update():
     assert script == (
         "flush chain inet trafficcop output\n"
         f'add rule inet trafficcop output socket cgroupv2 level 5 "{ZOOM_CG}"'
-        f' {SET_ZOOM} counter name "up_1"\n'
+        f' {SET_ZOOM} oifname != "lo" counter name "up_1"\n'
     )
 
 
