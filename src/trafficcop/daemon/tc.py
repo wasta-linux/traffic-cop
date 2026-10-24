@@ -23,10 +23,17 @@ is created only if some app has a download limit.
 
 The ``build_*`` functions return argv lists and run nothing, so they can be
 tested without root; ``apply`` runs them.
+
+``read_upload_counters`` reads what each app's upload CAKE leaf has actually
+sent, for the meter. Unlike the nft counters, which count packets before
+they reach the queue, it excludes what CAKE dropped or is still holding.
+CAKE's byte counts include the link-layer header (14 bytes on Ethernet and
+Wi-Fi), so they run about 1% above the nft counters' IP bytes.
 """
 
 from __future__ import annotations
 
+import json
 import subprocess
 from collections.abc import Iterable, Mapping
 
@@ -45,6 +52,40 @@ class TcError(RuntimeError):
 
 def _classid(minor: int) -> str:
     return f"1:{minor:x}"  # tc reads class minor numbers as hex
+
+
+def upload_counter_name(mark: int) -> str:
+    """Name of an app's shaped-upload counter in ``read_upload_counters``."""
+    return f"tc_up_{mark_slot(mark)}"
+
+
+def read_upload_counters(wan: str) -> dict[str, tuple[int, int]]:
+    """Return ``{upload_counter_name: (packets, bytes)}`` for ``wan``'s CAKE leaves.
+
+    Only apps with an upload limit have one. Returns ``{}`` if ``wan`` has no
+    Traffic Cop qdiscs or tc fails.
+    """
+    result = subprocess.run(
+        ["tc", "-s", "-j", "qdisc", "show", "dev", wan], capture_output=True, text=True
+    )
+    if result.returncode != 0:
+        return {}
+    try:
+        qdiscs = json.loads(result.stdout)
+    except ValueError:
+        return {}
+    counters = {}
+    for q in qdiscs:
+        parent = q.get("parent", "")
+        if q.get("kind") != "cake" or not parent.startswith("1:"):
+            continue
+        try:
+            slot = int(parent[2:], 16) - APP_CLASS_BASE
+            if slot >= 1:
+                counters[f"tc_up_{slot}"] = (int(q["packets"]), int(q["bytes"]))
+        except (KeyError, TypeError, ValueError):
+            continue
+    return counters
 
 
 def shaper_commands(

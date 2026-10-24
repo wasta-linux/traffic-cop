@@ -86,6 +86,41 @@ def test_counter_reset_without_restarted(fake: FakeNft):
     assert m.sample() == {"Zoom": Usage(0.0, 300.0, 0, 5300)}
 
 
+def test_prefers_cake_upload_counter(fake: FakeNft):
+    m = make_meter(fake)
+    fake.now += 1
+    fake.bytes = {"up_1": 5000, "tc_up_1": 4000, "down_1": 100}
+    assert m.sample() == {"Zoom": Usage(4000.0, 100.0, 4000, 100)}
+
+
+def test_switching_upload_sources_counts_once(fake: FakeNft):
+    m = make_meter(fake)
+    fake.now += 1
+    fake.bytes = {"up_1": 5000}  # not shaped yet
+    m.sample()
+    fake.now += 1
+    fake.bytes = {"up_1": 6000, "tc_up_1": 800}  # shaping started
+    m.forget(["tc_up_1"])
+    assert m.sample()["Zoom"].up_total == 5800
+    fake.now += 1
+    fake.bytes = {"up_1": 9000, "tc_up_1": 1300}
+    assert m.sample()["Zoom"].up_total == 6300
+    fake.now += 1
+    fake.bytes = {"up_1": 9500}  # WAN lost: back to nft, from its baseline
+    assert m.sample()["Zoom"].up_total == 6800
+
+
+def test_forget_after_tc_rebuild(fake: FakeNft):
+    m = make_meter(fake)
+    fake.now += 1
+    fake.bytes = {"tc_up_1": 5000}
+    m.sample()
+    m.forget(["tc_up_1"])  # tc rebuilt; the new leaf already sent 6000
+    fake.now += 1
+    fake.bytes = {"tc_up_1": 6000}
+    assert m.sample()["Zoom"].up_total == 11000
+
+
 def test_read_errors_propagate(fake: FakeNft):
     m = make_meter(fake)
     fake.error = nft.NftError("Error: No such file or directory")

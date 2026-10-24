@@ -1,10 +1,17 @@
-"""Turn the nftables counters into per-app traffic rates and totals.
+"""Turn the traffic counters into per-app rates and totals.
 
 Each configured app has an upload and a download counter in the nft table
 (see ``nft.py``). The supervisor calls ``Meter.sample`` about once a second;
 each call reads all the counters at once and returns, per app, the rate over
 the interval since the previous sample and the total since the meter
 started. This replaces nethogs, and includes UDP.
+
+The nft upload counter sees packets before they reach the tc queue, so for
+an app with an upload limit it would count what CAKE later drops. When the
+counters ``read`` returns include the app's CAKE leaf (named by
+``tc.upload_counter_name``; see ``tc.read_upload_counters``), its upload is
+taken from there instead. Downloads are counted after shaping, so the nft
+counter is right for them.
 
 All values are in **bytes** (rates in bytes per second), unlike the config,
 which stores limits in bits per second. Byte counts include IP headers, so
@@ -13,17 +20,18 @@ they can differ slightly from what the ISP reports.
 Counters start from zero whenever ``nft.build_ruleset`` replaces the table
 (on startup and config reloads). Create the ``Meter`` right after the table
 is first loaded, and call ``Meter.restarted`` right after each rebuild, so
-that each sample measures from the right baseline. As a fallback, a counter
-that goes down is assumed to have restarted.
+that each sample measures from the right baseline. Likewise, call
+``Meter.forget`` with the CAKE counter names after rebuilding the tc setup.
+As a fallback, a counter that goes down is assumed to have restarted.
 """
 
 from __future__ import annotations
 
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 
-from trafficcop.daemon import nft
+from trafficcop.daemon import nft, tc
 
 Counters = Mapping[str, tuple[int, int]]  # name -> (packets, bytes)
 
@@ -62,6 +70,11 @@ class Meter:
         self._last_time = self._clock()
         self._totals = {name: self._totals.get(name, (0, 0)) for name in marks}
 
+    def forget(self, counters: Iterable[str]) -> None:
+        """Take these counters to be zero now (e.g. tc was just rebuilt)."""
+        for name in counters:
+            self._last.pop(name, None)
+
     def sample(self) -> dict[str, Usage]:
         """Read the counters and return each configured app's usage.
 
@@ -72,9 +85,16 @@ class Meter:
         elapsed = now - self._last_time
         self._last_time = now
 
+        # Keep a baseline for every counter, used or not, so that switching an
+        # app between its nft and CAKE upload counters doesn't count twice.
+        deltas = {name: self._delta(name, counters) for name in counters}
+
         usage = {}
         for name, mark in self._marks.items():
-            up, down = (self._delta(c, counters) for c in nft.counter_names(mark))
+            nft_up, nft_down = nft.counter_names(mark)
+            shaped_up = tc.upload_counter_name(mark)
+            up = deltas[shaped_up] if shaped_up in counters else deltas.get(nft_up, 0)
+            down = deltas.get(nft_down, 0)
             up_total, down_total = self._totals[name]
             self._totals[name] = (up_total + up, down_total + down)
             usage[name] = Usage(

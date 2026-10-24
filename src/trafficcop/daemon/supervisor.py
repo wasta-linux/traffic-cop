@@ -1,7 +1,7 @@
 """The daemon's main loop: the only module that coordinates the others.
 
-``Supervisor.start`` clears anything a previous run left behind, loads the
-nft table for the config's apps and shapes the WAN interface. After that,
+``Supervisor.start`` clears anything a previous run left behind, shapes the
+WAN interface and loads the nft table for the config's apps. After that,
 ``run`` calls three periodic checks until asked to stop:
 
 * ``check_apps`` (every ``DETECT_INTERVAL``): re-scan for the apps' units and
@@ -49,6 +49,9 @@ class System:
     def read_counters(self) -> Counters:
         return nft.read_counters()
 
+    def read_upload_counters(self, wan: str) -> Counters:
+        return tc.read_upload_counters(wan)
+
     def setup_tc(self, config: Config, marks: Mapping[str, int], wan: str) -> None:
         tc.apply_setup(config, marks, wan)
 
@@ -76,7 +79,7 @@ class Supervisor:
         self.marks = nft.assign_marks(config)
         self.detector = Detector(config, proc)
         self.wan = WanWatcher(self.system.wan_device)
-        self.meter = Meter(self.marks, self.system.read_counters)
+        self.meter = Meter(self.marks, self._read_counters)
         self.usage: dict[str, Usage] = {}
         self.shaped: str | None = None  # interface the tc setup is on
         self._tc_error: str | None = None
@@ -84,20 +87,26 @@ class Supervisor:
     # --- Lifecycle ---------------------------------------------------------------
 
     def start(self) -> None:
-        """Clear leftovers, load the nft table and shape the WAN interface.
+        """Clear leftovers, shape the WAN interface and load the nft table.
 
-        Raises ``nft.NftError`` if the table can't be loaded.
+        tc goes first so that no marked traffic passes unshaped in between.
+        Raises ``nft.NftError`` if the table can't be loaded, after removing
+        the tc setup again.
         """
         self.system.teardown_nft()
         self.wan.poll()
         if self.wan.current:
             self.system.teardown_tc(self.wan.current)
-        self._load_table()
+        self._shape()
+        try:
+            self._load_table()
+        except nft.NftError:
+            self.stop()
+            raise
         self.meter.restarted(self.marks)
         for app, cgroups in sorted(self.detector.current.items()):
             for cgroup in sorted(cgroups):
                 log.info("%s: limiting %s", app, _unit_name(cgroup))
-        self._shape()
 
     def stop(self) -> None:
         if self.shaped:
@@ -159,6 +168,12 @@ class Supervisor:
 
     # --- Helpers -------------------------------------------------------------------
 
+    def _read_counters(self) -> Counters:
+        counters = dict(self.system.read_counters())
+        if self.shaped:
+            counters.update(self.system.read_upload_counters(self.shaped))
+        return counters
+
     def _load_table(self) -> None:
         for attempt in range(1, _NFT_ATTEMPTS + 1):
             self.detector.scan()
@@ -186,6 +201,7 @@ class Supervisor:
             return
         self.shaped = wan
         self._tc_error = None
+        self.meter.forget(tc.upload_counter_name(m) for m in self.marks.values())
         log.info("shaping traffic on %s", wan)
 
     @staticmethod

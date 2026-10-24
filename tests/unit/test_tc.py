@@ -129,3 +129,49 @@ def test_apply_setup_tears_down_on_failure(monkeypatch):
     with pytest.raises(tc.TcError, match="ip link add ifb-trafficcop type ifb: Error"):
         tc.apply_setup(CFG, MARKS, "eth0")
     assert run.calls[-3:] == tc.build_teardown("eth0")
+
+
+QDISCS = [
+    {"kind": "htb", "handle": "1:", "root": True, "bytes": 9000, "packets": 9},
+    {"kind": "fq_codel", "handle": "8013:", "parent": "1:2", "bytes": 1, "packets": 1},
+    {"kind": "cake", "handle": "8014:", "parent": "1:101", "bytes": 1042, "packets": 1},
+    {"kind": "cake", "handle": "8015:", "parent": "1:13f", "bytes": 50, "packets": 2},
+    {"kind": "cake", "handle": "8016:", "parent": "1:2", "bytes": 7, "packets": 7},
+    {"kind": "cake", "handle": "8017:", "parent": "2:101", "bytes": 7, "packets": 7},
+    {"kind": "cake", "handle": "8018:", "parent": "1:102"},  # incomplete stats
+    {"kind": "ingress", "handle": "ffff:", "parent": "ffff:fff1"},
+]
+
+
+def test_upload_counter_name():
+    assert tc.upload_counter_name(0x01000000) == "tc_up_1"
+    assert tc.upload_counter_name(0x3F000000) == "tc_up_63"
+
+
+def test_read_upload_counters(monkeypatch):
+    import json
+    import subprocess
+
+    calls = []
+
+    def run(argv, **kwargs):
+        calls.append(argv)
+        return subprocess.CompletedProcess(argv, 0, json.dumps(QDISCS), "")
+
+    monkeypatch.setattr(tc.subprocess, "run", run)
+    assert tc.read_upload_counters("wlp2s0") == {
+        "tc_up_1": (1, 1042),
+        "tc_up_63": (2, 50),
+    }
+    assert calls == [["tc", "-s", "-j", "qdisc", "show", "dev", "wlp2s0"]]
+
+
+@pytest.mark.parametrize(("code", "out"), [(1, ""), (0, "not json")])
+def test_read_upload_counters_failures(monkeypatch, code, out):
+    import subprocess
+
+    def run(argv, **kwargs):
+        return subprocess.CompletedProcess(argv, code, out, "Cannot find device")
+
+    monkeypatch.setattr(tc.subprocess, "run", run)
+    assert tc.read_upload_counters("eth9") == {}

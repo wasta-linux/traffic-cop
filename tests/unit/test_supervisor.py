@@ -35,6 +35,7 @@ class FakeSystem(supervisor.System):
     def __init__(self):
         self.wan: str | None = "wlp2s0"
         self.counters: dict[str, tuple[int, int]] = {}
+        self.upload_counters: dict[str, tuple[int, int]] = {}
         self.nft_failures = 0  # fail this many apply_nft calls first
         self.tc_error: str | None = None
         self.log: list[tuple[str, ...]] = []
@@ -48,6 +49,9 @@ class FakeSystem(supervisor.System):
 
     def read_counters(self) -> dict[str, tuple[int, int]]:
         return self.counters
+
+    def read_upload_counters(self, wan: str) -> dict[str, tuple[int, int]]:
+        return self.upload_counters
 
     def setup_tc(self, config: config.Config, marks: Mapping[str, int], wan: str):
         if self.tc_error:
@@ -109,10 +113,10 @@ def test_start(sup: supervisor.Supervisor, system: FakeSystem, caplog):
     assert system.calls("teardown_nft", "teardown_tc", "nft", "setup_tc") == [
         ("teardown_nft",),  # leftovers from a previous run
         ("teardown_tc", "wlp2s0"),
+        ("setup_tc", "wlp2s0"),  # before nft, so nothing passes unshaped
         ("nft", "ruleset"),
-        ("setup_tc", "wlp2s0"),
     ]
-    ruleset = system.log[2][2]
+    ruleset = system.log[3][2]
     assert f'"{ZOOM}"' in ruleset and f'"{SNAPD}"' in ruleset
     assert sup.shaped == "wlp2s0"
     assert "Zoom: limiting app-gnome-Zoom-1234.scope" in caplog.text
@@ -137,6 +141,8 @@ def test_start_gives_up(sup: supervisor.Supervisor, system: FakeSystem):
     system.nft_failures = 3
     with pytest.raises(nft.NftError):
         sup.start()
+    assert system.log[-2:] == [("teardown_tc", "wlp2s0"), ("teardown_nft",)]
+    assert sup.shaped is None
 
 
 def test_check_apps(sup: supervisor.Supervisor, system: FakeSystem, proc, caplog):
@@ -207,6 +213,24 @@ def test_sample(sup: supervisor.Supervisor, system: FakeSystem):
     sup.sample()
     assert sup.usage["Zoom"].up_total == 4000
     assert sup.usage["Snap Updates"] == Usage()
+
+
+def test_sample_uses_cake_for_limited_uploads(sup: supervisor.Supervisor, system):
+    sup.start()
+    system.counters = {"up_1": (5, 4000), "up_2": (2, 300)}
+    system.upload_counters = {"tc_up_1": (4, 3000)}  # CAKE dropped the rest
+    sup.sample()
+    assert sup.usage["Zoom"].up_total == 3000
+    assert sup.usage["Snap Updates"].up_total == 300  # no upload limit: nft
+
+
+def test_sample_without_shaping_uses_nft(sup: supervisor.Supervisor, system):
+    system.wan = None
+    sup.start()
+    system.counters = {"up_1": (5, 4000)}
+    system.upload_counters = {"tc_up_1": (4, 3000)}  # not read: nothing shaped
+    sup.sample()
+    assert sup.usage["Zoom"].up_total == 4000
 
 
 def test_sample_error_keeps_last_usage(sup: supervisor.Supervisor, system, caplog):
