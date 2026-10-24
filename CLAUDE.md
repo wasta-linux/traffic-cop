@@ -146,11 +146,11 @@ traffic-cop/
 Building CLI-first, so there are no GUI dependencies yet:
 
 ```bash
-python3 -m venv .venv && . .venv/bin/activate
+python3 -m venv venv && . venv/bin/activate
 pip install -e '.[dev]'
 pytest -m "not integration"
-sudo .venv/bin/traffic-copd          # sudo resets PATH, so use the full path
-sudo .venv/bin/pytest -m integration
+sudo venv/bin/traffic-copd          # sudo resets PATH, so use the full path
+sudo venv/bin/pytest -m integration
 ```
 
 Old modules were moved to `src/trafficcop/legacy/` and old tests to

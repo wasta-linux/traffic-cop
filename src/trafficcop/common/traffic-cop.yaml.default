@@ -7,101 +7,70 @@
 # interface has the active internet connection (e.g. wlp2s0).
 #
 # Units:
-# Units can be specified in all formats that tc supports, e.g.:
-#  bit (bits per second)
-#  kbit (kilobits per second)
-#  bps (bytes per second)
-#  kbps (kilobytes per second; base 1000)
+# Units can be specified in all formats that tc supports. Units are lowercase,
+# and "bit" and "bps" are different:
+#  bit   (bits per second)
+#  kbit  (kilobits per second)
+#  mbit  (megabits per second)
+#  bps   (bytes per second)
+#  kbps  (kilobytes per second; base 1000)
 #  kibps (kibibytes per second; base 1024)
-# More info can be found in a terminal with:
-# $ man tc | grep -A28 RATES
+# So 100kbps is the same as 800kbit.
 
 
-# GLOBAL CONFIGURATION
+# APP CONFIGURATION
 # ------------------------------------------------------------------------------
-# Set global bandwidth limits.
-# - limit bandwidth for entire interface
-# - make use of prioritization, which requires global limits
-# Uncomment the lines below to make use of global download and upload limits.
-#download: 250kbps
-#upload: 250kbps
-
-# Set global minimum bandwidth for non-managed traffic.
-#download-minimum: 128kbit
-#upload-minimum: 128kbit
-
-# Set global priority for non-managed traffic. "0" is top priority.
-#download-priority: 1
-#upload-priority: 1
-
-
-# PER-PROCESS CONFIGURATION
-# ------------------------------------------------------------------------------
-# Configure bandwidth management for individual processes. For example:
-# "Name": (user-defined; used for logging)
-#   download-priority: 0
-#   upload-priority: 0
-#   download: 1.5mbit
-#   upload: 500kbit
+# Configure bandwidth limits for individual apps. For example:
+# "Name": (user-defined; shown in Traffic Cop and in the log)
+#   download: 1.5mbit   (optional; leave out for no limit)
+#   upload: 500kbit     (optional; leave out for no limit)
 #   match:
-#     - cmdline|exe|match: string
+#     - exe: /opt/zoom/zoom
+#     - snap: zoom-client
 #
-#       Choose one of the three properties to match:
-#       > "cmdline" uses regex syntax for matching.
-#           It refers to the entire command, including options: "/usr/lib/firefox/firefox --new-window"
-#           See also: System Monitor > Processes tab > Command Line column.
-#       > "exe" uses an exact path (no regex).
-#           It refers to the executable path from the command: "/usr/lib/firefox/firefox"
-#       > "name" uses regex syntax for matching.
-#           It refers to the name of the process: "GeckoMain"
-#       In summary, specifying "exe" will cover all child processes of the
-#       parent executable and so has the broadest application. While "name" and
-#       "cmdline" can be used to specify a narrower set of processes for finer
-#       control.
+# The app is matched if any one of the "match" entries matches. An entry with
+# several keys matches only if all of them match. The keys are:
+#   exe      the exact path of the program: "/usr/lib/firefox/firefox"
+#   name     the process name (regex): "spotify"
+#   cmdline  the whole command, including options (regex):
+#            ".*/usr/lib/firefox/firefox.*"
+#            See also: System Monitor > Processes tab > Command Line column.
+#   snap     the name of a snap package: "firefox"
+#   flatpak  the ID of a flatpak app: "com.spotify.Client"
+#   scope    the app's systemd scope (regex): "app-gnome-Zoom-[0-9]+\.scope"
+# Regexes must match the whole name or command.
 #
-#       Verify that traffic is being managed by clicking on "View Log..." in the
-#       Traffic Cop window, or in a terminal with:
-#       $ journalctl -u traffic-cop.service
-#       If it's working, you will see lines that say, "Shaping traffic for..."
+# Limits apply to the whole app, including all of its helper processes: for
+# example, every Firefox process shares the same limit. An app with no limits
+# is still shown in Traffic Cop, so you can watch how much it uses.
 
-processes:
+version: 2
+
+apps:
   "Firefox":
-    #download-priority: 0
-    #upload-priority: 0
     download: 70kbps
     upload: 50kbps
     match:
-      - cmdline: .*/usr/lib/firefox/firefox.* # works for both deb & snap packages
-      #- name: Socket Process # only limits UDP packets; useful for audio/video calls
-
-  "Skype":
-    #download-priority: 0
-    #upload-priority: 0
-    download: 70kbps
-    upload: 35kbps
-    match:
-      - name: skype
+      - snap: firefox
+      - exe: /usr/lib/firefox/firefox
 
   "Snap Updates":
-    #download-priority: 9
-    #upload-priority: 9
     download: 1mbit
     upload: 500kbit
     match:
       - name: snapd
 
   "Spotify":
-    #download-priority: 2
-    #upload-priority: 2
     download: 128kbit
     upload: 64kbit
     match:
+      - snap: spotify
+      - flatpak: com.spotify.Client
       - name: spotify
 
   "Zoom":
-    #download-priority: 0
-    #upload-priority: 0
     download: 70kbps
     upload: 35kbps
     match:
+      - snap: zoom-client
       - exe: /opt/zoom/zoom

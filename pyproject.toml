@@ -21,7 +21,6 @@ classifiers = [
 ]
 dependencies = [
     "PyYAML>=5.4",
-    "schema>=0.7",
     "psutil>=5.9",      # process exe/cmdline lookups in the detector
 ]
 
