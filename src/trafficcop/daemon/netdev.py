@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -105,11 +106,12 @@ def interface_bytes(dev: str, sys_net: Path = SYS_NET) -> tuple[int, int]:
 class WanWatcher:
     """Tracks the WAN interface across polls."""
 
+    lookup: Callable[[], str | None] = wan_device
     current: str | None = field(default=None, init=False)
 
     def poll(self) -> bool:
         """Look up the WAN interface again. Return True if it changed."""
-        dev = wan_device()
+        dev = self.lookup()
         changed = dev != self.current
         self.current = dev
         return changed
