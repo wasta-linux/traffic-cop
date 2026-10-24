@@ -23,6 +23,9 @@ dependencies = [
     "PyYAML>=5.4",
     "psutil>=5.9",      # process exe/cmdline lookups in the detector
 ]
+# The daemon also needs the official nftables bindings (`import nftables`),
+# which aren't on PyPI: apt install python3-nftables, and create the venv
+# with --system-site-packages.
 
 [project.optional-dependencies]
 gui = [
@@ -67,6 +70,14 @@ markers = [
 [tool.coverage.run]
 source = ["trafficcop"]
 branch = true
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+typeCheckingMode = "standard"
+# Packages only available from apt (python3-nftables, later python3-gi). The
+# venv is created with --system-site-packages, but pyright ignores that.
+extraPaths = ["/usr/lib/python3/dist-packages"]
 
 [tool.ruff]
 line-length = 88

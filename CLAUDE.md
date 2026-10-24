@@ -56,6 +56,14 @@ nftables can match packets on the sending socket's cgroup.
    `socket cgroupv2 level <N> "<path>" meta mark set <mark> ct mark set meta mark`
    The path is relative to `/sys/fs/cgroup`; the level is its number of
    components.
+   **The daemon differs here:** it owns only mark bits `0x3f000000` (bits
+   24–29, so 63 app slots; `config.MAX_APPS`), and sets and tests only those
+   bits, so other software's marks (WireGuard `0xca6c`, Tailscale `0xff0000`,
+   Kubernetes `0x4000`/`0x8000`) survive. It sets `meta mark` and `ct mark`
+   separately with `and`/`or` instead of copying, uses `ct mark and <mask> ==`
+   for download counters, and `handle <mark>/<mask> fw` filters to app classes
+   `1:101`, `1:102`, …; the default class is `1:2`, not `1:20`. Software that
+   sets or matches the whole 32-bit mark (e.g. Mullvad) can still conflict.
 2. **Upload:** HTB root on the WAN interface (`default 20`). Classes run at
    link speed, so HTB only classifies. A `fw` filter on the mark sends traffic
    to the app's class, whose **CAKE leaf** (`bandwidth <rate> besteffort`)
@@ -107,7 +115,8 @@ traffic-cop/
 │   │   ├── supervisor.py      # main loop; the only module coordinating others
 │   │   ├── netdev.py          # WAN detection + route changes (replaces tt-wrapper)
 │   │   ├── detector.py        # watch cgroups, match processes to config apps
-│   │   ├── nft.py             # nftables table/map/counters (shell out to `nft -j` at first)
+│   │   ├── nft.py             # nftables table/counters, via python3-nftables (text syntax;
+│   │   │                      #   JSON input can't express `socket cgroupv2 level`)
 │   │   ├── tc.py              # HTB/CAKE/ifb setup
 │   │   ├── meter.py           # poll counters → per-app rates
 │   │   └── server.py          # Unix socket API + SO_PEERCRED auth
@@ -130,8 +139,12 @@ traffic-cop/
 - setuptools ≥ 68 (Ubuntu 24.04), `src/` layout, version from
   `trafficcop.__version__`, license `{file = "LICENSE"}` (the SPDX string form
   would need setuptools 77).
-- Dependencies: PyYAML, schema, psutil. Extras: `gui` (PyGObject), `dev`
+- Dependencies: PyYAML, psutil. Extras: `gui` (PyGObject), `dev`
   (pytest, pytest-cov, ruff).
+- The daemon also needs `python3-nftables` (the official libnftables
+  bindings), which isn't on PyPI: it's a deb dependency, and the snap must
+  stage it (it pulls in `libnftables1`). `nft.py` imports it lazily, so the
+  unit tests run without it.
 - Entry points: `traffic-copd`, `traffic-cop-ctl` (scripts); `traffic-cop`
   (gui-scripts).
 - Package data: `gui/ui/*.glade`, the default config. Load these with
@@ -146,11 +159,12 @@ traffic-cop/
 Building CLI-first, so there are no GUI dependencies yet:
 
 ```bash
-python3 -m venv venv && . venv/bin/activate
+sudo apt install python3-nftables   # not on PyPI
+python3 -m venv --system-site-packages .venv && . .venv/bin/activate
 pip install -e '.[dev]'
 pytest -m "not integration"
-sudo venv/bin/traffic-copd          # sudo resets PATH, so use the full path
-sudo venv/bin/pytest -m integration
+sudo .venv/bin/traffic-copd          # sudo resets PATH, so use the full path
+sudo .venv/bin/pytest -m integration
 ```
 
 Old modules were moved to `src/trafficcop/legacy/` and old tests to

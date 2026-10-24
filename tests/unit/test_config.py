@@ -1,4 +1,5 @@
 import logging
+import re
 from pathlib import Path
 
 import pytest
@@ -7,6 +8,17 @@ from trafficcop.common import config
 from trafficcop.common.config import ConfigError, format_rate, parse_rate
 
 DATA = Path(__file__).parent.parent / "data"
+
+
+def get_app(cfg: config.Config, name: str) -> config.App:
+    app = cfg.app(name)
+    assert app is not None, f"no app {name!r}"
+    return app
+
+
+def fullmatch(pattern: re.Pattern[str] | None, text: str) -> bool:
+    assert pattern is not None
+    return pattern.fullmatch(text) is not None
 
 
 # --- Rates --------------------------------------------------------------------
@@ -86,18 +98,18 @@ apps:
 
 def test_loads_good():
     cfg = config.loads(GOOD)
-    zoom = cfg.app("Zoom")
+    zoom = get_app(cfg, "Zoom")
     assert zoom.download == 560_000
     assert zoom.upload == 280_000
     assert zoom.limited
     assert zoom.match[0].snap == "zoom-client"
     assert zoom.match[1].exe == "/opt/zoom/zoom"
-    assert zoom.match[1].name.fullmatch("zoom")
+    assert fullmatch(zoom.match[1].name, "zoom")
 
-    watch = cfg.app("Watch only")
+    watch = get_app(cfg, "Watch only")
     assert watch.download is None and watch.upload is None
     assert not watch.limited
-    assert watch.match[0].scope.fullmatch("app-gnome-foo-1234.scope")
+    assert fullmatch(watch.match[0].scope, "app-gnome-foo-1234.scope")
 
 
 def test_round_trip():
@@ -180,6 +192,14 @@ def test_loads_rejects(text, message):
         config.loads(text)
 
 
+def test_app_limit():
+    apps = {f"a{i}": {"match": [{"name": "x"}]} for i in range(config.MAX_APPS)}
+    assert len(config.parse({"version": 2, "apps": apps}).apps) == config.MAX_APPS
+    apps["one too many"] = {"match": [{"name": "x"}]}
+    with pytest.raises(ConfigError, match="at most 63 apps"):
+        config.parse({"version": 2, "apps": apps})
+
+
 # --- v1 migration -------------------------------------------------------------
 
 
@@ -196,8 +216,8 @@ def test_migrate_v1_sample(caplog):
         "Spotify",
         "Zoom",
     ]
-    assert not cfg.app("Speedtest").limited  # priority only in v1
-    insync = cfg.app("Insync")
+    assert not get_app(cfg, "Speedtest").limited  # priority only in v1
+    insync = get_app(cfg, "Insync")
     assert insync.download == 800_000
     assert insync.match[0].exe == "/usr/lib/insync/insync"
 
@@ -205,7 +225,7 @@ def test_migrate_v1_sample(caplog):
 def test_migrate_v1_default():
     cfg = config.load(DATA / "traffic-cop.yaml.default")
     assert [a.name for a in cfg.apps] == ["Speedtest", "Skype", "Zoom"]
-    assert cfg.app("Zoom").match[0].exe == "/opt/zoom/zoom"
+    assert get_app(cfg, "Zoom").match[0].exe == "/opt/zoom/zoom"
 
 
 def test_migrate_v1_merges_predicates():
@@ -213,8 +233,8 @@ def test_migrate_v1_merges_predicates():
     assert config.migrate_v1(data)["apps"]["X"]["match"] == [
         {"cmdline": ".*x.*", "name": "x"}
     ]
-    app = config.parse(data).app("X")
-    assert app.match[0].cmdline.fullmatch("/usr/bin/x --new-window")
+    app = get_app(config.parse(data), "X")
+    assert fullmatch(app.match[0].cmdline, "/usr/bin/x --new-window")
 
 
 @pytest.mark.parametrize(

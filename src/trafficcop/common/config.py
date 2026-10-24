@@ -44,11 +44,13 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from yaml.constructor import ConstructorError
 
 log = logging.getLogger(__name__)
 
 VERSION = 2
 DEFAULT_CONFIG_NAME = "traffic-cop.yaml.default"
+MAX_APPS = 63  # one per slot in the packet-mark bits the daemon reserves (nft.py)
 
 MATCH_KEYS = ("exe", "name", "cmdline", "snap", "flatpak", "scope")
 _REGEX_KEYS = frozenset({"name", "cmdline", "scope"})
@@ -190,7 +192,7 @@ class Config:
 # --- Validation ---------------------------------------------------------------
 
 
-def _check_keys(data: dict, allowed: tuple[str, ...], where: str) -> None:
+def _check_keys(data: dict[Any, Any], allowed: tuple[str, ...], where: str) -> None:
     for key in data:
         if key not in allowed:
             raise ConfigError(
@@ -200,7 +202,7 @@ def _check_keys(data: dict, allowed: tuple[str, ...], where: str) -> None:
             )
 
 
-def _rate(data: dict, key: str, where: str) -> int | None:
+def _rate(data: dict[Any, Any], key: str, where: str) -> int | None:
     if data.get(key) is None:
         return None
     try:
@@ -274,10 +276,12 @@ def parse(data: Any) -> Config:
     apps = data.get("apps") or {}
     if not isinstance(apps, dict):
         raise ConfigError("apps: expected a mapping of app names to settings")
+    if len(apps) > MAX_APPS:
+        raise ConfigError(f"apps: at most {MAX_APPS} apps are supported")
     return Config(apps=tuple(_parse_app(n, a) for n, a in apps.items()))
 
 
-def migrate_v1(data: dict) -> dict:
+def migrate_v1(data: dict[Any, Any]) -> dict[str, Any]:
     """Convert a version 1 (TrafficToll) config dict to version 2.
 
     Settings without a v2 equivalent are dropped with a logged warning.
@@ -336,7 +340,7 @@ class _UniqueKeyLoader(yaml.SafeLoader):
         for key_node, _ in node.value:
             key = self.construct_object(key_node, deep=deep)
             if key in seen:
-                raise yaml.constructor.ConstructorError(
+                raise ConstructorError(
                     None, None, f"duplicate key {key!r}", key_node.start_mark
                 )
             seen.add(key)
