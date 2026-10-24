@@ -13,15 +13,19 @@ Config format, version 2::
 
 An app without limits is still detected and metered, just not shaped.
 
-Matching selects a cgroup scope, not a single process: every process in a
-matched scope shares the app's limits. Match keys:
+Matching selects a systemd unit, not a single process: every process in a
+matched unit shares the app's limits. Units are the apps users launch (in
+each user's ``app.slice``), plus system services named with ``service``.
+Match keys:
 
-    exe      exact executable path of a process in the scope
+    exe      exact executable path of a process in the unit
     name     regex on a process name
     cmdline  regex on a process's full command line (joined with spaces)
-    snap     snap name (scope ``snap.<name>.*``)
-    flatpak  flatpak app ID (scope ``app-flatpak-<id>-*``)
-    scope    regex on the scope unit name, e.g. ``app-gnome-Zoom-\\d+\\.scope``
+    snap     snap name (unit ``snap.<name>.*``)
+    flatpak  flatpak app ID (unit ``app-flatpak-<id>-*``)
+    scope    regex on the unit name, e.g. ``app-gnome-Zoom-\\d+\\.scope``
+    service  a system service, e.g. ``snapd.service`` (".service" optional);
+             can't be combined with snap, flatpak or scope
 
 Regexes must match the whole value (``re.fullmatch``).
 
@@ -52,7 +56,8 @@ VERSION = 2
 DEFAULT_CONFIG_NAME = "traffic-cop.yaml.default"
 MAX_APPS = 63  # one per slot in the packet-mark bits the daemon reserves (nft.py)
 
-MATCH_KEYS = ("exe", "name", "cmdline", "snap", "flatpak", "scope")
+MATCH_KEYS = ("exe", "name", "cmdline", "snap", "flatpak", "scope", "service")
+_APP_UNIT_KEYS = ("snap", "flatpak", "scope")  # only for units in app.slice
 _REGEX_KEYS = frozenset({"name", "cmdline", "scope"})
 _APP_KEYS = ("download", "upload", "match")
 _TOP_KEYS = ("version", "apps")
@@ -146,6 +151,7 @@ class Match:
     snap: str | None = None
     flatpak: str | None = None
     scope: re.Pattern[str] | None = None
+    service: str | None = None  # full unit name, e.g. "snapd.service"
 
     def to_dict(self) -> dict[str, str]:
         out = {}
@@ -230,8 +236,18 @@ def _parse_match(data: Any, where: str) -> Match:
                 ) from None
         elif key == "exe" and not value.startswith("/"):
             raise ConfigError(f"{where}.exe: expected an absolute path, got {value!r}")
+        elif key == "service":
+            if "/" in value:
+                raise ConfigError(
+                    f"{where}.service: expected a unit name, got {value!r}"
+                )
+            fields[key] = value if value.endswith(".service") else value + ".service"
         else:
             fields[key] = value
+    if "service" in fields and any(k in fields for k in _APP_UNIT_KEYS):
+        raise ConfigError(
+            f"{where}: 'service' can't be combined with " + ", ".join(_APP_UNIT_KEYS)
+        )
     return Match(**fields)
 
 

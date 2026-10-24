@@ -27,6 +27,29 @@ Rebuild it so it can ship as a **strict-confinement snap**, while still being
 able to build a deb from the same source. The work is being done step by
 step, starting with a daemon and CLI; the GUI comes last.
 
+## Supported systems
+
+Desktop-agnostic by design: no code for any particular desktop. What it
+relies on:
+
+- **systemd and cgroup v2** (unified hierarchy; Ubuntu 21.10+), with a
+  per-user systemd manager. The detector only looks at units in each user's
+  `user@<uid>.service/app.slice`, plus system services named with the
+  `service:` match key (e.g. `snapd.service` for snap updates).
+- **Per-app units.** Snap and flatpak apps get their own unit on any such
+  desktop (snapd and flatpak create them). Other apps do only if the desktop
+  launches them that way: GNOME (`app-gnome-*.scope`) does, and so do
+  terminal tabs in VTE terminals. On desktops that don't, deb apps all land in
+  the login `session-N.scope` and can't be told apart, so only snap, flatpak
+  and named-service apps can be limited there.
+- **Kernel/userspace:** nftables with `socket cgroupv2` in the output hook
+  (kernel ~5.13+, unverified), the CAKE qdisc and ifb, `python3-nftables`.
+
+Tested so far: Ubuntu with GNOME (kernel 7.0, nftables 1.1.6, Python 3.14).
+Not yet tested: KDE (believed to create per-app units), Cinnamon/Mint, Xfce,
+MATE. Packaging: the snap targets Ubuntu and other snapd distros; the deb
+covers distros without snapd, such as Mint.
+
 ## Architecture decisions
 
 **Privilege split.** One root daemon (`traffic-copd`) does everything
@@ -114,7 +137,7 @@ traffic-cop/
 │   │   ├── __main__.py        # startup, signals, teardown on exit
 │   │   ├── supervisor.py      # main loop; the only module coordinating others
 │   │   ├── netdev.py          # WAN detection + route changes (replaces tt-wrapper)
-│   │   ├── detector.py        # watch cgroups, match processes to config apps
+│   │   ├── detector.py        # app.slice units + named services → config apps
 │   │   ├── nft.py             # nftables table/counters, via python3-nftables (text syntax;
 │   │   │                      #   JSON input can't express `socket cgroupv2 level`)
 │   │   ├── tc.py              # HTB/CAKE/ifb setup
@@ -173,7 +196,7 @@ stub `main()`.
 
 ## Build order (each step runnable and testable)
 
-1. `common/config.py`: **next step.**
+1. `common/config.py`:
 2. `daemon/nft.py` + `daemon/tc.py`: reproduce `zoom-limit.sh` from config;
    unit-test the generated commands, integration-test in a netns.
 3. `daemon/detector.py`
@@ -196,10 +219,13 @@ stub `main()`.
     `ceil` borrowing), but then HTB is shaping again, not just classifying.
     Decide how that interacts with CAKE doing the per-app shaping.
 - **Changing cgroups.** Scopes are created and destroyed constantly, and
-  nftables resolves cgroup paths when rules load. The plan is an nftables map
-  from cgroup ID to mark, updated by the detector (via inotify on
-  `/sys/fs/cgroup` or systemd unit signals). Verify the target nftables
-  version supports this; the fallback is rewriting a small per-app chain.
+  nftables resolves cgroup paths when rules load. For now the supervisor polls
+  `Detector.scan()` and rewrites the output chain
+  (`nft.build_output_update`) when it changes. Launching an app creates a
+  directory in `app.slice`, so inotify on each user's `app.slice` could
+  replace most polling (exe/name matches may still need a re-check after the
+  new process execs). An nftables map from cgroup ID to mark is another
+  option; verify the target nftables version supports it.
 - **Apps started from a terminal** share the terminal's scope.
 - **Minimum kernel** for `socket cgroupv2` in the output hook (believed to be
   ~5.13+); check on the oldest supported release.

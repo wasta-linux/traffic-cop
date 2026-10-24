@@ -38,6 +38,7 @@
 #   snap     the name of a snap package: "firefox"
 #   flatpak  the ID of a flatpak app: "com.spotify.Client"
 #   scope    the app's systemd scope (regex): "app-gnome-Zoom-[0-9]+\.scope"
+#   service  a system service, such as "snapd.service" for snap updates
 # Regexes must match the whole name or command.
 #
 # Limits apply to the whole app, including all of its helper processes: for
@@ -58,7 +59,7 @@ apps:
     download: 1mbit
     upload: 500kbit
     match:
-      - name: snapd
+      - service: snapd.service
 
   "Spotify":
     download: 128kbit

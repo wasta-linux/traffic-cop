@@ -192,6 +192,30 @@ def test_loads_rejects(text, message):
         config.loads(text)
 
 
+def test_service_key():
+    cfg = config.loads(
+        "version: 2\napps:\n  S: {match: [{service: snapd}, {service: x.service}]}\n"
+    )
+    assert [m.service for m in get_app(cfg, "S").match] == [
+        "snapd.service",
+        "x.service",
+    ]
+    assert cfg.to_dict()["apps"]["S"]["match"][0] == {"service": "snapd.service"}
+
+
+@pytest.mark.parametrize(
+    ("entry", "message"),
+    [
+        ("{service: system.slice/snapd.service}", "expected a unit name"),
+        ("{service: snapd, snap: x}", "can't be combined with snap, flatpak, scope"),
+        ("{service: snapd, scope: x}", "can't be combined"),
+    ],
+)
+def test_service_key_rejects(entry, message):
+    with pytest.raises(ConfigError, match=message):
+        config.loads(f"version: 2\napps:\n  S: {{match: [{entry}]}}\n")
+
+
 def test_app_limit():
     apps = {f"a{i}": {"match": [{"name": "x"}]} for i in range(config.MAX_APPS)}
     assert len(config.parse({"version": 2, "apps": apps}).apps) == config.MAX_APPS
