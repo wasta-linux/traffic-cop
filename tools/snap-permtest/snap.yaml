@@ -1,0 +1,21 @@
+name: trafficcop-permtest
+version: '0.1'
+summary: Traffic Cop strict-confinement permission test
+description: |
+  Checks what a strict snap running as root may do for Traffic Cop: read the
+  cgroup tree and /proc, move a process into another cgroup, create ifb and
+  dummy links, set up tc (HTB, CAKE, fw, ingress, connmark, mirred) and load
+  an nftables table that matches on socket cgroupv2. Install it with
+  `snap try` from the directory tools/snap-permtest/prepare.sh builds.
+base: core26
+confinement: strict
+grade: devel
+
+apps:
+  run:
+    command: bin/run-tests
+    plugs:
+      - system-observe
+      - network-control
+      - firewall-control
+      - network-observe

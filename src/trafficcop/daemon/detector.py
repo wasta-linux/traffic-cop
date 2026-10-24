@@ -30,6 +30,13 @@ Desktops that don't start apps in their own units leave them all in the
 login session's scope, which is never matched; only snap and flatpak apps
 are detected there.
 
+Everything is read from ``/proc``: each process's cgroup (which also gives
+its unit), name, command line and executable. That's what a strict snap can
+read with ``system-observe``; it can't list ``/sys/fs/cgroup``. The snap also
+can't read the executable of another user's process (snapd denies
+``CAP_SYS_PTRACE``), so ``exe`` matches fall back to the command line's first
+word when the executable is unreadable; see ``Process.program``.
+
 This module only reads; the daemon polls ``Detector.scan`` and applies the
 changes itself.
 """
@@ -38,7 +45,8 @@ from __future__ import annotations
 
 import logging
 import os
-from collections.abc import Iterable, Iterator, Mapping
+import re
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -46,21 +54,40 @@ from trafficcop.common.config import App, Config, Match
 
 log = logging.getLogger(__name__)
 
-CGROUP_ROOT = Path("/sys/fs/cgroup")
 PROC = Path("/proc")
-APP_SLICES = "user.slice/user-*.slice/user@*.service/app.slice"
-SYSTEM_SLICE = "system.slice"
 
 _UNIT_SUFFIXES = (".scope", ".service")
+# Units directly in a user's app.slice, or in slices nested inside it.
+_APP_UNIT_RE = re.compile(
+    r"user\.slice/user-\d+\.slice/user@\d+\.service/app\.slice/"
+    r"(?:[^/]+\.slice/)*[^/]+\.(?:scope|service)"
+)
+# System services, directly in system.slice or in slices nested inside it.
+_SYSTEM_UNIT_RE = re.compile(r"system\.slice/(?:[^/]+\.slice/)*[^/]+\.service")
 _COMM_LEN = 15  # the kernel truncates /proc/<pid>/comm to this many chars
 
 
 @dataclass(frozen=True)
 class Process:
     pid: int
+    cgroup: str  # relative to /sys/fs/cgroup, no leading slash; "" = root
     name: str
-    exe: str | None = None  # None if unreadable
+    exe: str | None = None  # None if unreadable (another user's, in the snap)
     cmdline: tuple[str, ...] = ()
+
+    @property
+    def program(self) -> str | None:
+        """The executable path, or failing that argv[0] if it's absolute.
+
+        argv[0] is usually the same path, but not always: a program started
+        through a symlink shows the symlink (``/usr/bin/zoom``, not
+        ``/opt/zoom/ZoomLauncher``), and a program can change its argv[0].
+        """
+        if self.exe is not None:
+            return self.exe
+        if self.cmdline and self.cmdline[0].startswith("/"):
+            return self.cmdline[0]
+        return None
 
 
 @dataclass(frozen=True)
@@ -106,13 +133,23 @@ def _name(comm: str, cmdline: tuple[str, ...]) -> str:
     return comm
 
 
+def _cgroup_v2(text: str) -> str | None:
+    for line in text.splitlines():
+        if line.startswith("0::"):
+            return line[3:].strip("/")
+    return None  # cgroup v1 only; not supported
+
+
 def read_process(pid: int, proc: Path = PROC) -> Process | None:
-    """Read one process, or return None if it has exited."""
+    """Read one process, or return None if it has exited or has no v2 cgroup."""
     base = proc / str(pid)
     try:
+        cgroup = _cgroup_v2(_read(base / "cgroup"))
         comm = _read(base / "comm").rstrip("\n")
         raw = _read(base / "cmdline")
     except OSError:
+        return None
+    if cgroup is None:
         return None
     cmdline = tuple(raw.split("\0")[:-1]) if raw.endswith("\0") else (raw,)
     if cmdline == ("",):
@@ -124,62 +161,40 @@ def read_process(pid: int, proc: Path = PROC) -> Process | None:
     else:
         # A program upgraded while running shows its old, deleted file.
         exe = exe.removesuffix(" (deleted)")
-    return Process(pid, _name(comm, cmdline), exe, cmdline)
+    return Process(pid, cgroup, _name(comm, cmdline), exe, cmdline)
 
 
-def _subdirs(path: Path) -> list[Path]:
-    try:
-        return [p for p in path.iterdir() if p.is_dir()]
-    except OSError:
-        return []  # removed while we were looking
+def unit_cgroup(cgroup: str) -> str | None:
+    """Return the cgroup of the innermost .scope/.service containing ``cgroup``."""
+    parts = cgroup.split("/") if cgroup else []
+    for i in range(len(parts), 0, -1):
+        if parts[i - 1].endswith(_UNIT_SUFFIXES):
+            return "/".join(parts[:i])
+    return None
 
 
-def _units_under(slice_dir: Path) -> Iterator[Path]:
-    """Yield the unit directories in a slice, descending into nested slices."""
-    for d in _subdirs(slice_dir):
-        if d.name.endswith(_UNIT_SUFFIXES):
-            yield d
-        elif d.name.endswith(".slice"):
-            yield from _units_under(d)
+def read_units(services: Iterable[str] = (), proc: Path = PROC) -> list[Unit]:
+    """Read every app unit, plus the named system services that are running.
 
-
-def _pids(unit_dir: Path) -> list[int]:
-    """PIDs in a unit's cgroup and any cgroups nested inside it."""
-    pids = []
-    try:
-        pids += [int(line) for line in _read(unit_dir / "cgroup.procs").split()]
-    except OSError:
-        pass
-    for d in _subdirs(unit_dir):
-        pids += _pids(d)
-    return pids
-
-
-def read_units(
-    services: Iterable[str] = (),
-    cgroup_root: Path = CGROUP_ROOT,
-    proc: Path = PROC,
-) -> list[Unit]:
-    """Read every app unit, plus the named system services that are running."""
-    found = [(d, False) for s in cgroup_root.glob(APP_SLICES) for d in _units_under(s)]
+    Units are found from their processes, so a unit with no processes (or
+    whose processes all exited mid-scan) isn't returned.
+    """
     wanted = set(services)
-    if wanted:
-        found += [
-            (d, True)
-            for d in _units_under(cgroup_root / SYSTEM_SLICE)
-            if d.name in wanted
-        ]
-    units = []
-    for d, system in found:
-        procs = (read_process(pid, proc) for pid in _pids(d))
-        units.append(
-            Unit(
-                str(d.relative_to(cgroup_root)),
-                system,
-                tuple(p for p in procs if p is not None),
-            )
-        )
-    return units
+    members: dict[tuple[str, bool], list[Process]] = {}
+    for entry in proc.iterdir():
+        if not entry.name.isdigit():
+            continue
+        p = read_process(int(entry.name), proc)
+        if p is None or (unit := unit_cgroup(p.cgroup)) is None:
+            continue
+        if _APP_UNIT_RE.fullmatch(unit):
+            members.setdefault((unit, False), []).append(p)
+        elif unit.rsplit("/", 1)[-1] in wanted and _SYSTEM_UNIT_RE.fullmatch(unit):
+            members.setdefault((unit, True), []).append(p)
+    return [
+        Unit(path, system, tuple(sorted(procs, key=lambda p: p.pid)))
+        for (path, system), procs in members.items()
+    ]
 
 
 # --- Matching -----------------------------------------------------------------
@@ -205,7 +220,7 @@ def _unit_matches(entry: Match, unit: Unit) -> bool:
 
 
 def _process_matches(entry: Match, p: Process) -> bool:
-    if entry.exe is not None and p.exe != entry.exe:
+    if entry.exe is not None and p.program != entry.exe:
         return False
     if entry.name is not None and not entry.name.fullmatch(p.name):
         return False
@@ -253,7 +268,6 @@ class Detector:
     """Re-reads the units on demand and reports when the matches change."""
 
     config: Config
-    cgroup_root: Path = CGROUP_ROOT
     proc: Path = PROC
     current: Mapping[str, frozenset[str]] = field(default_factory=dict, init=False)
     _reported: set[Skipped] = field(default_factory=set, init=False)
@@ -264,7 +278,7 @@ class Detector:
         Each skipped unit is logged once, the first time it's seen.
         """
         services = {m.service for a in self.config.apps for m in a.match if m.service}
-        units = read_units(services, self.cgroup_root, self.proc)
+        units = read_units(services, self.proc)
         result = match(self.config, units)
         for s in sorted(result.skipped - self._reported, key=str):
             log.warning("%s: not limiting %s: %s", s.app, s.cgroup, s.reason)

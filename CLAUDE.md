@@ -41,7 +41,9 @@ relies on:
   launches them that way: GNOME (`app-gnome-*.scope`) does, and so do
   terminal tabs in VTE terminals. On desktops that don't, other apps all land in
   the login `session-N.scope` and can't be told apart, so only snap, flatpak
-  and named-service apps can be limited there.
+  and named-service apps can be limited there. Even on GNOME, an app whose
+  launcher starts the real program immediately can escape its scope and
+  can't be limited (e.g. Zoom's deb); see "Apps that escape their scope".
 - **Kernel/userspace:** nftables with `socket cgroupv2` in the output hook
   (kernel ~5.13+, unverified), the CAKE qdisc and ifb, `python3-nftables`.
 
@@ -113,13 +115,29 @@ instead of drop (TCP only; Zoom media is mostly UDP).
 per second. tc counts header bytes too, so totals may differ slightly from the
 ISP's; CAKE's `overhead` options can compensate.
 
-## Planned snap interfaces
+## Snap interfaces and confinement
 
-- Daemon: `network-control` (tc, ip link), `firewall-control` (nftables),
-  `system-observe` (cgroup tree, /proc). All need a store review request.
-- `kernel-module-load` is probably **not** needed: `ip link add ifb0 type ifb`
-  should autoload the module. Verify this under strict confinement.
+- Daemon: `network-control` (ip, tc), `firewall-control` (nftables),
+  `system-observe` (/proc), `network-observe` (interface byte counts). None
+  auto-connect; all need a store review request.
 - GUI: `network` at most.
+
+**Tested under strict confinement** with `tools/snap-permtest/` (a `snap try`
+snap on core26, run as root; see its `prepare.sh`), with those four
+interfaces connected:
+
+| works | refused |
+|---|---|
+| ifb link, full tc upload/download trees (HTB, CAKE, masked `fw`, ingress, `connmark`, `mirred`) | listing `/sys/fs/cgroup` (`system-observe` allows only a few cgroup files) |
+| nft table with `socket cgroupv2`, masked marks, counters | reading `/proc/<pid>/exe` of another user's process (snapd adds `deny capability sys_ptrace`; explicit denies aren't logged) |
+| `/proc/<pid>/cgroup`, `comm`, `cmdline`; `ip route get` | writing `cgroup.procs` (moving a process); no ordinary interface allows it |
+| `/sys/class/net/*/statistics` (needs `network-observe`) | |
+
+Consequences: the detector finds units from `/proc/<pid>/cgroup`, never from
+sysfs; `exe` matches fall back to `argv[0]` when the executable is
+unreadable. Not yet tested: whether `ip link add … type ifb` loads the
+`ifb` module itself (it was already loaded), so whether `kernel-module-load`
+is needed is still open.
 
 ## File layout
 
@@ -223,6 +241,19 @@ stub `main()`.
   new process execs). An nftables map from cgroup ID to mark is another
   option; verify the target nftables version supports it.
 - **Apps started from a terminal** share the terminal's scope.
+- **Apps that escape their scope.** GNOME creates an app's scope just *after*
+  starting it. Children the app starts in that window stay in GNOME Shell's
+  own cgroup (`session.slice/org.gnome.Shell@….service`), which is never
+  matched. Seen with Zoom's deb (`ZoomLauncher` starts `/opt/zoom/zoom`,
+  which carries meeting traffic, and its embedded Chromium creates its own
+  `app-org.chromium.Chromium-<pid>.scope`) and Zed (`bin/zed` starts
+  `libexec/zed-editor` and exits). Snap and flatpak apps are immune. As root,
+  writing the escaped PIDs to the launcher's scope `cgroup.procs` fixes it
+  (tested with Zoom), but a strict snap can't. Options: document and
+  recommend snap/flatpak versions (current choice); ask the store for a
+  privileged interface or classic confinement; have the GUI add per-user
+  desktop-entry overrides that launch via `systemd-run --user --scope`
+  (needs `personal-files`); or reconsider packaging.
 - **Minimum kernel** for `socket cgroupv2` in the output hook (believed to be
   ~5.13+); check on the oldest supported release.
 - Where the default config lives: `common/` vs `daemon/`.
