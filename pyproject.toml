@@ -73,6 +73,7 @@ branch = true
 venvPath = "."
 venv = ".venv"
 typeCheckingMode = "standard"
+exclude = ["src/trafficcop/legacy", "tests/legacy"]  # reference only
 # Packages only available from apt (python3-nftables, later python3-gi). The
 # venv is created with --system-site-packages, but pyright ignores that.
 extraPaths = ["/usr/lib/python3/dist-packages"]

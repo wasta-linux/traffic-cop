@@ -32,21 +32,27 @@ that follows the window, not the numbers. A bar is Wasta blue, and
 turns yellow when the limit is holding its app back (``model.FULL``): limited,
 not stopped, so a caution colour rather than an alarm.
 
-Read-only apart from the "Limits on" button (a ttk toggle button: pressed
-means on), which sends pause/resume; the daemon decides who may (see
-server.py), and a refusal is shown in a message box.
+Changes: the "Limits on" button (a ttk toggle button: pressed means on)
+sends pause/resume. "+" adds an app, clicking an app's name opens it for
+changing or removing (``dialog.AppDialog``), and the "…" menu restores the
+default apps. Each change fetches the current config, edits it
+(``editor.py``) and sends it back with ``set-config``. The daemon decides
+who may (see server.py); for other users the editor is read-only.
 """
 
 from __future__ import annotations
 
 import tkinter as tk
+from collections.abc import Callable
 from dataclasses import dataclass
 from tkinter import font, messagebox, ttk
 from typing import Any
 
+from trafficcop.common import config, protocol
 from trafficcop.common.i18n import _
-from trafficcop.gui import fonts
+from trafficcop.gui import editor, fonts
 from trafficcop.gui.client import Client, Reply
+from trafficcop.gui.dialog import AppDialog
 from trafficcop.gui.model import AppRow, Direction, Level, View, build_view
 
 DISPATCH_MS = 100
@@ -71,6 +77,7 @@ TEXT = SLATE
 DIM = "#7C818C"
 ON_SLATE_DIM = "#C3C7D0"
 TROUGH = "#E4E7EB"
+FIELD_GREY = "#EEF0F2"
 GREEN = "#3BA55C"
 YELLOW = "#E8B400"
 
@@ -121,6 +128,46 @@ def _style(root: tk.Tk) -> ttk.Style:
             borderwidth=0,
             thickness=10,
         )
+    style.configure(
+        "Header.TButton",
+        background=SLATE_LIGHT,
+        foreground=WHITE,
+        padding=(12, 4),
+        relief="raised",
+        borderwidth=1,
+    )
+    style.map(
+        "Header.TButton",
+        background=[("disabled", SLATE_LIGHT), ("active", "#6B7080")],
+        foreground=[("disabled", ON_SLATE_DIM)],
+    )
+    style.configure("Link.TLabel", foreground=TEXT)
+    # Dialog buttons: blue for the main action, slate (like the header's "+")
+    # for the rest; both stand out on white.
+    for name, colour, hover in (
+        ("Primary.TButton", BLUE, BLUE_DARK),
+        ("Secondary.TButton", SLATE_LIGHT, "#6B7080"),
+    ):
+        style.configure(
+            name,
+            background=colour,
+            foreground=WHITE,
+            padding=(12, 4),
+            relief="raised",
+            borderwidth=1,
+        )
+        style.map(
+            name,
+            background=[("disabled", TROUGH), ("pressed", SLATE), ("active", hover)],
+            foreground=[("disabled", DIM)],
+        )
+    # Pick-from-a-list and read-only fields get a light grey fill, so they
+    # stand apart from fields you type in.
+    style.map(
+        "TCombobox",
+        fieldbackground=[("disabled", FIELD_GREY), ("readonly", FIELD_GREY)],
+    )
+    style.map("TEntry", fieldbackground=[("disabled", FIELD_GREY)])
     return style
 
 
@@ -170,6 +217,7 @@ class MainWindow:
         big = font.nametofont("TkDefaultFont").copy()
         big.configure(weight="bold", size=big.cget("size") + 2)
         self._fonts = (bold, big)  # keep references: Tk forgets unreferenced fonts
+        ttk.Style(root).configure("Header.TButton", font=big)  # "+" and "…" read small
 
         header = ttk.Frame(root, style="Header.TFrame", padding=(16, 12))
         header.grid(row=0, column=0, sticky="ew")
@@ -187,7 +235,32 @@ class MainWindow:
             style="Limits.Toolbutton",
             cursor="hand2",
         )
-        self.switch.grid(row=0, column=1, rowspan=2, sticky="e")
+        self.switch.grid(row=0, column=3, rowspan=2, sticky="e")
+        self.add = ttk.Button(
+            header,
+            text="+",
+            style="Header.TButton",
+            command=self._add_app,
+            cursor="hand2",
+            width=2,
+        )
+        self.add.grid(row=0, column=1, rowspan=2, sticky="e", padx=(0, 6))
+        self.menu = tk.Menu(root, tearoff=False)
+        self.menu.add_command(label=_("Add an app\u2026"), command=self._add_app)
+        self.menu.add_command(
+            label=_("Restore the default apps\u2026"), command=self._restore_defaults
+        )
+        self.more = ttk.Button(
+            header,
+            text="\u2026",
+            style="Header.TButton",
+            command=self._show_menu,
+            cursor="hand2",
+            width=2,
+        )
+        self.more.grid(row=0, column=2, rowspan=2, sticky="e", padx=(0, 12))
+        self.may_change = editor.may_change()
+        self.dialog: AppDialog | None = None
 
         self.table = ttk.Frame(root, padding=(16, 10, 16, 12))
         self.table.grid(row=1, column=0, sticky="nsew")
@@ -257,6 +330,119 @@ class MainWindow:
             messagebox.showerror("Traffic Cop", reply.message, parent=self.root)
         self._render()
 
+    # --- Changing apps ---------------------------------------------------------------
+
+    def _show_menu(self) -> None:
+        x = self.more.winfo_rootx()
+        y = self.more.winfo_rooty() + self.more.winfo_height()
+        self.menu.tk_popup(x, y)
+
+    def _add_app(self) -> None:
+        self._open_dialog(editor.AppDraft(), None)
+
+    def _edit_app(self, name: str) -> None:
+        def got(reply: Reply) -> None:
+            entry = (reply.result or {}).get("apps", {}).get(name) if reply.ok else None
+            if entry is None:
+                self._report(reply)
+                return
+            self._open_dialog(editor.AppDraft.from_entry(name, entry), name)
+
+        self.client.request("get-config", got)
+
+    def _open_dialog(self, draft: editor.AppDraft, old_name: str | None) -> None:
+        if self.dialog is not None and self.dialog.winfo_exists():
+            self.dialog.lift()
+            return
+
+        def save(draft: editor.AppDraft) -> None:
+            try:
+                name, entry = draft.to_entry()
+            except editor.EditError as e:
+                dialog.show_error(str(e))
+                return
+            self._change(
+                lambda cfg: editor.with_app(cfg, old_name, name, entry), dialog
+            )
+
+        def remove() -> None:
+            if messagebox.askyesno(
+                _("Remove an app"),
+                _("Remove {name}? Its limits will stop applying.").format(
+                    name=old_name
+                ),
+                parent=dialog,
+            ):
+                self._change(
+                    lambda cfg: editor.without_app(cfg, old_name or ""), dialog
+                )
+
+        dialog = AppDialog(
+            self.root,
+            draft,
+            new=old_name is None,
+            editable=self.may_change,
+            on_save=save,
+            on_remove=remove if old_name is not None else None,
+        )
+        self.dialog = dialog
+
+    def _restore_defaults(self) -> None:
+        if not messagebox.askyesno(
+            _("Restore the default apps"),
+            _("Replace all your apps and limits with the defaults?"),
+            parent=self.root,
+        ):
+            return
+        self.client.request(
+            "set-config", self._changed(None), {"yaml": config.default_text()}
+        )
+
+    def _change(
+        self, edit: Callable[[dict[str, Any]], dict[str, Any]], dialog: AppDialog
+    ) -> None:
+        """Fetch the config, apply ``edit``, send it back; report to ``dialog``."""
+
+        def got(reply: Reply) -> None:
+            if not reply.ok:
+                dialog.show_error(self._message(reply))
+                return
+            try:
+                new = edit(reply.result)
+            except editor.EditError as e:
+                dialog.show_error(str(e))
+                return
+            self.client.request("set-config", self._changed(dialog), {"config": new})
+
+        self.client.request("get-config", got)
+
+    def _changed(self, dialog: AppDialog | None) -> Callable[[Reply], None]:
+        def done(reply: Reply) -> None:
+            if reply.ok:
+                self.status = reply.result
+                self._render()
+                if dialog is not None and dialog.winfo_exists():
+                    dialog.close()
+            elif dialog is not None and dialog.winfo_exists():
+                dialog.show_error(self._message(reply))
+            else:
+                self._report(reply)
+
+        return done
+
+    def _message(self, reply: Reply) -> str:
+        if reply.permission_denied:
+            return _("Only administrators can change apps.")
+        if reply.unreachable:
+            return _("Traffic Cop isn't running")
+        if isinstance(reply.error, protocol.ProtocolError):
+            return reply.error.message  # e.g. a config error, from the daemon
+        return str(reply.error)
+
+    def _report(self, reply: Reply) -> None:
+        if not reply.ok:
+            messagebox.showerror("Traffic Cop", self._message(reply), parent=self.root)
+
     # --- Drawing -----------------------------------------------------------------
 
     def _render(self) -> None:
@@ -271,6 +457,8 @@ class MainWindow:
         self.switch.state(
             ["!disabled"] if view.connected and not self.busy else ["disabled"]
         )
+        for button in (self.add, self.more):
+            button.state(["!disabled"] if view.connected else ["disabled"])
         self._render_rows(view)
 
     def _render_rows(self, view: View) -> None:
@@ -278,7 +466,7 @@ class MainWindow:
         if names != list(self._rows):
             for widgets in self._rows.values():
                 widgets.destroy()
-            self._rows = {name: self._make_row(i) for i, name in enumerate(names)}
+            self._rows = {name: self._make_row(i, name) for i, name in enumerate(names)}
         if view.connected and not view.rows:
             self.empty.grid(row=0, column=0, columnspan=C_TOTAL + 1, sticky="w")
         else:
@@ -286,7 +474,7 @@ class MainWindow:
         for row in view.rows:
             self._fill_row(self._rows[row.name], row)
 
-    def _make_row(self, index: int) -> _RowWidgets:
+    def _make_row(self, index: int, app: str) -> _RowWidgets:
         r = 3 * index  # per app: a rule (except the first), then down and up
         rule = None
         if index:
@@ -315,8 +503,10 @@ class MainWindow:
             borderwidth=0,
         )
         dot.grid(row=r + 1, column=C_DOT, rowspan=2, padx=(0, 8))
-        name = ttk.Label(self.table, font=self._fonts[0])
+        name = ttk.Label(self.table, font=self._fonts[0], cursor="hand2")
         name.grid(row=r + 1, column=C_NAME, rowspan=2, sticky="w", padx=(0, 16))
+        for w in (dot, name):  # click an app to change it
+            w.bind("<Button-1>", lambda e, app=app: self._edit_app(app))
         return _RowWidgets(
             dot, name, direction(r + 1, "down"), direction(r + 2, "up"), rule
         )

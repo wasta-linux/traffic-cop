@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: traffic-cop VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-25 15:32+0100\n"
+"POT-Creation-Date: 2026-10-25 15:49+0100\n"
 "PO-Revision-Date: 2026-10-25 15:32+0100\n"
 "Last-Translator: Traffic Cop developers\n"
 "Language: fr\n"
@@ -24,7 +24,7 @@ msgid "config: {path}"
 msgstr "configuration : {path}"
 
 #: src/trafficcop/cli/__main__.py:71 src/trafficcop/cli/__main__.py:96
-#: src/trafficcop/gui/window.py:201
+#: src/trafficcop/gui/window.py:237
 msgid "No apps configured."
 msgstr "Aucune application configurée."
 
@@ -202,7 +202,101 @@ msgstr "la fenêtre nécessite tkinter (sudo apt install python3-tk)"
 msgid "can't open a window: {error}"
 msgstr "impossible d’ouvrir une fenêtre : {error}"
 
-#: src/trafficcop/gui/model.py:97
+#: src/trafficcop/gui/dialog.py:43
+msgid "Add an app"
+msgstr "Ajouter une application"
+
+#: src/trafficcop/gui/dialog.py:43
+msgid "Change an app"
+msgstr "Modifier une application"
+
+#: src/trafficcop/gui/dialog.py:58
+msgid "Name"
+msgstr "Nom"
+
+#: src/trafficcop/gui/dialog.py:82
+msgid "blank: no limit"
+msgstr "vide : pas de limite"
+
+#: src/trafficcop/gui/dialog.py:86
+msgid "Recognise the app by"
+msgstr "Reconnaître l’application par"
+
+#: src/trafficcop/gui/dialog.py:105 src/trafficcop/gui/window.py:393
+msgid "Only administrators can change apps."
+msgstr "Seuls les administrateurs peuvent modifier les applications."
+
+#: src/trafficcop/gui/dialog.py:112
+msgid "Remove"
+msgstr "Supprimer"
+
+#: src/trafficcop/gui/dialog.py:116
+msgid "Cancel"
+msgstr "Annuler"
+
+#: src/trafficcop/gui/dialog.py:116
+msgid "Close"
+msgstr "Fermer"
+
+#: src/trafficcop/gui/dialog.py:121
+msgid "Save"
+msgstr "Enregistrer"
+
+#: src/trafficcop/gui/editor.py:37
+msgid "Snap package"
+msgstr "Paquet snap"
+
+#: src/trafficcop/gui/editor.py:38
+msgid "Flatpak app ID"
+msgstr "Identifiant Flatpak"
+
+#: src/trafficcop/gui/editor.py:39
+msgid "Program (full path)"
+msgstr "Programme (chemin complet)"
+
+#: src/trafficcop/gui/editor.py:40
+msgid "Process name (pattern)"
+msgstr "Nom du processus (motif)"
+
+#: src/trafficcop/gui/editor.py:41
+msgid "Command line (pattern)"
+msgstr "Ligne de commande (motif)"
+
+#: src/trafficcop/gui/editor.py:42
+msgid "systemd scope (pattern)"
+msgstr "Scope systemd (motif)"
+
+#: src/trafficcop/gui/editor.py:43
+msgid "System service"
+msgstr "Service système"
+
+#: src/trafficcop/gui/editor.py:72
+#, python-brace-format
+msgid "{field}: enter a number greater than 0, or leave it blank"
+msgstr "{field} : saisissez un nombre supérieur à 0, ou laissez vide"
+
+#: src/trafficcop/gui/editor.py:112
+msgid "Give the app a name."
+msgstr "Donnez un nom à l’application."
+
+#: src/trafficcop/gui/editor.py:115
+msgid "Download limit"
+msgstr "Limite de réception"
+
+#: src/trafficcop/gui/editor.py:116
+msgid "Upload limit"
+msgstr "Limite d’envoi"
+
+#: src/trafficcop/gui/editor.py:126
+msgid "Add at least one rule to recognise the app by."
+msgstr "Ajoutez au moins une règle pour reconnaître l’application."
+
+#: src/trafficcop/gui/editor.py:142
+#, python-brace-format
+msgid "There's already an app called {name}."
+msgstr "Il existe déjà une application nommée {name}."
+
+#: src/trafficcop/gui/model.py:97 src/trafficcop/gui/window.py:395
 msgid "Traffic Cop isn't running"
 msgstr "Traffic Cop n’est pas lancé"
 
@@ -211,19 +305,44 @@ msgstr "Traffic Cop n’est pas lancé"
 msgid "Start it with: {command}"
 msgstr "Lancez-le avec : {command}"
 
-#: src/trafficcop/gui/window.py:184 src/trafficcop/gui/window.py:269
+#: src/trafficcop/gui/window.py:206 src/trafficcop/gui/window.py:413
 msgid "Limits on"
 msgstr "Limites activées"
 
-#: src/trafficcop/gui/window.py:250
+#: src/trafficcop/gui/window.py:219
+msgid "Add an app…"
+msgstr "Ajouter une application…"
+
+#: src/trafficcop/gui/window.py:221
+msgid "Restore the default apps…"
+msgstr "Restaurer les applications par défaut…"
+
+#: src/trafficcop/gui/window.py:286
 msgid "Not allowed"
 msgstr "Non autorisé"
 
-#: src/trafficcop/gui/window.py:251
+#: src/trafficcop/gui/window.py:287
 msgid "Only administrators can turn the limits on or off."
 msgstr "Seuls les administrateurs peuvent activer ou désactiver les limites."
 
-#: src/trafficcop/gui/window.py:269
+#: src/trafficcop/gui/window.py:328
+msgid "Remove an app"
+msgstr "Supprimer une application"
+
+#: src/trafficcop/gui/window.py:329
+#, python-brace-format
+msgid "Remove {name}? Its limits will stop applying."
+msgstr "Supprimer {name} ? Ses limites ne s’appliqueront plus."
+
+#: src/trafficcop/gui/window.py:350
+msgid "Restore the default apps"
+msgstr "Restaurer les applications par défaut"
+
+#: src/trafficcop/gui/window.py:351
+msgid "Replace all your apps and limits with the defaults?"
+msgstr "Remplacer toutes vos applications et limites par celles par défaut ?"
+
+#: src/trafficcop/gui/window.py:413
 msgid "Limits off"
 msgstr "Limites désactivées"
 
