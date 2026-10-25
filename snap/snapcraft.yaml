@@ -98,17 +98,18 @@ parts:
         *dev*|*a*|*b*|*rc*) craftctl set grade=devel ;;
         *) craftctl set grade=stable ;;
       esac
+    build-environment:
+      # The plugin makes its venv with "python3", which must be the build
+      # machine's Python: the interpreter staged below has no ensurepip.
+      # The plugin's PATH would find the staged one first, from this part's
+      # install/usr/bin on a first build and from stage/bin on later ones.
+      # User build-environment comes last, so this wins.
+      - PATH: /usr/bin:$PATH
     override-build: |
-      # The plugin makes a venv in $CRAFT_PART_INSTALL with "python3", which
-      # must be the build machine's Python: the staged one has no ensurepip.
-      # - python3-nftables's dependencies stage python3-minimal, whose
-      #   usr/bin/python3 would come first on PATH; drop it (uniscape doesn't
-      #   stage it, so builds the same way).
-      # - A rebuild would reuse the last build's venv, whose bin/python3.14
-      #   already points at the staged interpreter; clear it. Staged
-      #   packages live in usr/ and etc/, so they're untouched.
-      rm -f "$CRAFT_PART_INSTALL/usr/bin/python3"
-      rm -rf "$CRAFT_PART_INSTALL/bin" "$CRAFT_PART_INSTALL/include" \
-        "$CRAFT_PART_INSTALL"/lib/python3.* "$CRAFT_PART_INSTALL/lib64" \
-        "$CRAFT_PART_INSTALL/pyvenv.cfg"
+      # A rebuild would reuse the last build's venv, whose bin/python3.14
+      # already points at the staged interpreter; clear it. Staged packages
+      # live in usr/ and etc/, so they're untouched.
+      install="${CRAFT_PART_INSTALL:?}"
+      rm -rf "$install/bin" "$install/include" "$install"/lib/python3.* \
+        "$install/lib64" "$install/pyvenv.cfg"
       craftctl default

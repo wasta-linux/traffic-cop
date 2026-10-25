@@ -119,7 +119,10 @@ ISP's; CAKE's `overhead` options can compensate.
 
 - Daemon: `network-control` (ip, tc), `firewall-control` (nftables),
   `system-observe` (/proc), `network-observe` (interface byte counts). None
-  auto-connect; all need a store review request.
+  auto-connect; all need a store review request. Plus `network-bind`
+  (auto-connects): without it seccomp refuses `bind`/`listen` even on the
+  daemon's Unix socket. `kernel-module-load` is **not** needed: with `ifb`
+  unloaded, the snapped daemon's `ip link add … type ifb` loaded it.
 - GUI (tkinter): `x11` (Tk runs through XWayland on Wayland desktops), and
   the daemon's socket. Stage `python3-tk` and `fonts-sil-andika`; `gui/fonts.py`
   registers the snap's Andika with fontconfig before Tk starts.
@@ -137,9 +140,16 @@ interfaces connected:
 
 Consequences: the detector finds units from `/proc/<pid>/cgroup`, never from
 sysfs; `exe` matches fall back to `argv[0]` when the executable is
-unreadable. Not yet tested: whether `ip link add … type ifb` loads the
-`ifb` module itself (it was already loaded), so whether `kernel-module-load`
-is needed is still open.
+unreadable.
+
+**Snap build notes** (`snap/snapcraft.yaml`, built locally with LXD):
+`core26` has no Python, so the interpreter is staged (via `python3-tk`).
+The python plugin then finds that staged `python3` first on `PATH` (from the
+part's `install/usr/bin`, and from `stage/bin` on rebuilds), which has no
+`ensurepip`, and its venv fails. The part sets `PATH: /usr/bin:$PATH` in
+`build-environment` and clears the previous venv in `override-build`.
+Confined `ip -d link show` reads `/usr/share/iproute2/group` (denied), so
+`netdev.link_kind` caches per interface to avoid a denial every poll.
 
 ## File layout
 
@@ -237,10 +247,12 @@ Steps 1–7 are done (also `common/paths.py`, `common/protocol.py`,
 7. ✓ GUI (tkinter + ttk, chosen over GTK 4 to avoid the ~600 MB GNOME
    runtime snap; costs: X11 via XWayland, plain look, weak screen-reader
    support): 7a read-only window + pause button; 7b editing apps.
-8. Packaging: snap. To verify: the daemon as a snap service, a client app
-   reaching the socket in `$SNAP_COMMON`, staging `python3-nftables`,
-   `python3-tk` and `fonts-sil-andika`, and whether ifb loads without
-   `kernel-module-load`. Build with `snapcraft remote-build` (no LXD).
+8. Packaging: snap `wasta-traffic-cop` (apps: `daemon`, `wasta-traffic-cop`
+   = the CLI, `gui`). Built and installed locally: the daemon runs as a
+   service under strict confinement and shapes, the CLI reaches its socket as
+   a user, ifb loads without `kernel-module-load`. Still to check: the GUI
+   from the menu, a real limit, start after reboot; then store registration
+   and the interface auto-connect review.
 
 Ideas after that: a "pick a running app" list in the editor (the daemon
 would report the app units it sees, with their traffic); a warning for apps
