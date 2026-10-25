@@ -62,7 +62,7 @@ version = {attr = "trafficcop.__version__"}
 testpaths = ["tests"]
 addopts = "-ra --ignore=tests/legacy"
 markers = [
-    "integration: needs root; runs real nft/tc inside a network namespace",
+    "integration: real nft/tc/daemon in an unprivileged user+network namespace (unshare -rn)",
 ]
 
 [tool.coverage.run]

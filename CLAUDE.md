@@ -169,7 +169,7 @@ traffic-cop/
 ├── data/                      # desktop file, icon
 ├── tests/
 │   ├── unit/                  # no root: config, detector (fake cgroup tree), command generation
-│   ├── integration/           # root: real nft/tc in a network namespace (veth pair)
+│   ├── integration/           # real nft/tc/daemon in an unprivileged netns (unshare -rn)
 │   └── legacy/                # old tests, ignored by pytest
 ├── tools/zoom-limit.sh        # working proof of concept
 └── snap/                      # snapcraft.yaml, hooks/install
@@ -180,7 +180,7 @@ traffic-cop/
 - setuptools ≥ 68 (Ubuntu 24.04), `src/` layout, version from
   `trafficcop.__version__`, license `{file = "LICENSE"}` (the SPDX string form
   would need setuptools 77).
-- Dependencies: PyYAML, psutil. Extras: `dev`
+- Dependencies: PyYAML. Extras: `dev`
   (pytest, pytest-cov, ruff).
 - The daemon also needs `python3-nftables` (the official libnftables
   bindings), which isn't on PyPI: the snap must stage it (it pulls in
@@ -203,12 +203,12 @@ pip install -e '.[dev]'
 pytest -m "not integration"
 sudo .venv/bin/traffic-copd          # sudo resets PATH, so use the full path
                                      # (dev paths: /var/lib/traffic-cop-dev, /run/traffic-cop-dev)
-sudo .venv/bin/pytest -m integration
+pytest -m integration               # no sudo: runs in `unshare -rn` namespaces
 ```
 
 Old modules were moved to `src/trafficcop/legacy/` and old tests to
-`tests/legacy/` because they import `gi`. Each entry point currently has a
-stub `main()`.
+`tests/legacy/` because they import `gi`. They're reference only: excluded
+from pytest, ruff and pyright.
 
 ## Translations
 
@@ -225,30 +225,37 @@ catalogue is complete and keeps every `{placeholder}`.
 
 ## Build order (each step runnable and testable)
 
-1. `common/config.py`:
-2. `daemon/nft.py` + `daemon/tc.py`: reproduce `zoom-limit.sh` from config;
-   unit-test the generated commands, integration-test in a netns.
-3. `daemon/detector.py`
-4. `daemon/meter.py`
-5. `daemon/supervisor.py` + `daemon/server.py`
-6. `cli/`
-7. GUI (tkinter + ttk, chosen over GTK 4 to avoid the ~600 MB GNOME runtime
-   snap; costs: X11 via XWayland, plain look, weak screen-reader support):
-   7a read-only window + pause switch; 7b editing apps
-8. Packaging: snap
+Steps 1–7 are done (also `common/paths.py`, `common/protocol.py`,
+`common/display.py`, `common/i18n.py`, `daemon/netdev.py`).
+
+1. ✓ `common/config.py`
+2. ✓ `daemon/nft.py` + `daemon/tc.py`: reproduce `zoom-limit.sh` from config;
+   unit tests for the generated commands, integration tests in a netns.
+3. ✓ `daemon/detector.py`
+4. ✓ `daemon/meter.py`
+5. ✓ `daemon/supervisor.py` + `daemon/server.py`
+6. ✓ `cli/`
+7. ✓ GUI (tkinter + ttk, chosen over GTK 4 to avoid the ~600 MB GNOME
+   runtime snap; costs: X11 via XWayland, plain look, weak screen-reader
+   support): 7a read-only window + pause button; 7b editing apps.
+8. Packaging: snap. To verify: the daemon as a snap service, a client app
+   reaching the socket in `$SNAP_COMMON`, staging `python3-nftables`,
+   `python3-tk` and `fonts-sil-andika`, and whether ifb loads without
+   `kernel-module-load`. Build with `snapcraft remote-build` (no LXD).
+
+Ideas after that: a "pick a running app" list in the editor (the daemon
+would report the app units it sees, with their traffic); a warning for apps
+that escaped their scope; a short "recent events" list from the daemon.
 
 ## Open questions
 
-- **Config schema v2.** The old (TrafficToll) format has global `download`/
-  `upload` limits, `*-minimum`, `*-priority`, and per-process entries matched
-  by `cmdline` (regex), `exe` (exact path) or `name` (regex). Decide what to
-  keep. Notes:
-  - Matching now picks a **cgroup scope**, so every process in that scope is
-    limited together. Narrow matches such as Firefox's `name: Socket Process`
-    can't target just one process inside a scope.
-  - **Global limits and priorities** fit HTB (root rate, class `prio`,
-    `ceil` borrowing), but then HTB is shaping again, not just classifying.
-    Decide how that interacts with CAKE doing the per-app shaping.
+- **Global limits and priorities** (from the 1.x format) aren't in config
+  v2, which has per-app `download`/`upload` and `match` only; 1.x configs are
+  rejected. They'd fit HTB (root rate, class `prio`, `ceil` borrowing), but
+  then HTB shapes again rather than only classifying; decide how that would
+  interact with CAKE before adding them. Matching picks a whole unit, so a
+  narrow 1.x match like Firefox's `name: Socket Process` can't target one
+  process inside it.
 - **Changing cgroups.** Scopes are created and destroyed constantly, and
   nftables resolves cgroup paths when rules load. For now the supervisor polls
   `Detector.scan()` and rewrites the output chain
@@ -273,7 +280,6 @@ catalogue is complete and keeps every `{placeholder}`.
   (needs `personal-files`); or reconsider packaging.
 - **Minimum kernel** for `socket cgroupv2` in the output hook (believed to be
   ~5.13+); check on the oldest supported release.
-- Where the default config lives: `common/` vs `daemon/`.
 - `SO_PEERCRED` policy: decided for now (root, or a member of `sudo`, `admin`
   or `wheel`, read from the caller's `/proc/<pid>/status`; see `server.py`).
   Revisit if the GUI needs per-user permissions.
