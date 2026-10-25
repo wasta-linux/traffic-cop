@@ -33,6 +33,7 @@ class FakeSystem(supervisor.System):
         self.wan: str | None = "wlp2s0"
         self.counters: dict[str, tuple[int, int]] = {}
         self.upload_counters: dict[str, tuple[int, int]] = {}
+        self.download_counters: dict[str, tuple[int, int]] = {}
         self.nft_failures = 0  # fail this many apply_nft calls first
         self.tc_error: str | None = None
         self.log: list[tuple[str, ...]] = []
@@ -49,6 +50,9 @@ class FakeSystem(supervisor.System):
 
     def read_upload_counters(self, wan: str) -> dict[str, tuple[int, int]]:
         return self.upload_counters
+
+    def read_download_counters(self) -> dict[str, tuple[int, int]]:
+        return self.download_counters
 
     def setup_tc(self, config: config.Config, marks: Mapping[str, int], wan: str):
         if self.tc_error:

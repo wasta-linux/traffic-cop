@@ -175,3 +175,46 @@ def test_read_upload_counters_failures(monkeypatch, code, out):
 
     monkeypatch.setattr(tc.subprocess, "run", run)
     assert tc.read_upload_counters("eth9") == {}
+
+
+IFB_QDISCS = [
+    {"kind": "htb", "handle": "1:", "root": True},
+    {
+        "kind": "cake",
+        "parent": "1:101",
+        "bytes": 2_274_101,  # delivered
+        "packets": 1871,
+        "tins": [{"sent_bytes": 3_898_561, "sent_packets": 3132, "drops": 1257}],
+    },
+    {"kind": "cake", "parent": "1:102", "tins": [{"sent_packets": 1}]},  # no bytes
+    {"kind": "fq_codel", "parent": "1:2"},
+]
+
+
+def test_download_counter_name():
+    assert tc.download_counter_name(0x02000000) == "tc_down_2"
+
+
+def test_read_download_counters_counts_what_arrived(monkeypatch):
+    import json
+    import subprocess
+
+    calls = []
+
+    def run(argv, **kwargs):
+        calls.append(argv)
+        return subprocess.CompletedProcess(argv, 0, json.dumps(IFB_QDISCS), "")
+
+    monkeypatch.setattr(tc.subprocess, "run", run)
+    assert tc.read_download_counters() == {"tc_down_1": (3132, 3_898_561)}
+    assert calls == [["tc", "-s", "-j", "qdisc", "show", "dev", "ifb-trafficcop"]]
+
+
+def test_read_download_counters_without_ifb(monkeypatch):
+    import subprocess
+
+    def run(argv, **kwargs):
+        return subprocess.CompletedProcess(argv, 1, "", "Cannot find device")
+
+    monkeypatch.setattr(tc.subprocess, "run", run)
+    assert tc.read_download_counters() == {}

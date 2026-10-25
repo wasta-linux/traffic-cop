@@ -56,6 +56,9 @@ class System:
     def read_upload_counters(self, wan: str) -> Counters:
         return tc.read_upload_counters(wan)
 
+    def read_download_counters(self) -> Counters:
+        return tc.read_download_counters()
+
     def setup_tc(self, config: Config, marks: Mapping[str, int], wan: str) -> None:
         tc.apply_setup(config, marks, wan)
 
@@ -212,6 +215,7 @@ class Supervisor:
         counters = dict(self.system.read_counters())
         if self.shaped:
             counters.update(self.system.read_upload_counters(self.shaped))
+            counters.update(self.system.read_download_counters())
         return counters
 
     def _load_table(self) -> None:
@@ -248,7 +252,11 @@ class Supervisor:
             return
         self.shaped = wan
         self._tc_error = None
-        self.meter.forget(tc.upload_counter_name(m) for m in self.marks.values())
+        self.meter.forget(
+            name
+            for m in self.marks.values()
+            for name in (tc.upload_counter_name(m), tc.download_counter_name(m))
+        )
         log.info("shaping traffic on %s", wan)
 
     @staticmethod

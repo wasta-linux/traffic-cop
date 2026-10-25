@@ -126,11 +126,21 @@ def test_sample_uses_cake_for_limited_uploads(sup: supervisor.Supervisor, system
     assert sup.usage["Snap Updates"].up_total == 300  # no upload limit: nft
 
 
+def test_sample_counts_dropped_downloads_for_limited_apps(sup, system: FakeSystem):
+    sup.start()
+    system.counters = {"down_1": (5, 2000), "down_2": (1, 100)}
+    system.download_counters = {"tc_down_1": (9, 3500)}  # 1500 B dropped
+    sup.sample()
+    assert sup.usage["Zoom"].down_total == 3500
+    assert sup.usage["Snap Updates"].down_total == 100  # no CAKE counter: nft
+
+
 def test_sample_without_shaping_uses_nft(sup: supervisor.Supervisor, system):
     system.wan = None
     sup.start()
     system.counters = {"up_1": (5, 4000)}
     system.upload_counters = {"tc_up_1": (4, 3000)}  # not read: nothing shaped
+    system.download_counters = {"tc_down_1": (4, 3000)}
     sup.sample()
     assert sup.usage["Zoom"].up_total == 4000
 

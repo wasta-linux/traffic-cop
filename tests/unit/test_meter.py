@@ -29,8 +29,13 @@ def fake() -> FakeNft:
     return FakeNft()
 
 
-def make_meter(fake: FakeNft, marks: dict[str, int] | None = None) -> meter.Meter:
-    return meter.Meter(marks or {"Zoom": ZOOM}, read=fake.read, clock=fake.clock)
+def make_meter(
+    fake: FakeNft, marks: dict[str, int] | None = None, smoothing: float = 0
+) -> meter.Meter:
+    """A meter on the fakes; unsmoothed unless asked, so rates are exact."""
+    return meter.Meter(
+        marks or {"Zoom": ZOOM}, read=fake.read, clock=fake.clock, smoothing=smoothing
+    )
 
 
 def test_rates_and_totals(fake: FakeNft):
@@ -93,6 +98,13 @@ def test_prefers_cake_upload_counter(fake: FakeNft):
     assert m.sample() == {"Zoom": Usage(4000.0, 100.0, 4000, 100)}
 
 
+def test_prefers_cake_download_counter(fake: FakeNft):
+    m = make_meter(fake)
+    fake.now += 1
+    fake.bytes = {"down_1": 2000, "tc_down_1": 3500}  # 1500 dropped by CAKE
+    assert m.sample()["Zoom"] == Usage(0.0, 3500.0, 0, 3500)
+
+
 def test_switching_upload_sources_counts_once(fake: FakeNft):
     m = make_meter(fake)
     fake.now += 1
@@ -126,3 +138,42 @@ def test_read_errors_propagate(fake: FakeNft):
     fake.error = nft.NftError("Error: No such file or directory")
     with pytest.raises(nft.NftError):
         m.sample()
+
+
+def test_rates_are_smoothed(fake: FakeNft):
+    m = make_meter(fake, smoothing=3.0)
+    total = 0
+    rates = []
+    for burst in (30_000, 0, 30_000, 0, 30_000, 0):  # bursty: 15 kB/s on average
+        fake.now += 1
+        total += burst
+        fake.bytes = {"down_1": total}
+        rates.append(m.sample()["Zoom"].down_rate)
+    assert rates[0] == 30_000  # nothing to smooth against at first
+    assert max(rates[1:]) < 30_000 and min(rates[1:]) > 0  # no swings to 0 or full
+    assert m.sample()["Zoom"].down_total == 90_000  # totals stay exact
+
+
+def test_smoothing_follows_a_change(fake: FakeNft):
+    m = make_meter(fake, smoothing=3.0)
+    total = 0
+    for _ in range(15):  # 15 s at 10 kB/s, then it stops
+        fake.now += 1
+        total += 10_000
+        fake.bytes = {"up_1": total}
+        m.sample()
+    rate = 0.0
+    for _ in range(10):  # 10 s idle
+        fake.now += 1
+        rate = m.sample()["Zoom"].up_rate
+    assert rate < 10_000 * 0.05  # after ~3 time constants, close to 0
+
+
+def test_restarted_drops_rates_of_removed_apps(fake: FakeNft):
+    m = make_meter(fake, {"Zoom": ZOOM, "Spotify": SPOTIFY}, smoothing=3.0)
+    fake.now += 1
+    fake.bytes = {"up_2": 500}
+    m.sample()
+    m.restarted({"Zoom": ZOOM})
+    fake.now += 1
+    assert set(m.sample()) == {"Zoom"}
