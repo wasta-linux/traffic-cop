@@ -61,6 +61,7 @@ apps:
       - firewall-control  # nftables
       - system-observe    # /proc/<pid>/cgroup, comm, cmdline
       - network-observe   # interface byte counts
+      - network-bind      # listen on its socket (connects automatically)
 
   # The command-line client, named like the snap so it's simply
   # `wasta-traffic-cop`. (The program calls itself traffic-cop-ctl.)
@@ -97,3 +98,17 @@ parts:
         *dev*|*a*|*b*|*rc*) craftctl set grade=devel ;;
         *) craftctl set grade=stable ;;
       esac
+    override-build: |
+      # The plugin makes a venv in $CRAFT_PART_INSTALL with "python3", which
+      # must be the build machine's Python: the staged one has no ensurepip.
+      # - python3-nftables's dependencies stage python3-minimal, whose
+      #   usr/bin/python3 would come first on PATH; drop it (uniscape doesn't
+      #   stage it, so builds the same way).
+      # - A rebuild would reuse the last build's venv, whose bin/python3.14
+      #   already points at the staged interpreter; clear it. Staged
+      #   packages live in usr/ and etc/, so they're untouched.
+      rm -f "$CRAFT_PART_INSTALL/usr/bin/python3"
+      rm -rf "$CRAFT_PART_INSTALL/bin" "$CRAFT_PART_INSTALL/include" \
+        "$CRAFT_PART_INSTALL"/lib/python3.* "$CRAFT_PART_INSTALL/lib64" \
+        "$CRAFT_PART_INSTALL/pyvenv.cfg"
+      craftctl default

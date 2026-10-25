@@ -39,6 +39,13 @@ def route(dev: str) -> list[dict[str, object]]:
     return [{"dst": "1.1.1.1", "gateway": "192.168.1.1", "dev": dev, "flags": []}]
 
 
+@pytest.fixture(autouse=True)
+def fresh_kinds():
+    netdev.forget_link_kinds()
+    yield
+    netdev.forget_link_kinds()
+
+
 @pytest.fixture
 def fake_ip(monkeypatch: pytest.MonkeyPatch):
     def install(
@@ -180,3 +187,24 @@ def test_interface_bytes(tmp_path: Path):
 def test_interface_bytes_on_this_system():
     rx, tx = netdev.interface_bytes("lo")
     assert rx >= 0 and tx >= 0
+
+
+def test_link_kind_is_looked_up_once(fake_ip):
+    fake = fake_ip({"1.1.1.1": route("proton0")}, {"proton0": "wireguard"})
+    for _ in range(3):
+        assert netdev.wan_device() == "proton0"
+    link_calls = [c for c in fake.calls if "link" in c]
+    assert len(link_calls) == 1  # route lookups repeat; the kind doesn't
+
+
+def test_failed_link_lookups_are_retried(monkeypatch: pytest.MonkeyPatch):
+    calls = []
+
+    def run(argv, **kwargs):
+        calls.append(argv)
+        return subprocess.CompletedProcess(argv, 1, "", "Device does not exist")
+
+    monkeypatch.setattr(netdev.subprocess, "run", run)
+    assert netdev.link_kind("tun0") is None
+    assert netdev.link_kind("tun0") is None
+    assert len(calls) == 2

@@ -55,16 +55,33 @@ def _ip_json(*args: str) -> Any:
         return None
 
 
+# Interface kinds already looked up. A link's kind can't change while it
+# exists, and `ip -d link show` reads /usr/share/iproute2/group, which the
+# snap may not (a harmless but noisy AppArmor denial), so ask once per name.
+_kinds: dict[str, str | None] = {}
+
+
 def link_kind(dev: str) -> str | None:
     """Return an interface's kind (``wireguard``, ``dummy``, ...), if it has one.
 
-    Physical interfaces have no kind.
+    Physical interfaces have no kind. Answers are remembered per interface
+    name (see ``forget_link_kinds``); failed lookups aren't.
     """
+    if dev in _kinds:
+        return _kinds[dev]
+    links = _ip_json("-d", "link", "show", "dev", dev)
+    if not isinstance(links, list) or not links:
+        return None  # gone, or ip failed: ask again next time
     try:
-        kind = _ip_json("-d", "link", "show", "dev", dev)[0]["linkinfo"]["info_kind"]
+        kind = links[0]["linkinfo"]["info_kind"]
     except (LookupError, TypeError):
-        return None
-    return kind if isinstance(kind, str) else None
+        kind = None
+    _kinds[dev] = kind if isinstance(kind, str) else None
+    return _kinds[dev]
+
+
+def forget_link_kinds() -> None:
+    _kinds.clear()
 
 
 def route_device(destination: str) -> str | None:
