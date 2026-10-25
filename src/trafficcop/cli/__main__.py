@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 import time
 from collections.abc import Callable, Mapping, Sequence
@@ -28,6 +27,14 @@ from typing import Any, TextIO
 
 from trafficcop import __version__
 from trafficcop.common import config, paths, protocol
+from trafficcop.common.display import (
+    human_bytes,
+    human_limit,
+    human_rate,
+    start_hint,
+    state_text,
+)
+from trafficcop.common.i18n import _, ngettext
 
 Call = Callable[[str, Mapping[str, Any] | None], Any]
 
@@ -37,26 +44,6 @@ _CLEAR = "\x1b[H\x1b[2J"
 
 
 # --- Formatting -------------------------------------------------------------------
-
-
-def human_rate(bytes_per_second: float) -> str:
-    """Format a rate in bytes per second, e.g. ``"70.0 kB/s"``."""
-    for unit, size in (("MB/s", 1e6), ("kB/s", 1e3)):
-        if bytes_per_second >= size:
-            return f"{bytes_per_second / size:.1f} {unit}"
-    return f"{bytes_per_second:.0f} B/s"
-
-
-def human_bytes(n: float) -> str:
-    for unit, size in (("GB", 1e9), ("MB", 1e6), ("kB", 1e3)):
-        if n >= size:
-            return f"{n / size:.1f} {unit}"
-    return f"{n:.0f} B"
-
-
-def human_limit(bits_per_second: int | None) -> str:
-    """Format a limit (stored in bits per second) the way rates are shown."""
-    return "-" if bits_per_second is None else human_rate(bits_per_second / 8)
 
 
 def table(rows: Sequence[Sequence[str]], right: Sequence[int] = ()) -> str:
@@ -73,31 +60,24 @@ def table(rows: Sequence[Sequence[str]], right: Sequence[int] = ()) -> str:
 
 
 def format_status(status: Mapping[str, Any]) -> str:
-    if status["paused"]:
-        state = "paused (not shaping; still metering)"
-    elif status["shaping"]:
-        state = f"shaping traffic on {status['shaping']}"
-    elif status["wan"]:
-        state = f"not shaping: setting up tc on {status['wan']} failed (see the log)"
-    else:
-        state = "not shaping: no route to the internet"
+    state = state_text(status)
     lines = [
         f"traffic-copd {status['version']}: {state}",
-        f"config: {status['config']}",
+        _("config: {path}").format(path=status["config"]),
         "",
     ]
     apps = status["apps"]
     if not apps:
-        return "\n".join([*lines, "No apps configured."])
-    rows = [["APP", "DOWN LIMIT", "UP LIMIT", "RUNNING"]]
+        return "\n".join([*lines, _("No apps configured.")])
+    rows = [[_("APP"), _("DOWN LIMIT"), _("UP LIMIT"), _("RUNNING")]]
     for app in apps:
         units = app["units"]
         running = (
-            "no"
+            _("no")
             if not units
             else units[0]
             if len(units) == 1
-            else f"{len(units)} units"
+            else ngettext("{n} unit", "{n} units", len(units)).format(n=len(units))
         )
         rows.append(
             [
@@ -113,8 +93,8 @@ def format_status(status: Mapping[str, Any]) -> str:
 def format_rates(usage: Mapping[str, Any]) -> str:
     apps = usage["apps"]
     if not apps:
-        return "No apps configured."
-    rows = [["APP", "DOWN", "UP", "DOWN TOTAL", "UP TOTAL"]]
+        return _("No apps configured.")
+    rows = [[_("APP"), _("DOWN"), _("UP"), _("DOWN TOTAL"), _("UP TOTAL")]]
     for name, u in apps.items():
         rows.append(
             [
@@ -187,51 +167,45 @@ def cmd_config_set(call: Call, args: argparse.Namespace, out: TextIO) -> None:
 # --- Main ----------------------------------------------------------------------------
 
 
-def start_hint(env: Mapping[str, str] = os.environ, argv0: str = sys.argv[0]) -> str:
-    """How to start the daemon, for the "can't reach it" error."""
-    if paths.get(env).snap:
-        name = env.get("SNAP_INSTANCE_NAME") or env.get("SNAP_NAME", "traffic-cop")
-        return f"sudo snap start {name}"
-    # A development checkout: traffic-copd sits next to this script in the venv.
-    daemon = Path(argv0).parent / "traffic-copd"
-    return f"sudo {daemon}" if daemon.is_file() else "sudo traffic-copd"
-
-
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="traffic-cop-ctl",
-        description="Control and monitor the Traffic Cop daemon.",
+        description=_("Control and monitor the Traffic Cop daemon."),
     )
-    parser.add_argument("--json", action="store_true", help="print raw JSON")
+    parser.add_argument("--json", action="store_true", help=_("print raw JSON"))
     parser.add_argument(
-        "--socket", type=Path, help=f"daemon socket (default: {paths.get().socket})"
+        "--socket",
+        type=Path,
+        help=_("daemon socket (default: {path})").format(path=paths.get().socket),
     )
     parser.add_argument("--version", action="version", version=__version__)
     sub = parser.add_subparsers(dest="command", required=True, metavar="COMMAND")
 
-    sub.add_parser("status", help="daemon state and each app's limits").set_defaults(
+    sub.add_parser("status", help=_("daemon state and each app's limits")).set_defaults(
         run=cmd_status
     )
-    rates = sub.add_parser("rates", help="current rates and totals")
-    rates.add_argument("-w", "--watch", action="store_true", help="keep updating")
+    rates = sub.add_parser("rates", help=_("current rates and totals"))
+    rates.add_argument("-w", "--watch", action="store_true", help=_("keep updating"))
     rates.add_argument(
-        "-n", "--interval", type=float, default=1.0, help="seconds between updates"
+        "-n", "--interval", type=float, default=1.0, help=_("seconds between updates")
     )
     rates.set_defaults(run=cmd_rates)
     for name, text in (
-        ("pause", "stop shaping (metering continues)"),
-        ("resume", "start shaping again"),
-        ("reload", "re-read the config file"),
+        ("pause", _("stop shaping (metering continues)")),
+        ("resume", _("start shaping again")),
+        ("reload", _("re-read the config file")),
     ):
         sub.add_parser(name, help=text).set_defaults(run=cmd_simple(name))
 
-    cfg = sub.add_parser("config", help="show or replace the config")
+    cfg = sub.add_parser("config", help=_("show or replace the config"))
     cfg_sub = cfg.add_subparsers(dest="action", required=True, metavar="ACTION")
-    cfg_sub.add_parser("show", help="print the config as YAML").set_defaults(
+    cfg_sub.add_parser("show", help=_("print the config as YAML")).set_defaults(
         run=cmd_config_show
     )
-    cfg_set = cfg_sub.add_parser("set", help="validate, apply and save a config file")
-    cfg_set.add_argument("file", help='YAML config file, or "-" for stdin')
+    cfg_set = cfg_sub.add_parser(
+        "set", help=_("validate, apply and save a config file")
+    )
+    cfg_set.add_argument("file", help=_('YAML config file, or "-" for stdin'))
     cfg_set.set_defaults(run=cmd_config_set)
     return parser
 
@@ -251,10 +225,13 @@ def main(
     try:
         args.run(call_daemon, args, out)
     except protocol.ProtocolError as e:
-        hint = ""
         if e.code == protocol.PERMISSION_DENIED:
-            hint = " (try sudo)"
-        print(f"traffic-cop-ctl: {e.message}{hint}", file=sys.stderr)
+            message = _(
+                "'{command}' needs root or an administrator account (try sudo)"
+            ).format(command=args.command)
+        else:
+            message = e.message  # from the daemon, in English
+        print(f"traffic-cop-ctl: {message}", file=sys.stderr)
         return EXIT_FAILED
     except config.ConfigError as e:
         print(f"traffic-cop-ctl: {e}", file=sys.stderr)
@@ -264,8 +241,11 @@ def main(
             print(f"traffic-cop-ctl: {e}", file=sys.stderr)  # e.g. config set FILE
             return EXIT_FAILED
         print(
-            f"traffic-cop-ctl: can't reach the daemon at {socket_path};"
-            f" is it running? Start it with: {start_hint()}",
+            "traffic-cop-ctl: "
+            + _(
+                "can't reach the daemon at {path}; is it running?"
+                " Start it with: {command}"
+            ).format(path=socket_path, command=start_hint()),
             file=sys.stderr,
         )
         return EXIT_UNREACHABLE

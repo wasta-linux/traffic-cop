@@ -120,7 +120,9 @@ ISP's; CAKE's `overhead` options can compensate.
 - Daemon: `network-control` (ip, tc), `firewall-control` (nftables),
   `system-observe` (/proc), `network-observe` (interface byte counts). None
   auto-connect; all need a store review request.
-- GUI: `network` at most.
+- GUI (tkinter): `x11` (Tk runs through XWayland on Wayland desktops), and
+  the daemon's socket. Stage `python3-tk` and `fonts-sil-andika`; `gui/fonts.py`
+  registers the snap's Andika with fontconfig before Tk starts.
 
 **Tested under strict confinement** with `tools/snap-permtest/` (a `snap try`
 snap on core26, run as root; see its `prepare.sh`), with those four
@@ -162,7 +164,7 @@ traffic-cop/
 │   │   ├── meter.py           # poll counters → per-app rates
 │   │   └── server.py          # Unix socket API + SO_PEERCRED auth
 │   ├── cli/__main__.py        # traffic-cop-ctl: status/rates/pause/resume/reload
-│   ├── gui/                   # traffic-cop (later): app, window, client, ui/*.glade
+│   ├── gui/                   # traffic-cop (tkinter/ttk): client, model, window
 │   └── legacy/                # old modules, reference only; never imported
 ├── data/                      # desktop file, icon
 ├── tests/
@@ -178,7 +180,7 @@ traffic-cop/
 - setuptools ≥ 68 (Ubuntu 24.04), `src/` layout, version from
   `trafficcop.__version__`, license `{file = "LICENSE"}` (the SPDX string form
   would need setuptools 77).
-- Dependencies: PyYAML, psutil. Extras: `gui` (PyGObject), `dev`
+- Dependencies: PyYAML, psutil. Extras: `dev`
   (pytest, pytest-cov, ruff).
 - The daemon also needs `python3-nftables` (the official libnftables
   bindings), which isn't on PyPI: the snap must stage it (it pulls in
@@ -186,7 +188,7 @@ traffic-cop/
   unit tests run without it.
 - Entry points: `traffic-copd`, `traffic-cop-ctl` (scripts); `traffic-cop`
   (gui-scripts).
-- Package data: `gui/ui/*.glade`, the default config. Load these with
+- Package data: the default config. Load it with
   `importlib.resources`, never hardcoded `/usr/share` paths.
 - pytest marker `integration`; add `--ignore=tests/legacy` to `addopts`.
 
@@ -195,7 +197,7 @@ traffic-cop/
 Building CLI-first, so there are no GUI dependencies yet:
 
 ```bash
-sudo apt install python3-nftables   # not on PyPI
+sudo apt install python3-nftables python3-tk   # not on PyPI
 python3 -m venv --system-site-packages .venv && . .venv/bin/activate
 pip install -e '.[dev]'
 pytest -m "not integration"
@@ -208,6 +210,19 @@ Old modules were moved to `src/trafficcop/legacy/` and old tests to
 `tests/legacy/` because they import `gi`. Each entry point currently has a
 stub `main()`.
 
+## Translations
+
+English and French, via gettext (`common/i18n.py`; domain `traffic-cop`).
+Catalogues are package data in `src/trafficcop/locale/<lang>/LC_MESSAGES/`;
+both `.po` and compiled `.mo` are committed. After changing user-facing
+strings in the CLI or GUI, run `tools/i18n.sh` (needs `python3-babel`),
+translate new or fuzzy entries, and run it again. New language:
+`tools/i18n.sh add es`. The decimal separator and units (`ko/s`, `Mo`) are
+translated strings, so numbers follow the interface language even without
+system locale data. The daemon's log and its error messages stay English.
+Tests run in English (`tests/conftest.py`); `test_i18n.py` checks each
+catalogue is complete and keeps every `{placeholder}`.
+
 ## Build order (each step runnable and testable)
 
 1. `common/config.py`:
@@ -217,7 +232,9 @@ stub `main()`.
 4. `daemon/meter.py`
 5. `daemon/supervisor.py` + `daemon/server.py`
 6. `cli/`
-7. Port the GUI onto `gui/client.py`
+7. GUI (tkinter + ttk, chosen over GTK 4 to avoid the ~600 MB GNOME runtime
+   snap; costs: X11 via XWayland, plain look, weak screen-reader support):
+   7a read-only window + pause switch; 7b editing apps
 8. Packaging: snap
 
 ## Open questions

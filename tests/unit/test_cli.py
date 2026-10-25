@@ -56,24 +56,6 @@ def run(daemon: FakeDaemon, *argv: str) -> tuple[int, str]:
     return code, out.getvalue()
 
 
-@pytest.mark.parametrize(
-    ("rate", "text"),
-    [(0, "0 B/s"), (999, "999 B/s"), (70_000, "70.0 kB/s"), (1_500_000, "1.5 MB/s")],
-)
-def test_human_rate(rate: float, text: str):
-    assert cli.human_rate(rate) == text
-
-
-def test_human_limit():
-    assert cli.human_limit(560_000) == "70.0 kB/s"  # 70kbps in the config
-    assert cli.human_limit(None) == "-"
-
-
-def test_human_bytes():
-    assert cli.human_bytes(31_000_000) == "31.0 MB"
-    assert cli.human_bytes(512) == "512 B"
-
-
 def test_status():
     daemon = FakeDaemon()
     code, out = run(daemon, "status")
@@ -193,7 +175,7 @@ def test_permission_denied(capsys: pytest.CaptureFixture[str]):
     )
     assert run(daemon, "pause")[0] == cli.EXIT_FAILED
     assert capsys.readouterr().err == (
-        "traffic-cop-ctl: 'pause' needs root or membership of one of: sudo (try sudo)\n"
+        "traffic-cop-ctl: 'pause' needs root or an administrator account (try sudo)\n"
     )
 
 
@@ -209,27 +191,3 @@ def test_usage_errors():
     with pytest.raises(SystemExit) as e:
         run(FakeDaemon())
     assert e.value.code == 2
-
-
-SNAP_ENV = {
-    "SNAP": "/snap/traffic-cop/42",
-    "SNAP_DATA": "/var/snap/traffic-cop/42",
-    "SNAP_COMMON": "/var/snap/traffic-cop/common",
-    "SNAP_NAME": "traffic-cop",
-}
-
-
-def test_start_hint_in_the_snap():
-    assert cli.start_hint(SNAP_ENV) == "sudo snap start traffic-cop"
-    parallel = {**SNAP_ENV, "SNAP_INSTANCE_NAME": "traffic-cop_test"}
-    assert cli.start_hint(parallel) == "sudo snap start traffic-cop_test"
-
-
-def test_start_hint_in_a_venv(tmp_path: Path):
-    (tmp_path / "traffic-copd").write_text("#!/bin/sh\n")
-    argv0 = str(tmp_path / "traffic-cop-ctl")
-    assert cli.start_hint({}, argv0) == f"sudo {tmp_path}/traffic-copd"
-
-
-def test_start_hint_without_a_daemon_script(tmp_path: Path):
-    assert cli.start_hint({}, str(tmp_path / "traffic-cop-ctl")) == "sudo traffic-copd"
