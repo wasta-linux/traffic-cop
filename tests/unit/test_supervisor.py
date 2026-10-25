@@ -275,3 +275,45 @@ def test_apply_config_failure_keeps_the_old_config(sup, system: FakeSystem):
         sup.apply_config(config.loads("version: 2\napps: {}\n"))
     assert sup.config is CFG and sup.marks == old_marks
     assert sup.shaped == "wlp2s0"  # shaping restored
+
+
+def test_fresh_install_starts_paused(system: FakeSystem, proc, tmp_path, caplog):
+    state = tmp_path / "state.json"
+    with caplog.at_level(logging.INFO):
+        sup = supervisor.Supervisor(CFG, system, proc.path, state=state)
+        sup.start()
+    assert sup.paused and sup.shaped is None
+    assert system.calls("setup_tc") == []
+    assert ("nft", "ruleset") in system.calls("nft")  # still metering
+    assert "no saved state: starting paused" in caplog.text
+    assert not state.exists()  # written on the first pause or resume
+
+
+def test_pause_state_survives_a_restart(system: FakeSystem, proc, tmp_path):
+    state = tmp_path / "state.json"
+    sup = supervisor.Supervisor(CFG, system, proc.path, state=state)
+    sup.start()
+    sup.resume()
+    assert supervisor.load_state(state) is False
+
+    again = supervisor.Supervisor(CFG, system, proc.path, state=state)
+    again.start()
+    assert not again.paused and again.shaped == "wlp2s0"
+
+    again.pause()
+    assert supervisor.Supervisor(CFG, system, proc.path, state=state).paused
+
+
+@pytest.mark.parametrize("text", ["not json", "[]", "{}"])
+def test_unreadable_state_starts_paused(tmp_path, caplog, text):
+    state = tmp_path / "state.json"
+    state.write_text(text)
+    assert supervisor.load_state(state) is True
+    assert "starting paused" in caplog.text
+
+
+def test_save_state_failure_is_logged(tmp_path, caplog):
+    blocker = tmp_path / "file"
+    blocker.write_text("")
+    supervisor.save_state(blocker / "state.json", paused=False)  # parent is a file
+    assert "couldn't save the state" in caplog.text

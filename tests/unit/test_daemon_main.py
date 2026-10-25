@@ -40,7 +40,7 @@ def test_main_runs_the_supervisor(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     monkeypatch.setattr(daemon.os, "geteuid", lambda: 0)
     ran: list[config.Config] = []
 
-    async def fake_run(cfg: config.Config, config_path: Path, socket_path: Path):
+    async def fake_run(cfg: config.Config, *paths: Path):
         ran.append(cfg)
 
     monkeypatch.setattr(daemon, "_run", fake_run)

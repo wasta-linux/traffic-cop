@@ -34,12 +34,14 @@ def load_or_create(path: Path) -> config.Config:
     return config.load(path)
 
 
-async def _run(cfg: config.Config, config_path: Path, socket_path: Path) -> None:
+async def _run(
+    cfg: config.Config, config_path: Path, socket_path: Path, state_path: Path
+) -> None:
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGTERM, signal.SIGINT):
         loop.add_signal_handler(sig, stop.set)
-    sup = supervisor.Supervisor(cfg)
+    sup = supervisor.Supervisor(cfg, state=state_path)
     api = server.Server(sup, socket_path, config_path)
     await server.serve(api, lambda: supervisor.run(sup, stop))
 
@@ -78,7 +80,9 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     try:
-        asyncio.run(_run(cfg, path, args.socket or paths.get().socket))
+        asyncio.run(
+            _run(cfg, path, args.socket or paths.get().socket, paths.get().state)
+        )
     except nft.NftError as e:
         log.error("couldn't load the nftables rules: %s", e)
         return 1

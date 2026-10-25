@@ -11,6 +11,9 @@ WAN interface and loads the nft table for the config's apps. After that,
 * ``sample`` (every ``METER_INTERVAL``): read the counters into ``usage``.
 
 ``pause`` removes the shaping but keeps metering; ``resume`` restores it.
+Given a state file, the supervisor remembers which across restarts (and
+reboots), and starts paused when there's no state file yet, i.e. on a fresh
+install: nothing is limited until someone turns the limits on.
 ``apply_config`` switches to a new config while running (marks, rules and
 shaping are rebuilt; per-app totals carry over for apps that remain).
 
@@ -26,7 +29,9 @@ Everything privileged goes through ``System``, so tests can replace it.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
+import os
 from collections.abc import Callable, Mapping
 from pathlib import Path
 
@@ -75,12 +80,47 @@ class System:
         return wan_device()
 
 
+def load_state(path: Path) -> bool:
+    """Return whether the daemon was paused, from the state file at ``path``.
+
+    No file means a fresh install, which starts paused. So does an unreadable
+    one, after a warning.
+    """
+    try:
+        state = json.loads(path.read_text(encoding="utf-8"))
+        return bool(state["paused"])
+    except FileNotFoundError:
+        log.info("no saved state: starting paused")
+        return True
+    except (OSError, ValueError, TypeError, KeyError) as e:
+        log.warning("couldn't read %s (%s): starting paused", path, e)
+        return True
+
+
+def save_state(path: Path, paused: bool) -> None:
+    """Write the state file atomically. Failure is logged, not raised."""
+    tmp = path.with_name(path.name + ".tmp")
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp.write_text(json.dumps({"paused": paused}) + "\n", encoding="utf-8")
+        os.replace(tmp, path)
+    except OSError as e:
+        log.warning("couldn't save the state to %s: %s", path, e)
+
+
 def _unit_name(cgroup: str) -> str:
     return cgroup.rsplit("/", 1)[-1]
 
 
 class Supervisor:
-    def __init__(self, config: Config, system: System | None = None, proc: Path = PROC):
+    def __init__(
+        self,
+        config: Config,
+        system: System | None = None,
+        proc: Path = PROC,
+        state: Path | None = None,
+    ):
+        """``state``: where to remember pause/resume (None: always start running)."""
         self.config = config
         self.system = system or System()
         self.marks = nft.assign_marks(config)
@@ -89,7 +129,8 @@ class Supervisor:
         self.meter = Meter(self.marks, self._read_counters)
         self.usage: dict[str, Usage] = {}
         self.shaped: str | None = None  # interface the tc setup is on
-        self.paused = False
+        self._state = state
+        self.paused = load_state(state) if state else False
         self._tc_error: str | None = None
 
     # --- Lifecycle ---------------------------------------------------------------
@@ -105,6 +146,8 @@ class Supervisor:
         self.wan.poll()
         if self.wan.current:
             self.system.teardown_tc(self.wan.current)
+        if self.paused:
+            log.info("paused: not shaping any traffic")
         self._shape()
         try:
             self._load_table()
@@ -128,6 +171,7 @@ class Supervisor:
         if self.paused:
             return
         self.paused = True
+        self._save_state()
         self._unshape()
         log.info("paused: not shaping any traffic")
 
@@ -135,6 +179,7 @@ class Supervisor:
         if not self.paused:
             return
         self.paused = False
+        self._save_state()
         log.info("resumed")
         self._shape()
 
@@ -210,6 +255,10 @@ class Supervisor:
                 )
 
     # --- Helpers -------------------------------------------------------------------
+
+    def _save_state(self) -> None:
+        if self._state:
+            save_state(self._state, self.paused)
 
     def _read_counters(self) -> Counters:
         counters = dict(self.system.read_counters())

@@ -65,7 +65,9 @@ snap store review.)
 
 Consequences:
 - "Pause/resume" is a daemon command that removes or re-applies rules, not
-  starting and stopping a systemd service.
+  starting and stopping a systemd service. The daemon remembers it across
+  restarts and reboots (`state.json` beside the config) and starts paused
+  on a fresh install, when there's no state file yet.
 - The config is edited through the API, which validates it; no `sudo nano`.
 - No `pkexec`, no `systemctl` calls, no nethogs, no TrafficToll dependency.
 
@@ -250,9 +252,10 @@ Steps 1–7 are done (also `common/paths.py`, `common/protocol.py`,
 8. Packaging: snap `wasta-traffic-cop` (apps: `daemon`, `wasta-traffic-cop`
    = the CLI, `gui`). Built and installed locally: the daemon runs as a
    service under strict confinement and shapes, the CLI reaches its socket as
-   a user, ifb loads without `kernel-module-load`. Still to check: the GUI
-   from the menu, a real limit, start after reboot; then store registration
-   and the interface auto-connect review.
+   a user, ifb loads without `kernel-module-load`. It starts at boot (before
+   the network is up: it meters only, then shapes once a WAN appears). The
+   GUI opens from the menu, and a real limit holds (Firefox at 30 kB/s).
+   Next: store registration and the interface auto-connect review.
 
 Ideas after that: a "pick a running app" list in the editor (the daemon
 would report the app units it sees, with their traffic); a warning for apps

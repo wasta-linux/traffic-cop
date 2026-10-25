@@ -15,6 +15,7 @@ def test_development():
     assert paths.get({"HOME": "/root"}) == paths.Paths(
         config=Path("/var/lib/traffic-cop-dev/traffic-cop.yaml"),
         socket=Path("/run/traffic-cop-dev/traffic-cop.sock"),
+        state=Path("/var/lib/traffic-cop-dev/state.json"),
         snap=False,
     )
 
@@ -23,6 +24,7 @@ def test_snap():
     assert paths.get(SNAP_ENV) == paths.Paths(
         config=Path("/var/snap/traffic-cop/42/traffic-cop.yaml"),
         socket=Path("/var/snap/traffic-cop/common/traffic-cop.sock"),
+        state=Path("/var/snap/traffic-cop/42/state.json"),
         snap=True,
     )
 
