@@ -1,19 +1,99 @@
 name: wasta-traffic-cop
-base: core26
-confinement: devmode
-grade: devel
+title: Traffic Cop
+summary: Set and watch per-app bandwidth limits.
+description: |
+  Traffic Cop limits how fast each app may download and upload, and shows
+  how much each one is using, including UDP (video calls). Useful on slow
+  or metered connections: keep a video call usable while updates download,
+  or stop one app from using the whole connection.
 
+  Apps are recognised by their systemd unit, which snap and flatpak apps
+  always have; desktop apps get one when the desktop launches them in their
+  own scope (GNOME does). Limits are applied with nftables and tc (CAKE).
+
+  After installing, connect the interfaces the background service needs:
+
+    sudo snap connect wasta-traffic-cop:network-control
+    sudo snap connect wasta-traffic-cop:firewall-control
+    sudo snap connect wasta-traffic-cop:system-observe
+    sudo snap connect wasta-traffic-cop:network-observe
+    sudo snap restart wasta-traffic-cop.daemon
+
+  Then open Traffic Cop from the menu, or in a terminal:
+
+    wasta-traffic-cop status        what's limited and running
+    wasta-traffic-cop rates -w      live rates
+    wasta-traffic-cop pause|resume  turn the limits off and on
+
+  Administrators (members of sudo, admin or wheel) can change the apps and
+  their limits; everyone can watch.
+website: https://github.com/wasta-linux/traffic-cop
+contact: https://github.com/wasta-linux/traffic-cop/issues
+issues: https://github.com/wasta-linux/traffic-cop/issues
+source-code: https://github.com/wasta-linux/traffic-cop
+license: GPL-3.0-or-later
+icon: snap/gui/icon.svg
+
+adopt-info: traffic-cop  # version and grade, from the source
+base: core26
+confinement: strict
 platforms:
   amd64:
   arm64:
 
+# For every app. The interpreter and the apt-only Python packages
+# (python3-nftables, python3-tk) are staged from the archive, not pip.
+environment:
+  PYTHONPATH: $SNAP/usr/lib/python3.14:$SNAP/usr/lib/python3.14/lib-dynload:$SNAP/usr/lib/python3/dist-packages
+  # python3-nftables loads libnftables.so.1 by name, through ctypes.
+  LD_LIBRARY_PATH: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR
+
 apps:
-  wasta-traffic-cop:
-    command: bin/traffic-cop
+  # The privileged service: owns the config (in $SNAP_DATA), applies the
+  # limits, and answers clients on its socket (in $SNAP_COMMON).
+  daemon:
+    command: bin/traffic-copd
+    daemon: simple
+    install-mode: enable
+    restart-condition: always
     plugs:
-      - network
+      - network-control   # ip, tc, the ifb device
+      - firewall-control  # nftables
+      - system-observe    # /proc/<pid>/cgroup, comm, cmdline
+      - network-observe   # interface byte counts
+
+  # The command-line client, named like the snap so it's simply
+  # `wasta-traffic-cop`. (The program calls itself traffic-cop-ctl.)
+  wasta-traffic-cop:
+    command: bin/traffic-cop-ctl
+    plugs:
+      - home  # `config set FILE`
+
+  # The window. Tk speaks only X11 (XWayland on Wayland desktops).
+  gui:
+    command: bin/traffic-cop
+    # Its launcher is snap/gui/gui.desktop (snapcraft finds it by the app's name).
+    plugs: [x11, desktop, home]
+    environment:
+      # https://forum.snapcraft.io/t/modulenotfounderror-no-module-named-tkinter/28707/4
+      TCL_LIBRARY: $SNAP/usr/share/tcltk/tcl8.6
+      TK_LIBRARY: $SNAP/usr/share/tcltk/tk8.6
+      XLOCALEDIR: $SNAP/usr/share/X11/locale
 
 parts:
-  wasta-traffic-cop:
+  traffic-cop:
     plugin: python
     source: .
+    stage-packages:
+      - python3-nftables  # the daemon's nftables bindings (+ libnftables1)
+      - python3-tk        # tkinter (+ Tcl/Tk, and the Python 3.14 interpreter)
+      - libx11-data       # X11 locale data, for XLOCALEDIR
+      - fonts-sil-andika  # gui/fonts.py registers it with fontconfig
+    override-pull: |
+      craftctl default
+      version="$(grep -Po '(?<=__version__ = ")[^"]+' src/trafficcop/__init__.py)"
+      craftctl set version="$version"
+      case "$version" in
+        *dev*|*a*|*b*|*rc*) craftctl set grade=devel ;;
+        *) craftctl set grade=stable ;;
+      esac

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from collections.abc import Callable, Mapping, Sequence
@@ -167,9 +168,17 @@ def cmd_config_set(call: Call, args: argparse.Namespace, out: TextIO) -> None:
 # --- Main ----------------------------------------------------------------------------
 
 
+def prog_name(env: Mapping[str, str] | None = None) -> str:
+    """What this command is called: in the snap it's the snap's own name."""
+    env = os.environ if env is None else env
+    if paths.get(env).snap:
+        return env.get("SNAP_INSTANCE_NAME") or env.get("SNAP_NAME", "traffic-cop-ctl")
+    return "traffic-cop-ctl"
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="traffic-cop-ctl",
+        prog=prog_name(),
         description=_("Control and monitor the Traffic Cop daemon."),
     )
     parser.add_argument("--json", action="store_true", help=_("print raw JSON"))
@@ -231,17 +240,17 @@ def main(
             ).format(command=args.command)
         else:
             message = e.message  # from the daemon, in English
-        print(f"traffic-cop-ctl: {message}", file=sys.stderr)
+        print(f"{prog_name()}: {message}", file=sys.stderr)
         return EXIT_FAILED
     except config.ConfigError as e:
-        print(f"traffic-cop-ctl: {e}", file=sys.stderr)
+        print(f"{prog_name()}: {e}", file=sys.stderr)
         return EXIT_FAILED
     except (FileNotFoundError, ConnectionRefusedError) as e:
         if getattr(e, "filename", None) not in (None, str(socket_path)):
-            print(f"traffic-cop-ctl: {e}", file=sys.stderr)  # e.g. config set FILE
+            print(f"{prog_name()}: {e}", file=sys.stderr)  # e.g. config set FILE
             return EXIT_FAILED
         print(
-            "traffic-cop-ctl: "
+            f"{prog_name()}: "
             + _(
                 "can't reach the daemon at {path}; is it running?"
                 " Start it with: {command}"
@@ -250,7 +259,7 @@ def main(
         )
         return EXIT_UNREACHABLE
     except OSError as e:
-        print(f"traffic-cop-ctl: {e}", file=sys.stderr)
+        print(f"{prog_name()}: {e}", file=sys.stderr)
         return EXIT_FAILED
     return 0
 

@@ -166,13 +166,12 @@ traffic-cop/
 │   ├── cli/__main__.py        # traffic-cop-ctl: status/rates/pause/resume/reload
 │   ├── gui/                   # traffic-cop (tkinter/ttk): client, model, window
 │   └── legacy/                # old modules, reference only; never imported
-├── data/                      # desktop file, icon
 ├── tests/
 │   ├── unit/                  # no root: config, detector (fake cgroup tree), command generation
 │   ├── integration/           # real nft/tc/daemon in an unprivileged netns (unshare -rn)
 │   └── legacy/                # old tests, ignored by pytest
 ├── tools/zoom-limit.sh        # working proof of concept
-└── snap/                      # snapcraft.yaml, hooks/install
+└── snap/                      # snapcraft.yaml; gui/: launcher (gui.desktop), icon.svg
 ```
 
 ## pyproject.toml (already on the branch)

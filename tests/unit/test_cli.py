@@ -191,3 +191,14 @@ def test_usage_errors():
     with pytest.raises(SystemExit) as e:
         run(FakeDaemon())
     assert e.value.code == 2
+
+
+def test_prog_name():
+    assert cli.prog_name({}) == "traffic-cop-ctl"
+    snap = {
+        "SNAP": "/snap/wasta-traffic-cop/1",
+        "SNAP_DATA": "/var/snap/wasta-traffic-cop/1",
+        "SNAP_COMMON": "/var/snap/wasta-traffic-cop/common",
+        "SNAP_NAME": "wasta-traffic-cop",
+    }
+    assert cli.prog_name(snap) == "wasta-traffic-cop"

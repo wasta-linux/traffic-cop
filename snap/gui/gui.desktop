@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=Traffic Cop
+GenericName=Bandwidth Manager
+GenericName[fr]=Gestionnaire de bande passante
+Comment=Set and watch per-app bandwidth limits
+Comment[fr]=Définir et surveiller les limites de bande passante par application
+Exec=wasta-traffic-cop.gui
+Icon=${SNAP}/meta/gui/icon.svg
+StartupWMClass=Traffic-cop
+Terminal=false
+Categories=Network;Monitor;
+Keywords=bandwidth;limit;network;speed;data;
+Keywords[fr]=bande passante;limite;réseau;débit;données;
