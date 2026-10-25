@@ -54,7 +54,7 @@ def test_paused():
 def test_paused_bars_are_not_coloured():
     busy = build_view({**STATUS, "paused": True}, USAGE).rows[2]
     assert busy.down.fraction == 1.0  # still shows how much of the limit
-    assert busy.down.level == "ok"  # but not as a warning: nothing is limited
+    assert busy.down.level == "paused"  # greyed out: nothing is limited
 
 
 def test_before_the_first_usage():

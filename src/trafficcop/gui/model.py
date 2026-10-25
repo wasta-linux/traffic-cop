@@ -23,8 +23,8 @@ from trafficcop.common.i18n import _
 
 # Whether a rate is at its limit, for colouring the bar: "full" means the
 # limit is (just about) all in use, so it's holding the app back. While the
-# daemon is paused nothing is limited, so every bar is "ok".
-Level = Literal["ok", "full"]
+# daemon is paused nothing is limited, so every bar is "paused" (greyed out).
+Level = Literal["ok", "full", "paused"]
 FULL = 0.95
 
 
@@ -69,7 +69,7 @@ def _direction(rate: float, total: int, limit: int | None, paused: bool) -> Dire
         rate_of_limit(rate, limit),
         fraction,
         human_bytes(total),
-        "ok" if paused else level(fraction),
+        "paused" if paused else level(fraction),
     )
 
 

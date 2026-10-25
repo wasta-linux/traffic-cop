@@ -70,6 +70,7 @@ C_DOT, C_NAME, C_ARROW, C_BAR, C_RATE, C_TOTAL = range(6)
 # Wasta Linux website palette (wastalinux.org, from the Arc theme)
 SLATE = "#383C4A"
 SLATE_LIGHT = "#5C6170"
+SLATE_PALE = "#A3A8B4"  # paused bars: present but not in force
 BLUE = "#5294E2"
 BLUE_DARK = "#3B7DD8"
 WHITE = "#FFFFFF"
@@ -84,8 +85,9 @@ YELLOW = "#E8B400"
 BAR_STYLES: dict[Level, str] = {
     "ok": "Ok.Horizontal.TProgressbar",
     "full": "Full.Horizontal.TProgressbar",
+    "paused": "Paused.Horizontal.TProgressbar",
 }
-BAR_COLOURS: dict[Level, str] = {"ok": BLUE, "full": YELLOW}
+BAR_COLOURS: dict[Level, str] = {"ok": BLUE, "full": YELLOW, "paused": SLATE_PALE}
 
 
 def _style(root: tk.Tk) -> ttk.Style:
