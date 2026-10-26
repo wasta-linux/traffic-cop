@@ -15,7 +15,7 @@ POT=$LOCALE/traffic-cop.pot
 
 pybabel extract --project=traffic-cop --no-wrap --sort-by-file \
     -k _ -k ngettext:1,2 -k pgettext:1c,2 \
-    --ignore-dirs=legacy -o "$POT" src/trafficcop
+    -o "$POT" src/trafficcop
 
 if [ "${1:-}" = add ]; then
     pybabel init --no-wrap -i "$POT" -d "$LOCALE" -D traffic-cop -l "$2"

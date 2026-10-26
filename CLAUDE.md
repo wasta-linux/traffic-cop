@@ -176,12 +176,10 @@ traffic-cop/
 │   │   ├── meter.py           # poll counters → per-app rates
 │   │   └── server.py          # Unix socket API + SO_PEERCRED auth
 │   ├── cli/__main__.py        # traffic-cop-ctl: status/rates/pause/resume/reload
-│   ├── gui/                   # traffic-cop (tkinter/ttk): client, model, window
-│   └── legacy/                # old modules, reference only; never imported
+│   └── gui/                   # traffic-cop (tkinter/ttk): client, model, window
 ├── tests/
 │   ├── unit/                  # no root: config, detector (fake cgroup tree), command generation
-│   ├── integration/           # real nft/tc/daemon in an unprivileged netns (unshare -rn)
-│   └── legacy/                # old tests, ignored by pytest
+│   └── integration/           # real nft/tc/daemon in an unprivileged netns (unshare -rn)
 ├── tools/zoom-limit.sh        # working proof of concept
 └── snap/                      # snapcraft.yaml; gui/: launcher (gui.desktop), icon.svg
 ```
@@ -201,7 +199,6 @@ traffic-cop/
   (gui-scripts).
 - Package data: the default config. Load it with
   `importlib.resources`, never hardcoded `/usr/share` paths.
-- pytest marker `integration`; add `--ignore=tests/legacy` to `addopts`.
 
 ## Dev environment
 
@@ -216,10 +213,6 @@ sudo .venv/bin/traffic-copd          # sudo resets PATH, so use the full path
                                      # (dev paths: /var/lib/traffic-cop-dev, /run/traffic-cop-dev)
 pytest -m integration               # no sudo: runs in `unshare -rn` namespaces
 ```
-
-Old modules were moved to `src/trafficcop/legacy/` and old tests to
-`tests/legacy/` because they import `gi`. They're reference only: excluded
-from pytest, ruff and pyright.
 
 ## Translations
 
