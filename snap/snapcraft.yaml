@@ -60,7 +60,6 @@ apps:
       - network-control   # ip, tc, the ifb device
       - firewall-control  # nftables
       - system-observe    # /proc/<pid>/cgroup, comm, cmdline
-      - network-observe   # interface byte counts
       - network-bind      # listen on its socket (connects automatically)
 
   # The command-line client, named like the snap so it's simply
