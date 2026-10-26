@@ -36,11 +36,15 @@ on the connection (ct mark) is restored at ingress for downloads (see
 merge one mark into the other under a mask without newer kernels. The
 counters are read by the meter.
 
-Rules are generated as nft's text syntax and loaded in-process through
-libnftables, using the official ``nftables`` Python bindings (Debian/Ubuntu
-package ``python3-nftables``; not on PyPI). JSON input can't be used for the
-rules yet: nftables 1.1.6 rejects ``level`` on a ``socket cgroupv2`` match in
-JSON input, and omits it from JSON output. JSON output is fine for counters.
+Rules are generated as nft's text syntax (what `nft list ruleset` prints and
+the nft man page documents) and loaded in-process through libnftables, ...
+
+JSON input can't express these rules: its parser accepts only the socket
+keys "transparent", "mark" and "wildcard" (json_parse_socket_expr in
+nftables' src/parser_json.c, checked against 1.1.6 and upstream 1.1.7-dev,
+October 2026), and JSON output drops the cgroupv2 level. To re-check on a
+newer nftables: load a `socket cgroupv2` rule as text, `nft -j list` it, and
+load that JSON back with `nft -j -f`. JSON output is fine for counters.
 
 nftables resolves a cgroup path to an ID when the rule is loaded, so the
 path must exist then, and the rule stops matching once the scope is gone.

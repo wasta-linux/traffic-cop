@@ -215,6 +215,50 @@ sudo .venv/bin/traffic-copd          # sudo resets PATH, so use the full path
 pytest -m integration               # no sudo: runs in `unshare -rn` namespaces
 ```
 
+## Debugging
+
+When a limit doesn't hold, check what the daemon actually set up. Each app's
+slot is its position in the config (1, 2, …; `nft.assign_marks`): its mark
+is `slot << 24` (slot 1 = `0x01000000`), its counters are `up_<slot>` and
+`down_<slot>`, and its tc class is `1:<0x100 + slot>` in hex (slot 1 =
+`1:101`, slot 10 = `1:10a`).
+
+```bash
+wasta-traffic-cop status             # paused? which interface is shaped? which units matched?
+wasta-traffic-cop --json rates       # the meter's numbers, in bytes per second
+
+# Marking and counting (nftables). Rules list an app's cgroup path only
+# while it's running; no rule means the detector found no unit.
+sudo nft list table inet trafficcop
+sudo nft list counters table inet trafficcop
+
+# Shaping (tc). <wan> is the interface from `status` (or `ip route get 1.1.1.1`).
+tc -s qdisc show dev <wan>           # upload: a CAKE leaf per limited app
+tc -s class show dev <wan>           # HTB classes 1:101, …; 1:2 is unlimited traffic
+tc -s filter show dev <wan> ingress  # downloads: connmark + mirred to the ifb
+tc -s qdisc show dev ifb-trafficcop  # download CAKE leaves; "drops" = shaping working
+
+# Which unit is an app in? Compare with `status` and the nft rules.
+cat /proc/$(pgrep -o firefox)/cgroup
+
+# The daemon's log
+sudo snap logs -f wasta-traffic-cop.daemon        # or: journalctl -u snap.wasta-traffic-cop.daemon
+sudo .venv/bin/traffic-copd -v                    # development: debug output, incl. per-app rates
+```
+
+Common causes:
+- **No rule for the app:** it isn't running in its own unit (started from a
+  terminal, on a desktop without per-app units, or escaped its scope:
+  `/proc/<pid>/cgroup` shows `session.slice/org.gnome.Shell@…`), or no
+  match key fits it.
+- **Rule present, counters rising, no CAKE leaf** (and `Cannot find device
+  "ifb-trafficcop"`): not shaped. Paused, no WAN, or tc failed; `status`
+  and the log say which.
+- **Counts on the wrong interface:** the WAN changed (VPN up or down) and
+  the daemon hasn't caught up yet; it re-checks every 5 seconds.
+- **Download below its limit:** expected. CAKE drops to hold the limit, and
+  dropped bytes count against it (see "Download-limit rationale").
+
 ## Translations
 
 English and French, via gettext (`common/i18n.py`; domain `traffic-cop`).
