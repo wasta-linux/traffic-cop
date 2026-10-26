@@ -16,7 +16,6 @@ description: |
     sudo snap connect wasta-traffic-cop:network-control
     sudo snap connect wasta-traffic-cop:firewall-control
     sudo snap connect wasta-traffic-cop:system-observe
-    sudo snap connect wasta-traffic-cop:network-observe
     sudo snap restart wasta-traffic-cop.daemon
 
   Then open Traffic Cop from the menu, or in a terminal:

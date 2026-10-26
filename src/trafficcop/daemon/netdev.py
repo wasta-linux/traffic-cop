@@ -27,12 +27,10 @@ import json
 import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
 
 from trafficcop.daemon.tc import IFB
 
-SYS_NET = Path("/sys/class/net")
 # Public addresses to look up routes for; no packets are sent.
 PROBES = ("1.1.1.1", "2606:4700:4700::1111")
 _NOT_WAN = {"lo", IFB}
@@ -105,18 +103,6 @@ def wan_device() -> str | None:
         if dev := route_device(destination):
             return dev
     return None
-
-
-def interface_bytes(dev: str, sys_net: Path = SYS_NET) -> tuple[int, int]:
-    """Return ``(received, sent)`` byte counts for a whole interface.
-
-    Raises OSError if the interface doesn't exist.
-    """
-    stats = sys_net / dev / "statistics"
-    return (
-        int((stats / "rx_bytes").read_text()),
-        int((stats / "tx_bytes").read_text()),
-    )
 
 
 @dataclass

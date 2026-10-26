@@ -30,7 +30,6 @@ automatically. Connect them once, then restart the service:
 sudo snap connect wasta-traffic-cop:network-control
 sudo snap connect wasta-traffic-cop:firewall-control
 sudo snap connect wasta-traffic-cop:system-observe
-sudo snap connect wasta-traffic-cop:network-observe
 sudo snap restart wasta-traffic-cop.daemon
 ```
 

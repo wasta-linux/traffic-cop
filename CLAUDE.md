@@ -120,8 +120,9 @@ ISP's; CAKE's `overhead` options can compensate.
 ## Snap interfaces and confinement
 
 - Daemon: `network-control` (ip, tc), `firewall-control` (nftables),
-  `system-observe` (/proc), `network-observe` (interface byte counts). None
-  auto-connect; all need a store review request. Plus `network-bind`
+  `system-observe` (/proc). None auto-connect; all need a store review
+  request. (`network-observe`, for `/sys/class/net/*/statistics`, was
+  dropped: nothing reads whole-interface counts.) Plus `network-bind`
   (auto-connects): without it seccomp refuses `bind`/`listen` even on the
   daemon's Unix socket. `kernel-module-load` is **not** needed: with `ifb`
   unloaded, the snapped daemon's `ip link add … type ifb` loaded it.
@@ -130,8 +131,8 @@ ISP's; CAKE's `overhead` options can compensate.
   registers the snap's Andika with fontconfig before Tk starts.
 
 **Tested under strict confinement** with `tools/snap-permtest/` (a `snap try`
-snap on core26, run as root; see its `prepare.sh`), with those four
-interfaces connected:
+snap on core26, run as root; see its `prepare.sh`), with those three
+interfaces and `network-observe` connected:
 
 | works | refused |
 |---|---|

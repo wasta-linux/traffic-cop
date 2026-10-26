@@ -1,6 +1,5 @@
 import json
 import subprocess
-from pathlib import Path
 
 import pytest
 
@@ -172,21 +171,6 @@ def test_watcher(fake_ip):
     fake.answers.clear()  # offline
     assert w.poll() is True
     assert w.current is None
-
-
-def test_interface_bytes(tmp_path: Path):
-    stats = tmp_path / "wlp2s0" / "statistics"
-    stats.mkdir(parents=True)
-    (stats / "rx_bytes").write_text("123456\n")
-    (stats / "tx_bytes").write_text("7890\n")
-    assert netdev.interface_bytes("wlp2s0", tmp_path) == (123456, 7890)
-    with pytest.raises(OSError):
-        netdev.interface_bytes("eth9", tmp_path)
-
-
-def test_interface_bytes_on_this_system():
-    rx, tx = netdev.interface_bytes("lo")
-    assert rx >= 0 and tx >= 0
 
 
 def test_link_kind_is_looked_up_once(fake_ip):
