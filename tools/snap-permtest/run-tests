@@ -1,0 +1,197 @@
+#!/bin/sh
+# Runs inside the strict snap, as root: sudo trafficcop-permtest.run
+#
+# Each check prints PASS or FAIL (with the first lines of its error). It
+# only touches things it creates itself: a dummy link, an ifb link, an nft
+# table and a sleep process, all removed again at the end.
+#
+# Optional: MOVE_TARGET=<cgroup dir> chooses the scope the sleep process is
+# moved into (default: the first unit in a user's app.slice).
+
+set -u
+
+CG=/sys/fs/cgroup
+DUMMY=tcoptest0
+IFB=tcoptest-ifb
+TABLE=tcoptest
+NFT="$SNAP/bin/nft"
+export LD_LIBRARY_PATH="$SNAP/lib"
+
+pass=0
+fail=0
+
+check() {
+    name=$1
+    shift
+    if out=$("$@" 2>&1); then
+        echo "PASS  $name"
+        [ -n "$out" ] && echo "$out" | sed 's/^/        /' | head -3
+        pass=$((pass + 1))
+    else
+        echo "FAIL  $name"
+        echo "$out" | sed 's/^/        /' | head -5
+        fail=$((fail + 1))
+    fi
+}
+
+cleanup() {
+    [ -n "${sleeper:-}" ] && kill "$sleeper" 2>/dev/null
+    "$NFT" delete table inet "$TABLE" 2>/dev/null
+    ip link del "$DUMMY" 2>/dev/null
+    ip link del "$IFB" 2>/dev/null
+}
+trap cleanup EXIT
+
+# An app unit found the way system-observe allows: from /proc/<pid>/cgroup,
+# not by listing /sys/fs/cgroup. Prints "<pid> <cgroup path>".
+first_app_process() {
+    for f in /proc/[0-9]*/cgroup; do
+        path=$(sed -n 's|^0::/||p' "$f" 2>/dev/null)
+        case "$path" in
+            */app.slice/*.scope | */app.slice/*.service)
+                pid=${f#/proc/}
+                echo "${pid%/cgroup} $path"
+                return 0 ;;
+        esac
+    done
+    return 1
+}
+
+# --- system-observe: what the detector reads ----------------------------------
+
+list_cgroup_tree() {
+    ls -d "$CG"/user.slice/user-*.slice/user@*.service/app.slice > /dev/null
+}
+
+find_app_units_via_proc() {
+    found=$(first_app_process) || { echo "no process in any app.slice"; return 1; }
+    echo "pid ${found%% *} is in ${found#* }"
+}
+
+read_processes() {
+    found=$(first_app_process) || return 1
+    pid=${found%% *}
+    comm=$(cat "/proc/$pid/comm") || { echo "can't read /proc/$pid/comm"; return 1; }
+    tr '\0' ' ' < "/proc/$pid/cmdline" > /dev/null ||
+        { echo "can't read /proc/$pid/cmdline"; return 1; }
+    exe=$(readlink "/proc/$pid/exe") ||
+        { echo "can't read /proc/$pid/exe (needs ptrace read access)"; return 1; }
+    echo "pid $pid: $comm, exe $exe"
+}
+
+read_system_service() {
+    ls -d "$CG"/system.slice/*.service > /dev/null
+}
+
+# --- the rescue: moving a process into an app's scope -------------------------
+
+move_process() {
+    if [ -z "${MOVE_TARGET:-}" ]; then
+        found=$(first_app_process) || return 1
+        MOVE_TARGET="$CG/${found#* }"
+    fi
+    target=$MOVE_TARGET
+    sleep 60 &
+    sleeper=$!
+    echo "$sleeper" > "$target/cgroup.procs" || return 1
+    now=$(sed -n 's/^0:://p' "/proc/$sleeper/cgroup")
+    [ "$now" = "${target#"$CG"}" ] || {
+        echo "write accepted, but the process is still in $now"
+        return 1
+    }
+    echo "moved pid $sleeper into ${target#"$CG"/}"
+    kill "$sleeper"
+    sleeper=
+}
+
+# --- network-control: links and tc ---------------------------------------------
+
+create_ifb() {
+    before=no
+    [ -d /sys/module/ifb ] && before=yes
+    ip link add "$IFB" type ifb || return 1
+    ip link set "$IFB" up || return 1
+    echo "ifb module loaded before: $before"
+}
+
+route_lookup() {
+    ip -j route get 1.1.1.1
+}
+
+interface_stats() {
+    cat /sys/class/net/lo/statistics/rx_bytes > /dev/null
+}
+
+tc_upload_tree() {
+    ip link add "$DUMMY" type dummy && ip link set "$DUMMY" up || return 1
+    tc qdisc add dev "$DUMMY" root handle 1: htb default 2 || return 1
+    tc class add dev "$DUMMY" parent 1: classid 1:1 htb rate 10gbit || return 1
+    tc class add dev "$DUMMY" parent 1:1 classid 1:2 htb rate 10gbit || return 1
+    tc qdisc add dev "$DUMMY" parent 1:2 fq_codel || return 1
+    tc class add dev "$DUMMY" parent 1:1 classid 1:101 htb rate 10gbit || return 1
+    tc qdisc add dev "$DUMMY" parent 1:101 cake bandwidth 800kbit besteffort || return 1
+    tc filter add dev "$DUMMY" parent 1: protocol all prio 1 \
+        handle 0x1000000/0x3f000000 fw flowid 1:101
+}
+
+tc_download_redirect() {
+    tc qdisc add dev "$DUMMY" handle ffff: ingress || return 1
+    tc filter add dev "$DUMMY" parent ffff: protocol all prio 1 matchall \
+        action connmark action mirred egress redirect dev "$IFB" || return 1
+    tc qdisc add dev "$IFB" root handle 1: htb default 2 || return 1
+    tc class add dev "$IFB" parent 1: classid 1:101 htb rate 10gbit || return 1
+    tc qdisc add dev "$IFB" parent 1:101 cake bandwidth 800kbit besteffort ingress
+}
+
+# --- firewall-control: nftables -------------------------------------------------
+
+nft_table() {
+    own=$(sed -n 's|^0::/||p' /proc/self/cgroup)
+    level=$(echo "$own" | awk -F/ '{print NF}')
+    "$NFT" -f - <<EOF || return 1
+table inet $TABLE {
+    counter up_1 {}
+    counter down_1 {}
+    chain output {
+        type filter hook output priority mangle; policy accept;
+        socket cgroupv2 level $level "$own" meta mark set meta mark and 0xc0ffffff or 0x01000000 ct mark set ct mark and 0xc0ffffff or 0x01000000 oifname != "lo" counter name "up_1"
+    }
+    chain input {
+        type filter hook input priority mangle; policy accept;
+        iifname != "lo" ct mark and 0x3f000000 == 0x01000000 counter name "down_1"
+    }
+}
+EOF
+    "$NFT" -j list counters table inet "$TABLE" > /dev/null || return 1
+    echo "matched own cgroup ${own} (level $level)"
+}
+
+# --- snap directories --------------------------------------------------------------
+
+snap_dirs() {
+    touch "$SNAP_DATA/test" "$SNAP_COMMON/test" && rm "$SNAP_DATA/test" "$SNAP_COMMON/test"
+}
+
+[ "$(id -u)" = 0 ] || { echo "run as root: sudo $SNAP_NAME.run"; exit 2; }
+
+echo "== system-observe"
+check "list /sys/fs/cgroup directly" list_cgroup_tree
+check "find app.slice units via /proc/*/cgroup" find_app_units_via_proc
+check "read /proc for a user's app (comm, cmdline, exe)" read_processes
+check "read system.slice services" read_system_service
+echo "== moving processes"
+check "move a process into an app's scope (cgroup.procs)" move_process
+echo "== network-control"
+check "create an ifb link (module autoload)" create_ifb
+check "route lookup (ip route get)" route_lookup
+check "read interface byte counts" interface_stats
+check "tc: HTB + CAKE + masked fw filter on a dummy link" tc_upload_tree
+check "tc: ingress, connmark, mirred redirect to ifb, CAKE ingress" tc_download_redirect
+echo "== firewall-control"
+check "nft: table with socket cgroupv2, masked marks, counters" nft_table
+echo "== snap"
+check "write \$SNAP_DATA and \$SNAP_COMMON" snap_dirs
+
+echo
+echo "$pass passed, $fail failed"
+echo "AppArmor/seccomp denials: sudo journalctl -k --since -10min | grep -E 'DENIED|audit'"

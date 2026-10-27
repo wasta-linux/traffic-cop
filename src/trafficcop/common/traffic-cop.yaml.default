@@ -1,0 +1,77 @@
+### traffic-cop configuration file.
+
+# NOTES
+# ------------------------------------------------------------------------------
+# Devices:
+# All bandwidth limits specified here are applied automatically to whichever
+# interface has the active internet connection (e.g. wlp2s0).
+#
+# Units:
+# Units can be specified in all formats that tc supports. Units are lowercase,
+# and "bit" and "bps" are different:
+#  bit   (bits per second)
+#  kbit  (kilobits per second)
+#  mbit  (megabits per second)
+#  bps   (bytes per second)
+#  kbps  (kilobytes per second; base 1000)
+#  kibps (kibibytes per second; base 1024)
+# So 100kbps is the same as 800kbit.
+
+
+# APP CONFIGURATION
+# ------------------------------------------------------------------------------
+# Configure bandwidth limits for individual apps. For example:
+# "Name": (user-defined; shown in Traffic Cop and in the log)
+#   download: 1.5mbit   (optional; leave out for no limit)
+#   upload: 500kbit     (optional; leave out for no limit)
+#   match:
+#     - exe: /opt/zoom/zoom
+#     - snap: zoom-client
+#
+# The app is matched if any one of the "match" entries matches. An entry with
+# several keys matches only if all of them match. The keys are:
+#   exe      the exact path of the program: "/usr/lib/firefox/firefox"
+#   name     the process name (regex): "spotify"
+#   cmdline  the whole command, including options (regex):
+#            ".*/usr/lib/firefox/firefox.*"
+#            See also: System Monitor > Processes tab > Command Line column.
+#   snap     the name of a snap package: "firefox"
+#   flatpak  the ID of a flatpak app: "com.spotify.Client"
+#   scope    the app's systemd scope (regex): "app-gnome-Zoom-[0-9]+\.scope"
+#   service  a system service, such as "snapd.service" for snap updates
+# Regexes must match the whole name or command.
+#
+# Limits apply to the whole app, including all of its helper processes: for
+# example, every Firefox process shares the same limit. An app with no limits
+# is still shown in Traffic Cop, so you can watch how much it uses.
+
+version: 2
+
+apps:
+  "Firefox":
+    download: 70kbps
+    upload: 50kbps
+    match:
+      - snap: firefox
+      - exe: /usr/lib/firefox/firefox
+
+  "Snap Updates":
+    download: 1mbit
+    upload: 500kbit
+    match:
+      - service: snapd.service
+
+  "Spotify":
+    download: 128kbit
+    upload: 64kbit
+    match:
+      - snap: spotify
+      - flatpak: com.spotify.Client
+      - name: spotify
+
+  "Zoom":
+    download: 70kbps
+    upload: 35kbps
+    match:
+      - snap: zoom-client
+      - exe: /opt/zoom/zoom
