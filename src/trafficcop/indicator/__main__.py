@@ -108,17 +108,16 @@ class Indicator:
             icon, tooltip = PAUSED, _("Limits off")
         else:
             icon, tooltip = ON, _("Limits on")
-        items = []
-        if self.status is not None:
-            paused = bool(self.status.get("paused"))
-            items.append(
-                sni.MenuItem(
-                    "resume" if paused else "pause",
-                    _("Turn limits on") if paused else _("Turn limits off"),
-                    enabled=self.may_change,
-                )
-            )
-        items += [
+        # Always the same items; the switch is hidden, not removed, while
+        # the daemon can't be reached (see sni.py on item ids).
+        paused = self.status is not None and bool(self.status.get("paused"))
+        items = [
+            sni.MenuItem(
+                "toggle",
+                _("Turn limits on") if paused else _("Turn limits off"),
+                enabled=self.may_change,
+                visible=self.status is not None,
+            ),
             sni.MenuItem("open", _("Open Traffic Cop")),
             sni.MenuItem("separator", separator=True),
             sni.MenuItem("quit", _("Quit")),
@@ -128,8 +127,8 @@ class Indicator:
         self.item.set_items(items)
 
     def on_click(self, key: str) -> None:
-        if key in ("pause", "resume"):
-            self.call(key)
+        if key == "toggle" and self.status is not None:
+            self.call("resume" if self.status.get("paused") else "pause")
             self.show()
         elif key == "open":
             open_window(self.socket_path)
@@ -188,6 +187,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     except sni.NoTray:
         # Plain GNOME has no tray; nothing to do, and not an error.
         log.info("no tray on this desktop (no StatusNotifierWatcher); exiting")
+    except sni.NotAllowed as e:
+        log.error("the session bus refused the tray icon: %s", e)
+        instance = os.environ.get("SNAP_INSTANCE_NAME")
+        if instance:
+            log.error(
+                "connect the unity7 interface: sudo snap connect %s:unity7", instance
+            )
+        return 1
     except KeyboardInterrupt:
         pass
     finally:

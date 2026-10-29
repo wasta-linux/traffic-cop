@@ -58,6 +58,15 @@ WATCHER = DBusAddress("/StatusNotifierWatcher", WATCHER_NAME, WATCHER_NAME)
 ICON_SIZES = (16, 22, 24, 32, 48)
 
 
+ACCESS_DENIED = "org.freedesktop.DBus.Error.AccessDenied"
+
+
+class DBusError(Exception):
+    def __init__(self, name: str, message: str):
+        super().__init__(f"{name}: {message}")
+        self.name = name
+
+
 class NoTray(Exception):
     """No StatusNotifierWatcher is running, so there's nowhere to show an icon.
 
@@ -65,11 +74,20 @@ class NoTray(Exception):
     """
 
 
+class NotAllowed(Exception):
+    """The bus refused us a tray icon's names or calls (AccessDenied).
+
+    In the snap: the unity7 interface isn't connected. Seen with it
+    disconnected; desktop alone doesn't allow the tray's names.
+    """
+
+
 @dataclass(frozen=True)
 class MenuItem:
-    key: str  # passed to on_click
+    key: str  # passed to on_click; unique in the menu (it fixes the item's id)
     label: str = ""
     enabled: bool = True
+    visible: bool = True
     separator: bool = False
 
 
@@ -129,6 +147,7 @@ class StatusNotifier:
         self.icon = Icon("", "#808080")
         self.tooltip = ""
         self.items: list[MenuItem] = []
+        self._ids: dict[str, int] = {}  # menu item key -> dbusmenu id, for good
         self.revision = 1  # dbusmenu layout revision; bumped on every change
         self.stopped = False
 
@@ -137,31 +156,40 @@ class StatusNotifier:
     def register(self) -> None:
         """Take our bus name and announce the icon to the watcher.
 
-        Raises NoTray if no watcher is running. Also asks to hear when the
+        Raises NoTray if no watcher is running, NotAllowed if the bus refuses
+        (in a snap: unity7 not connected). Also asks to hear when the
         watcher (re)starts, e.g. when the GNOME extension is turned off and
         on, so the icon can register again.
         """
-        self._call(message_bus.RequestName(self.bus_name))
-        rule = MatchRule(
-            type="signal",
-            sender="org.freedesktop.DBus",
-            interface="org.freedesktop.DBus",
-            member="NameOwnerChanged",
-            path="/org/freedesktop/DBus",
-        )
-        rule.add_arg_condition(0, WATCHER_NAME)
-        self._call(message_bus.AddMatch(rule))
-        self._register_with_watcher()
+        try:
+            self._call(message_bus.RequestName(self.bus_name))
+            rule = MatchRule(
+                type="signal",
+                sender="org.freedesktop.DBus",
+                interface="org.freedesktop.DBus",
+                member="NameOwnerChanged",
+                path="/org/freedesktop/DBus",
+            )
+            rule.add_arg_condition(0, WATCHER_NAME)
+            self._call(message_bus.AddMatch(rule))
+            self._register_with_watcher()
+        except DBusError as e:
+            if e.name == ACCESS_DENIED:
+                raise NotAllowed(str(e)) from e
+            raise
 
     def _register_with_watcher(self) -> None:
-        reply = self._call(
-            new_method_call(
-                WATCHER, "RegisterStatusNotifierItem", "s", (self.bus_name,)
-            ),
-            check=False,
-        )
-        if reply.header.message_type == MessageType.error:
-            raise NoTray(str(reply.header.fields.get(HeaderFields.error_name)))
+        try:
+            self._call(
+                new_method_call(
+                    WATCHER, "RegisterStatusNotifierItem", "s", (self.bus_name,)
+                )
+            )
+        except DBusError as e:
+            if e.name == ACCESS_DENIED:
+                raise
+            # Usually ServiceUnknown: nothing owns the watcher's name.
+            raise NoTray(str(e)) from e
 
     def close(self) -> None:
         self.conn.close()
@@ -179,8 +207,11 @@ class StatusNotifier:
             self._emit(ITEM_PATH, ITEM_IFACE, "NewToolTip")
 
     def set_items(self, items: Sequence[MenuItem]) -> None:
+        """Show these menu items. Prefer hiding (``visible``) to removing."""
         if list(items) != self.items:
             self.items = list(items)
+            for item in self.items:
+                self._ids.setdefault(item.key, len(self._ids) + 1)
             self.revision += 1
             self._emit(MENU_PATH, MENU_IFACE, "LayoutUpdated", "ui", (self.revision, 0))
 
@@ -199,8 +230,10 @@ class StatusNotifier:
                 return
             self._handle(msg)
 
-    def _call(self, msg: Message, check: bool = True) -> Message:
+    def _call(self, msg: Message) -> Message:
         """Send a method call and wait for its reply, answering the panel meanwhile.
+
+        Raises DBusError for an error reply.
 
         jeepney's own ``send_and_get_reply`` drops other messages while it
         waits; the watcher may call back (to read our properties) before it
@@ -211,8 +244,10 @@ class StatusNotifier:
         while True:
             reply = self.conn.receive(timeout=10)
             if reply.header.fields.get(HeaderFields.reply_serial) == serial:
-                if check and reply.header.message_type == MessageType.error:
-                    raise RuntimeError(f"D-Bus error: {reply.body}")
+                if reply.header.message_type == MessageType.error:
+                    name = reply.header.fields.get(HeaderFields.error_name, "")
+                    text = reply.body[0] if reply.body else ""
+                    raise DBusError(str(name), str(text))
                 return reply
             self._handle(reply)
 
@@ -317,7 +352,17 @@ class StatusNotifier:
         return "a{sv}", (self._item_properties(),)
 
     # --- dbusmenu ----------------------------------------------------------------
-    # Item ids: 0 is the root, then 1, 2, ... in the order of self.items.
+    # Item ids: 0 is the root; each item key gets the next id the first time
+    # it's shown, and keeps it. Ids by position went wrong: when an item was
+    # removed, the ones after it moved up, so an id changed from a label to
+    # the separator, and GNOME's AppIndicator extension updates items in
+    # place without changing their type, leaving extra lines in the menu.
+
+    def _item(self, item_id: int) -> MenuItem | None:
+        for item in self.items:
+            if self._ids[item.key] == item_id:
+                return item
+        return None
 
     def _menu_properties(self) -> dict[str, tuple[str, Any]]:
         return {
@@ -336,10 +381,13 @@ class StatusNotifier:
     def _props(self, item_id: int) -> dict[str, tuple[str, Any]]:
         if item_id == 0:
             return {"children-display": ("s", "submenu")}
-        item = self.items[item_id - 1]
+        item = self._item(item_id)
+        if item is None:
+            raise KeyError(f"no menu item {item_id}")
+        props = {"visible": ("b", item.visible)}
         if item.separator:
-            return {"type": ("s", "separator")}
-        return {"label": ("s", item.label), "enabled": ("b", item.enabled)}
+            return {**props, "type": ("s", "separator")}
+        return {**props, "label": ("s", item.label), "enabled": ("b", item.enabled)}
 
     def _get_layout(
         self, parent_id: int, depth: int, names: list[str]
@@ -348,7 +396,9 @@ class StatusNotifier:
             return (item_id, self._props(item_id), [])
 
         if parent_id == 0:
-            children = [("(ia{sv}av)", node(i)) for i in range(1, len(self.items) + 1)]
+            children = [
+                ("(ia{sv}av)", node(self._ids[item.key])) for item in self.items
+            ]
             layout = (0, self._props(0), children)
         else:
             layout = node(parent_id)
@@ -357,16 +407,17 @@ class StatusNotifier:
     def _get_group_properties(
         self, ids: list[int], names: list[str]
     ) -> tuple[str, tuple]:
-        ids = ids or list(range(len(self.items) + 1))
-        valid = [i for i in ids if 0 <= i <= len(self.items)]
+        shown = [0] + [self._ids[item.key] for item in self.items]
+        valid = [i for i in ids if i in shown] if ids else shown
         return "a(ia{sv})", ([(i, self._props(i)) for i in valid],)
 
     def _get_property(self, item_id: int, name: str) -> tuple[str, tuple]:
         return "v", (self._props(item_id)[name],)
 
     def _event(self, item_id: int, event: str, data: Any, timestamp: int) -> tuple:
-        if event == "clicked" and 1 <= item_id <= len(self.items):
-            self.on_click(self.items[item_id - 1].key)
+        item = self._item(item_id)
+        if event == "clicked" and item is not None:
+            self.on_click(item.key)
         return None, ()
 
     def _event_group(self, events: list[tuple]) -> tuple[str, tuple]:

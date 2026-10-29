@@ -12,11 +12,12 @@ Repo: https://github.com/wasta-linux/traffic-cop. The 2.x rewrite is on
 - The store request for auto-connecting `network-control`,
   `firewall-control` and `system-observe` (see "Store review") has been made;
   waiting on a response.
-- **In progress:** the tray indicator (see "Indicator design"). Step 1 done
-  unconfined: `indicator/sni.py` + a minimal `__main__.py` register with
-  GNOME's watcher, and the menu works (checked with `busctl`). Next: check
-  the icon in the panel, then build the snap and find which interface
-  (`unity7` / `desktop-legacy`) the confined indicator needs.
+- **In progress:** the tray indicator (see "Indicator design"). Works in
+  the snap (tested as a parallel install, `wasta-traffic-cop_test`): icon,
+  menu, Open, pause/resume. Uncommitted: stable menu item ids (fixes extra
+  lines in the menu after the daemon went away and came back), the icon
+  path fix for parallel installs, and a clear error without `unity7`.
+  Next: `menu.py`, single-instance GUI, autostart.
 
 ## Working with the maintainer
 
@@ -227,7 +228,12 @@ was written; check with the maintainer whether it has been posted.
 own plugs, and snapd's runtime prompting doesn't cover these interfaces. The
 daemon could check `snapctl is-connected <plug>` at startup and report missing
 ones in `status`, so the CLI and GUI show the `sudo snap connect …` commands
-(plus restarting the daemon) instead of failing vaguely.
+(plus restarting the daemon) instead of failing vaguely. Today, without
+`firewall-control` the daemon dies at startup: libnftables prints `src/mnl.c:66:
+Unable to initialize Netlink socket: Operation not permitted` and exits the
+process (status 3), so Python can't catch it, and systemd gives up after 5
+restarts. Seen on the parallel test install; a store install would hit it
+until the auto-connect request is granted.
 
 ## File layout
 
@@ -407,9 +413,12 @@ non-admins), Open, Quit. Planned structure:
   runs `$SNAP/bin/traffic-cop`; `quit` exits).
 - The GUI becomes **single-instance** (a lock/socket in `$XDG_RUNTIME_DIR`),
   so Open raises an existing window.
-- Snap: a new `indicator` app; D-Bus tray access is traditionally the
-  `unity7` interface (or `desktop-legacy`); verify which one current snapd
-  needs for SNI.
+- Snap: the `indicator` app plugs `unity7`, `x11`, `desktop`, `home`, all
+  auto-connected. Tested by disconnecting: without `unity7` the bus refuses
+  the tray's names (`sni.NotAllowed`; `desktop` doesn't cover them);
+  without `desktop` the icon still works, but it stays for the window that
+  Open starts under the indicator's confinement (fonts, themes); `x11` and
+  `home` are for that window too. `desktop-legacy` wasn't needed.
 - Shown on KDE, Cinnamon, Xfce, MATE and Ubuntu's GNOME (AppIndicator
   extension); plain GNOME (e.g. Fedora) has no tray, so exit quietly when no
   StatusNotifierWatcher is running.
