@@ -111,16 +111,20 @@ def _style(root: tk.Tk) -> ttk.Style:
         relief="raised",
         borderwidth=1,
     )
+    # Disabled header buttons sink into the header (its colour, dim text, a
+    # thin outline): only paler text on the usual slate looked just as
+    # clickable. "solid" draws the border in one colour, bordercolor.
     style.map(
         "Limits.Toolbutton",
         background=[
-            ("disabled", SLATE_LIGHT),
+            ("disabled", SLATE),
             ("selected", "active", BLUE_DARK),
             ("selected", BLUE),
             ("active", "#6B7080"),
         ],
-        foreground=[("disabled", ON_SLATE_DIM)],
-        relief=[("selected", "sunken")],
+        foreground=[("disabled", DIM)],
+        relief=[("disabled", "solid"), ("selected", "sunken")],
+        bordercolor=[("disabled", SLATE_LIGHT)],
     )
     for level, name in BAR_STYLES.items():
         style.configure(
@@ -140,8 +144,10 @@ def _style(root: tk.Tk) -> ttk.Style:
     )
     style.map(
         "Header.TButton",
-        background=[("disabled", SLATE_LIGHT), ("active", "#6B7080")],
-        foreground=[("disabled", ON_SLATE_DIM)],
+        background=[("disabled", SLATE), ("active", "#6B7080")],
+        foreground=[("disabled", DIM)],
+        relief=[("disabled", "solid")],
+        bordercolor=[("disabled", SLATE_LIGHT)],
     )
     style.configure("Link.TLabel", foreground=TEXT)
     # Dialog buttons: blue for the main action, slate (like the header's "+")
@@ -453,9 +459,13 @@ class MainWindow:
         self.detail.configure(text=view.detail)
         if view.paused is not None:
             self.active.set(not view.paused)
-        self.switch.configure(
-            text=_("Limits on") if self.active.get() else _("Limits off")
-        )
+        if view.connected:
+            text = _("Limits on") if self.active.get() else _("Limits off")
+        else:
+            # Unknown without the daemon: claim neither on nor off.
+            self.active.set(False)
+            text = _("Limits")
+        self.switch.configure(text=text)
         self.switch.state(
             ["!disabled"] if view.connected and not self.busy else ["disabled"]
         )

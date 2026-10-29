@@ -48,6 +48,23 @@ def test_window_shows_status_and_rows():
         client.close()
 
 
+def test_switch_disabled_without_the_daemon():
+    def unreachable(cmd: str, args: Any, path: Any) -> Any:
+        raise FileNotFoundError(path)
+
+    client = Client(Path("/x"), unreachable)
+    root = tk.Tk()
+    try:
+        window = MainWindow(root, client)
+        pump(root, client)
+        assert "disabled" in window.switch.state()
+        assert window.switch.cget("text") == "Limits"  # neither on nor off
+        assert "selected" not in window.switch.state()
+    finally:
+        root.destroy()
+        client.close()
+
+
 class FakeDaemon:
     """Answers like the daemon, with a config that set-config replaces."""
 

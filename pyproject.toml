@@ -20,6 +20,7 @@ classifiers = [
     "Topic :: System :: Networking :: Monitoring",
 ]
 dependencies = [
+    "jeepney",
     "PyYAML>=5.4",
 ]
 # The daemon also needs the official nftables bindings (`import nftables`),
@@ -45,6 +46,7 @@ traffic-cop-ctl = "trafficcop.cli.__main__:main"
 
 [project.gui-scripts]
 traffic-cop = "trafficcop.gui.__main__:main"
+traffic-cop-indicator = "trafficcop.indicator.__main__:main"
 
 [tool.setuptools.dynamic]
 version = {attr = "trafficcop.__version__"}
@@ -57,6 +59,7 @@ version = {attr = "trafficcop.__version__"}
 # importlib.resources rather than hard-coded /usr/share paths.
 "trafficcop.common" = ["traffic-cop.yaml.default"]
 "trafficcop" = ["locale/*/LC_MESSAGES/*.mo"]
+"trafficcop.indicator" = ["icons/*.svg"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

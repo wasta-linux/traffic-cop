@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: traffic-cop VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-25 15:49+0100\n"
+"POT-Creation-Date: 2026-10-29 20:28+0100\n"
 "PO-Revision-Date: 2026-10-25 15:32+0100\n"
 "Last-Translator: Traffic Cop developers\n"
 "Language: fr\n"
@@ -18,122 +18,123 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.17.0\n"
 
-#: src/trafficcop/cli/__main__.py:66
+#: src/trafficcop/cli/__main__.py:67
 #, python-brace-format
 msgid "config: {path}"
 msgstr "configuration : {path}"
 
-#: src/trafficcop/cli/__main__.py:71 src/trafficcop/cli/__main__.py:96
-#: src/trafficcop/gui/window.py:237
+#: src/trafficcop/cli/__main__.py:72 src/trafficcop/cli/__main__.py:97
+#: src/trafficcop/gui/window.py:282
 msgid "No apps configured."
 msgstr "Aucune application configurée."
 
-#: src/trafficcop/cli/__main__.py:72
+#: src/trafficcop/cli/__main__.py:73
 msgid "DOWN LIMIT"
 msgstr "LIMITE RÉCEPTION"
 
-#: src/trafficcop/cli/__main__.py:72
+#: src/trafficcop/cli/__main__.py:73
 msgid "UP LIMIT"
 msgstr "LIMITE ENVOI"
 
-#: src/trafficcop/cli/__main__.py:72
+#: src/trafficcop/cli/__main__.py:73
 msgid "RUNNING"
 msgstr "EN COURS"
 
-#: src/trafficcop/cli/__main__.py:72 src/trafficcop/cli/__main__.py:97
+#: src/trafficcop/cli/__main__.py:73 src/trafficcop/cli/__main__.py:98
 msgid "APP"
 msgstr "APPLI"
 
-#: src/trafficcop/cli/__main__.py:76
+#: src/trafficcop/cli/__main__.py:77
 msgid "no"
 msgstr "non"
 
-#: src/trafficcop/cli/__main__.py:80
+#: src/trafficcop/cli/__main__.py:81
 #, python-brace-format
 msgid "{n} unit"
 msgid_plural "{n} units"
 msgstr[0] "{n} unité"
 msgstr[1] "{n} unités"
 
-#: src/trafficcop/cli/__main__.py:97
+#: src/trafficcop/cli/__main__.py:98
 msgid "DOWN"
 msgstr "RÉCEPTION"
 
-#: src/trafficcop/cli/__main__.py:97
+#: src/trafficcop/cli/__main__.py:98
 msgid "UP"
 msgstr "ENVOI"
 
-#: src/trafficcop/cli/__main__.py:97
+#: src/trafficcop/cli/__main__.py:98
 msgid "DOWN TOTAL"
 msgstr "TOTAL REÇU"
 
-#: src/trafficcop/cli/__main__.py:97
+#: src/trafficcop/cli/__main__.py:98
 msgid "UP TOTAL"
 msgstr "TOTAL ENVOYÉ"
 
-#: src/trafficcop/cli/__main__.py:173
+#: src/trafficcop/cli/__main__.py:182
 msgid "Control and monitor the Traffic Cop daemon."
 msgstr "Contrôler et surveiller le démon Traffic Cop."
 
-#: src/trafficcop/cli/__main__.py:175
+#: src/trafficcop/cli/__main__.py:184
 msgid "print raw JSON"
 msgstr "afficher le JSON brut"
 
-#: src/trafficcop/cli/__main__.py:179 src/trafficcop/gui/__main__.py:27
+#: src/trafficcop/cli/__main__.py:188 src/trafficcop/gui/__main__.py:27
+#: src/trafficcop/indicator/__main__.py:162
 #, python-brace-format
 msgid "daemon socket (default: {path})"
 msgstr "socket du démon (par défaut : {path})"
 
-#: src/trafficcop/cli/__main__.py:184
+#: src/trafficcop/cli/__main__.py:193
 msgid "daemon state and each app's limits"
 msgstr "état du démon et limites de chaque application"
 
-#: src/trafficcop/cli/__main__.py:187
+#: src/trafficcop/cli/__main__.py:196
 msgid "current rates and totals"
 msgstr "débits actuels et totaux"
 
-#: src/trafficcop/cli/__main__.py:188
+#: src/trafficcop/cli/__main__.py:197
 msgid "keep updating"
 msgstr "mettre à jour en continu"
 
-#: src/trafficcop/cli/__main__.py:190
+#: src/trafficcop/cli/__main__.py:199
 msgid "seconds between updates"
 msgstr "secondes entre les mises à jour"
 
-#: src/trafficcop/cli/__main__.py:194
+#: src/trafficcop/cli/__main__.py:203
 msgid "stop shaping (metering continues)"
 msgstr "suspendre les limites (la mesure continue)"
 
-#: src/trafficcop/cli/__main__.py:195
+#: src/trafficcop/cli/__main__.py:204
 msgid "start shaping again"
 msgstr "réactiver les limites"
 
-#: src/trafficcop/cli/__main__.py:196
+#: src/trafficcop/cli/__main__.py:205
 msgid "re-read the config file"
 msgstr "relire le fichier de configuration"
 
-#: src/trafficcop/cli/__main__.py:200
+#: src/trafficcop/cli/__main__.py:209
 msgid "show or replace the config"
 msgstr "afficher ou remplacer la configuration"
 
-#: src/trafficcop/cli/__main__.py:202
+#: src/trafficcop/cli/__main__.py:211
 msgid "print the config as YAML"
 msgstr "afficher la configuration en YAML"
 
-#: src/trafficcop/cli/__main__.py:206
+#: src/trafficcop/cli/__main__.py:215
 msgid "validate, apply and save a config file"
 msgstr "valider, appliquer et enregistrer un fichier de configuration"
 
-#: src/trafficcop/cli/__main__.py:208
+#: src/trafficcop/cli/__main__.py:217
 msgid "YAML config file, or \"-\" for stdin"
 msgstr "fichier de configuration YAML, ou « - » pour l’entrée standard"
 
-#: src/trafficcop/cli/__main__.py:230
+#: src/trafficcop/cli/__main__.py:239
 #, python-brace-format
 msgid "'{command}' needs root or an administrator account (try sudo)"
 msgstr "« {command} » nécessite root ou un compte administrateur (essayez sudo)"
 
-#: src/trafficcop/cli/__main__.py:246
+#: src/trafficcop/cli/__main__.py:255
 #, python-brace-format
 msgid "can't reach the daemon at {path}; is it running? Start it with: {command}"
 msgstr "impossible de joindre le démon sur {path} ; est-il lancé ? Lancez-le avec : {command}"
@@ -184,7 +185,7 @@ msgstr "pas de limitation : échec de la configuration de tc sur {interface} (v
 msgid "not shaping: no route to the internet"
 msgstr "pas de limitation : aucune route vers Internet"
 
-#: src/trafficcop/common/i18n.py:55
+#: src/trafficcop/common/i18n.py:55 src/trafficcop/gui/editor.py:64
 msgctxt "decimal separator"
 msgid "."
 msgstr ","
@@ -210,35 +211,35 @@ msgstr "Ajouter une application"
 msgid "Change an app"
 msgstr "Modifier une application"
 
-#: src/trafficcop/gui/dialog.py:58
+#: src/trafficcop/gui/dialog.py:59
 msgid "Name"
 msgstr "Nom"
 
-#: src/trafficcop/gui/dialog.py:82
+#: src/trafficcop/gui/dialog.py:87
 msgid "blank: no limit"
 msgstr "vide : pas de limite"
 
-#: src/trafficcop/gui/dialog.py:86
+#: src/trafficcop/gui/dialog.py:92
 msgid "Recognise the app by"
 msgstr "Reconnaître l’application par"
 
-#: src/trafficcop/gui/dialog.py:105 src/trafficcop/gui/window.py:393
+#: src/trafficcop/gui/dialog.py:113 src/trafficcop/gui/window.py:443
 msgid "Only administrators can change apps."
 msgstr "Seuls les administrateurs peuvent modifier les applications."
 
-#: src/trafficcop/gui/dialog.py:112
+#: src/trafficcop/gui/dialog.py:121
 msgid "Remove"
 msgstr "Supprimer"
 
-#: src/trafficcop/gui/dialog.py:116
+#: src/trafficcop/gui/dialog.py:125
 msgid "Cancel"
 msgstr "Annuler"
 
-#: src/trafficcop/gui/dialog.py:116
+#: src/trafficcop/gui/dialog.py:125
 msgid "Close"
 msgstr "Fermer"
 
-#: src/trafficcop/gui/dialog.py:121
+#: src/trafficcop/gui/dialog.py:133
 msgid "Save"
 msgstr "Enregistrer"
 
@@ -270,33 +271,34 @@ msgstr "Scope systemd (motif)"
 msgid "System service"
 msgstr "Service système"
 
-#: src/trafficcop/gui/editor.py:72
+#: src/trafficcop/gui/editor.py:73
 #, python-brace-format
 msgid "{field}: enter a number greater than 0, or leave it blank"
 msgstr "{field} : saisissez un nombre supérieur à 0, ou laissez vide"
 
-#: src/trafficcop/gui/editor.py:112
+#: src/trafficcop/gui/editor.py:113
 msgid "Give the app a name."
 msgstr "Donnez un nom à l’application."
 
-#: src/trafficcop/gui/editor.py:115
+#: src/trafficcop/gui/editor.py:116
 msgid "Download limit"
 msgstr "Limite de réception"
 
-#: src/trafficcop/gui/editor.py:116
+#: src/trafficcop/gui/editor.py:117
 msgid "Upload limit"
 msgstr "Limite d’envoi"
 
-#: src/trafficcop/gui/editor.py:126
+#: src/trafficcop/gui/editor.py:127
 msgid "Add at least one rule to recognise the app by."
 msgstr "Ajoutez au moins une règle pour reconnaître l’application."
 
-#: src/trafficcop/gui/editor.py:142
+#: src/trafficcop/gui/editor.py:143
 #, python-brace-format
 msgid "There's already an app called {name}."
 msgstr "Il existe déjà une application nommée {name}."
 
-#: src/trafficcop/gui/model.py:97 src/trafficcop/gui/window.py:395
+#: src/trafficcop/gui/model.py:97 src/trafficcop/gui/window.py:445
+#: src/trafficcop/indicator/__main__.py:106
 msgid "Traffic Cop isn't running"
 msgstr "Traffic Cop n’est pas lancé"
 
@@ -305,44 +307,69 @@ msgstr "Traffic Cop n’est pas lancé"
 msgid "Start it with: {command}"
 msgstr "Lancez-le avec : {command}"
 
-#: src/trafficcop/gui/window.py:206 src/trafficcop/gui/window.py:413
+#: src/trafficcop/gui/window.py:240 src/trafficcop/gui/window.py:463
+#: src/trafficcop/indicator/__main__.py:110
 msgid "Limits on"
 msgstr "Limites activées"
 
-#: src/trafficcop/gui/window.py:219
+#: src/trafficcop/gui/window.py:257
 msgid "Add an app…"
 msgstr "Ajouter une application…"
 
-#: src/trafficcop/gui/window.py:221
+#: src/trafficcop/gui/window.py:259
 msgid "Restore the default apps…"
 msgstr "Restaurer les applications par défaut…"
 
-#: src/trafficcop/gui/window.py:286
+#: src/trafficcop/gui/window.py:331
 msgid "Not allowed"
 msgstr "Non autorisé"
 
-#: src/trafficcop/gui/window.py:287
+#: src/trafficcop/gui/window.py:332
 msgid "Only administrators can turn the limits on or off."
 msgstr "Seuls les administrateurs peuvent activer ou désactiver les limites."
 
-#: src/trafficcop/gui/window.py:328
+#: src/trafficcop/gui/window.py:378
 msgid "Remove an app"
 msgstr "Supprimer une application"
 
-#: src/trafficcop/gui/window.py:329
+#: src/trafficcop/gui/window.py:379
 #, python-brace-format
 msgid "Remove {name}? Its limits will stop applying."
 msgstr "Supprimer {name} ? Ses limites ne s’appliqueront plus."
 
-#: src/trafficcop/gui/window.py:350
+#: src/trafficcop/gui/window.py:400
 msgid "Restore the default apps"
 msgstr "Restaurer les applications par défaut"
 
-#: src/trafficcop/gui/window.py:351
+#: src/trafficcop/gui/window.py:401
 msgid "Replace all your apps and limits with the defaults?"
 msgstr "Remplacer toutes vos applications et limites par celles par défaut ?"
 
-#: src/trafficcop/gui/window.py:413
+#: src/trafficcop/gui/window.py:463 src/trafficcop/indicator/__main__.py:108
 msgid "Limits off"
 msgstr "Limites désactivées"
+
+#: src/trafficcop/gui/window.py:467
+msgid "Limits"
+msgstr "Limites"
+
+#: src/trafficcop/indicator/__main__.py:117
+msgid "Turn limits on"
+msgstr "Activer les limites"
+
+#: src/trafficcop/indicator/__main__.py:117
+msgid "Turn limits off"
+msgstr "Désactiver les limites"
+
+#: src/trafficcop/indicator/__main__.py:121
+msgid "Open Traffic Cop"
+msgstr "Ouvrir Traffic Cop"
+
+#: src/trafficcop/indicator/__main__.py:123
+msgid "Quit"
+msgstr "Quitter"
+
+#: src/trafficcop/indicator/__main__.py:157
+msgid "The Traffic Cop tray icon."
+msgstr "L’icône de Traffic Cop dans la barre d’état."
 
