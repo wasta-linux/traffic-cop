@@ -43,17 +43,22 @@ OFFLINE = ("wasta-traffic-cop-offline-symbolic", "#D64545")
 def icon_dir() -> str:
     """The icons' directory, as the panel (outside the snap) sees it.
 
-    Inside a snap, $SNAP is /snap/<snap name>/<revision>, but on the host
-    the snap is mounted at /snap/<instance name>/<revision>. They differ for
-    a parallel install (e.g. wasta-traffic-cop_test), so the path is
-    rebuilt from the instance name.
+    Inside a snap, the package is under /snap/<snap name>/..., but on the
+    host the snap is mounted at /snap/<instance name>/.... They differ for a
+    parallel install (e.g. wasta-traffic-cop_test), where the snap name's
+    path on the host is a *different* install, so the name is swapped.
+
+    Only the name: what follows may be the revision ($SNAP, /snap/…/x2) or
+    the "current" link, which is how Python finds its packages in the snap
+    (seen in the test instance; matching on $SNAP missed it), and both exist
+    on the host.
     """
     path = str(resources.files("trafficcop.indicator") / "icons")
-    snap = os.environ.get("SNAP")
+    name = os.environ.get("SNAP_NAME")
     instance = os.environ.get("SNAP_INSTANCE_NAME")
-    revision = os.environ.get("SNAP_REVISION")
-    if snap and instance and revision and path.startswith(snap + "/"):
-        path = f"/snap/{instance}/{revision}" + path[len(snap) :]
+    prefix = f"/snap/{name}/"
+    if name and instance and path.startswith(prefix):
+        path = f"/snap/{instance}/" + path[len(prefix) :]
     return path
 
 
