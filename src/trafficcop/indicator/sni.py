@@ -73,12 +73,27 @@ class MenuItem:
     separator: bool = False
 
 
+@dataclass(frozen=True)
+class Icon:
+    """What the panel shows: a named icon file, with a drawn fallback.
+
+    ``name`` is a file in the ``icon_dir`` given to StatusNotifier, without
+    its extension (``<name>.svg``). Panels look it up there through the
+    ``IconThemePath`` property, as Chromium and Electron do in snaps: the
+    panel runs outside the snap, but can read the snap's files under
+    /snap. If a panel can't load it, it uses ``IconPixmap``: a circle in
+    ``colour``.
+    """
+
+    name: str
+    colour: str  # "#rrggbb"
+
+
 def circle_pixmap(colour: str, size: int) -> tuple[int, int, bytes]:
     """A filled circle in ``colour`` ("#rrggbb"), as SNI pixmap data.
 
-    The icon is drawn in code rather than named, because an ``IconName``
-    must exist in the user's icon theme, and a snap can't install into it.
-    SNI pixmaps are ARGB32 in network byte order (A, R, G, B per pixel).
+    The fallback for panels that can't load the named icon. SNI pixmaps
+    are ARGB32 in network byte order (A, R, G, B per pixel).
     Edges are anti-aliased by covering each pixel's distance from the rim.
     """
     r, g, b = (int(colour[i : i + 2], 16) for i in (1, 3, 5))
@@ -101,14 +116,17 @@ class StatusNotifier:
         app_id: str,
         title: str,
         on_click: Callable[[str], None],
+        icon_dir: str = "",
         connection: DBusConnection | None = None,
     ):
+        """``icon_dir``: where the panel finds the icons, as a path on the host."""
         self.app_id = app_id
         self.title = title
         self.on_click = on_click
+        self.icon_dir = icon_dir
         self.conn = connection or open_dbus_connection(bus="SESSION")
         self.bus_name = f"org.kde.StatusNotifierItem-{os.getpid()}-1"
-        self.colour = "#808080"
+        self.icon = Icon("", "#808080")
         self.tooltip = ""
         self.items: list[MenuItem] = []
         self.revision = 1  # dbusmenu layout revision; bumped on every change
@@ -150,9 +168,9 @@ class StatusNotifier:
 
     # --- Changing what's shown ----------------------------------------------
 
-    def set_icon(self, colour: str) -> None:
-        if colour != self.colour:
-            self.colour = colour
+    def set_icon(self, icon: Icon) -> None:
+        if icon != self.icon:
+            self.icon = icon
             self._emit(ITEM_PATH, ITEM_IFACE, "NewIcon")
 
     def set_tooltip(self, text: str) -> None:
@@ -271,14 +289,15 @@ class StatusNotifier:
 
     def _item_properties(self) -> dict[str, tuple[str, Any]]:
         """Values are (signature, value): how jeepney writes a D-Bus variant."""
-        pixmaps = [circle_pixmap(self.colour, size) for size in ICON_SIZES]
+        pixmaps = [circle_pixmap(self.icon.colour, size) for size in ICON_SIZES]
         return {
             "Category": ("s", "SystemServices"),
             "Id": ("s", self.app_id),
             "Title": ("s", self.title),
             "Status": ("s", "Active"),
             "WindowId": ("i", 0),
-            "IconName": ("s", ""),
+            "IconName": ("s", self.icon.name),
+            "IconThemePath": ("s", self.icon_dir),
             "IconPixmap": ("a(iiay)", pixmaps),
             "OverlayIconName": ("s", ""),
             "OverlayIconPixmap": ("a(iiay)", []),

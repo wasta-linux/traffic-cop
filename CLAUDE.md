@@ -390,9 +390,18 @@ non-admins), Open, Quit. Planned structure:
 - `indicator/sni.py` (done): thin D-Bus layer, StatusNotifierItem +
   dbusmenu, with **jeepney** (pure Python, blocking; no GTK/`gi`). One
   thread: `serve(seconds)` answers the panel, then the caller polls. The
-  icon is an `IconPixmap` drawn in code (a coloured circle), because an
-  `IconName` must be in the user's icon theme, which a snap can't install
-  into.
+  icon is `IconName` + `IconThemePath` pointing at `indicator/icons/`, as
+  Chromium and Electron do in snaps: the panel runs outside the snap and
+  reads `/snap/<instance>/<revision>/…`, which differs from `$SNAP` for
+  parallel installs (`indicator.icon_dir`). A drawn circle in `IconPixmap`
+  is the fallback.
+- Tray icons: monochrome "-symbolic" SVGs that panels recolour to their
+  text colour; bold (on), faint (paused), faint + X (offline), since only
+  opacity survives recolouring. Made from the visible layers of
+  `snap/gui/icon.svg` (the yield sign; the octagon layers are hidden) by
+  `tools/tray-icons.py`, which needs `shapely`. Good enough for now but
+  muddled at 22 px; to refine later, probably as a simple hand-drawn
+  one-colour version that the script only fades and crosses out.
 - `indicator/__main__.py`: poll the daemon (`protocol.call`) every few
   seconds, push changes, handle clicks (`pause`/`resume` via the API; `open`
   runs `$SNAP/bin/traffic-cop`; `quit` exits).

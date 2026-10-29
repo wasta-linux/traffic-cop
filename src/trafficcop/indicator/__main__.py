@@ -4,20 +4,23 @@ A separate process from the window, started at login: it lives all
 session, and D-Bus and Tk event loops don't mix. Its menu turns the limits
 on and off, opens the window, or quits the icon (never the daemon).
 
-The icon's colour shows the state: green while the limits are on, grey
-while paused, red when the daemon can't be reached. Like the window, it
-needs no privileges and only talks to the daemon's socket.
+The icon shows the state: a monochrome app icon, bold while the limits
+are on, faint while paused, faint with an X when the daemon can't be
+reached (icons/, made by tools/tray-icons.py). Like the window, it needs no
+privileges and only talks to the daemon's socket.
 """
 
 from __future__ import annotations
 
 import argparse
 import logging
+import os
 import shutil
 import signal
 import subprocess
 import sys
 from collections.abc import Sequence
+from importlib import resources
 from pathlib import Path
 from typing import Any
 
@@ -29,11 +32,29 @@ from trafficcop.gui.editor import may_change
 log = logging.getLogger("traffic-cop-indicator")
 
 POLL_SECONDS = 3.0
-# Same colours as the window (gui/window.py, which can't be imported
-# without tkinter).
-GREEN = "#3BA55C"
-GREY = "#A3A8B4"
-RED = "#D64545"
+# Icon names (files in icons/) and fallback colours, for panels that can't
+# load the files. The colours are the window's (gui/window.py, which can't
+# be imported without tkinter).
+ON = ("wasta-traffic-cop-on-symbolic", "#3BA55C")
+PAUSED = ("wasta-traffic-cop-paused-symbolic", "#A3A8B4")
+OFFLINE = ("wasta-traffic-cop-offline-symbolic", "#D64545")
+
+
+def icon_dir() -> str:
+    """The icons' directory, as the panel (outside the snap) sees it.
+
+    Inside a snap, $SNAP is /snap/<snap name>/<revision>, but on the host
+    the snap is mounted at /snap/<instance name>/<revision>. They differ for
+    a parallel install (e.g. wasta-traffic-cop_test), so the path is
+    rebuilt from the instance name.
+    """
+    path = str(resources.files("trafficcop.indicator") / "icons")
+    snap = os.environ.get("SNAP")
+    instance = os.environ.get("SNAP_INSTANCE_NAME")
+    revision = os.environ.get("SNAP_REVISION")
+    if snap and instance and revision and path.startswith(snap + "/"):
+        path = f"/snap/{instance}/{revision}" + path[len(snap) :]
+    return path
 
 
 class Indicator:
@@ -45,7 +66,10 @@ class Indicator:
         self.may_change = may_change()
         self.status: dict[str, Any] | None = None
         self.item = sni.StatusNotifier(
-            "wasta-traffic-cop", "Traffic Cop", on_click=self.on_click
+            "wasta-traffic-cop",
+            "Traffic Cop",
+            on_click=self.on_click,
+            icon_dir=icon_dir(),
         )
 
     def run(self) -> None:
@@ -74,11 +98,11 @@ class Indicator:
     def show(self) -> None:
         sni = self.sni
         if self.status is None:
-            colour, tooltip = RED, _("Traffic Cop isn't running")
+            icon, tooltip = OFFLINE, _("Traffic Cop isn't running")
         elif self.status.get("paused"):
-            colour, tooltip = GREY, _("Limits off")
+            icon, tooltip = PAUSED, _("Limits off")
         else:
-            colour, tooltip = GREEN, _("Limits on")
+            icon, tooltip = ON, _("Limits on")
         items = []
         if self.status is not None:
             paused = bool(self.status.get("paused"))
@@ -94,7 +118,7 @@ class Indicator:
             sni.MenuItem("separator", separator=True),
             sni.MenuItem("quit", _("Quit")),
         ]
-        self.item.set_icon(colour)
+        self.item.set_icon(sni.Icon(*icon))
         self.item.set_tooltip(tooltip)
         self.item.set_items(items)
 
