@@ -79,6 +79,19 @@ apps:
       TK_LIBRARY: $SNAP/usr/share/tcltk/tk8.6
       XLOCALEDIR: $SNAP/usr/share/X11/locale
 
+  # The tray icon (StatusNotifierItem over D-Bus). Its "Open" item starts
+  # the window as its own child, under this app's confinement, so it also
+  # needs the window's plugs and environment.
+  indicator:
+    command: bin/traffic-cop-indicator
+    # unity7: the tray's D-Bus names and paths. To verify: whether
+    # desktop-legacy also allows them, and which auto-connects.
+    plugs: [unity7, x11, desktop, home]
+    environment:
+      TCL_LIBRARY: $SNAP/usr/share/tcltk/tcl8.6
+      TK_LIBRARY: $SNAP/usr/share/tcltk/tk8.6
+      XLOCALEDIR: $SNAP/usr/share/X11/locale
+
 parts:
   traffic-cop:
     plugin: python
