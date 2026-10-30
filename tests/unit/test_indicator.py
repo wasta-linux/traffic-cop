@@ -168,3 +168,23 @@ def test_no_watcher_is_no_tray():
     item = sni.StatusNotifier("id", "Title", lambda key: None, connection=bus)
     with pytest.raises(sni.NoTray):
         item.register()
+
+
+def test_take_lock_without_a_runtime_dir(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("XDG_RUNTIME_DIR", raising=False)
+    assert indicator.take_lock() is None  # runs without the check
+
+
+def test_second_copy_exits_quietly(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
+    first = indicator.take_lock()
+    assert first is not None
+    try:
+        # main() returns before connecting to D-Bus, so no bus is needed.
+        assert indicator.main([]) == 0
+    finally:
+        first.close()  # closing releases the lock
+    # ...after which the next copy gets it.
+    again = indicator.take_lock()
+    assert again is not None
+    again.close()

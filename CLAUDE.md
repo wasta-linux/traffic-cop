@@ -1,23 +1,26 @@
 # Traffic Cop 2.x: project notes
 
 Repo: https://github.com/wasta-linux/traffic-cop. The 2.x rewrite is on
-`main` (merged from `snap`, PR #1). Current work branch: `indicator`.
+`main` (merged from `snap`, PR #1; the indicator, PR #2). Current work
+branch: `ensure-indicator`.
 
-## Current state (2026-10-29)
+## Current state (2026-10-30)
 
-- Daemon, CLI and GUI are done and tested (364 unit tests; integration tests
-  in network namespaces).
+- Daemon, CLI, GUI and tray indicator are done and tested (378 unit tests;
+  integration tests in network namespaces).
 - The snap `wasta-traffic-cop` is registered (publisher `n8marti`), and
   revision 2 (2.0.0.dev0) is on `latest/edge`.
 - The store request for auto-connecting `network-control`,
   `firewall-control` and `system-observe` (see "Store review") has been made;
   waiting on a response.
-- **In progress:** the tray indicator (see "Indicator design"). Works in
-  the snap (tested as a parallel install, `wasta-traffic-cop_test`): icon,
-  menu, Open, pause/resume. Uncommitted: stable menu item ids (fixes extra
-  lines in the menu after the daemon went away and came back), the icon
-  path fix for parallel installs, and a clear error without `unity7`.
-  Next: `menu.py`, single-instance GUI, autostart.
+- The tray indicator (see "Indicator design") works in the snap, tested as
+  a parallel install (`wasta-traffic-cop_test`): icon, menu, Open,
+  pause/resume.
+- **In progress:** the window starts the indicator, which is
+  single-instance. Works unconfined; still to check in the snap that the
+  window and the indicator share `$XDG_RUNTIME_DIR`
+  (`/run/user/<uid>/snap.<instance>/` should hold
+  `traffic-cop-indicator.lock`). Next: `menu.py`, autostart.
 
 ## Working with the maintainer
 
@@ -180,7 +183,8 @@ the ISP's; CAKE's `overhead` options can compensate.
   the confined `ip link add … type ifb` loads `ifb`. `network-observe` was
   dropped: nothing reads whole-interface counts.
 - CLI: `home` (for `config set FILE`).
-- GUI (tkinter): `x11` (Tk runs through XWayland), `desktop`, `home`. Stages
+- GUI (tkinter): `x11` (Tk runs through XWayland), `desktop`, `home`, and
+  `unity7` for the indicator it starts (see "Indicator design"). Stages
   `python3-tk` and `fonts-sil-andika`; `gui/fonts.py` registers the snap's
   Andika with fontconfig before Tk starts.
 
@@ -250,6 +254,7 @@ traffic-cop/
 │   │   ├── protocol.py             # API (JSON lines), commands, WRITER_GROUPS, client call()
 │   │   ├── display.py              # rates/sizes/state as text (shared by CLI and GUI)
 │   │   ├── i18n.py                 # gettext: _, ngettext, pgettext, number
+│   │   ├── launch.py               # starts the window or the indicator (beside the interpreter)
 │   │   └── traffic-cop.yaml.default
 │   ├── locale/fr/LC_MESSAGES/      # traffic-cop.po + .mo
 │   ├── daemon/                     # traffic-copd
@@ -268,7 +273,10 @@ traffic-cop/
 │   │   ├── window.py               # main window, Wasta palette, bars
 │   │   ├── editor.py, dialog.py    # editing apps; may_change()
 │   │   └── fonts.py                # registers the snap's Andika
-│   └── indicator/                  # tray indicator: just started (see "Indicator design")
+│   └── indicator/                  # tray indicator (see "Indicator design")
+│       ├── __main__.py             # traffic-cop-indicator: polls the daemon, menu actions, lock
+│       ├── sni.py                  # StatusNotifierItem + dbusmenu over jeepney
+│       └── icons/                  # tray icons, made by tools/tray-icons.py
 ├── tests/
 │   ├── unit/                       # no root; fakes.py stands in for System and /proc
 │   └── integration/                # real nft/tc in an unprivileged netns (unshare -rn)
@@ -385,7 +393,7 @@ read-only fields), Andika font. One row per app: download bar above upload
 bar, with ↓/↑ arrows and "rate / limit" text. Header button: "Limits on" /
 paused. The editor is read-only for non-admins (`editor.may_change`).
 
-## Indicator design (next feature)
+## Indicator design
 
 A tray icon with a menu: Pause/Resume (whichever applies; disabled for
 non-admins), Open, Quit. Planned structure:
@@ -414,11 +422,20 @@ non-admins), Open, Quit. Planned structure:
   one-colour version that the script only fades and crosses out.
 - `indicator/__main__.py`: poll the daemon (`protocol.call`) every few
   seconds, push changes, handle clicks (`pause`/`resume` via the API; `open`
-  runs `$SNAP/bin/traffic-cop`; `quit` exits).
-- The GUI becomes **single-instance** (a lock/socket in `$XDG_RUNTIME_DIR`),
-  so Open raises an existing window.
+  starts `traffic-cop` with `launch.start`; `quit` exits).
+- **The window starts the indicator** each time it opens
+  (`gui/__main__.py`, `common/launch.py`), and the indicator is
+  **single-instance**: it holds an `flock` on
+  `$XDG_RUNTIME_DIR/traffic-cop-indicator.lock`, and a second copy exits
+  quietly. The indicator decides rather than the window, so one rule covers
+  every way a copy starts (window, login, by hand), and the kernel releases
+  the lock when the process ends, even in a crash. (A D-Bus check can't
+  tell: the tray's bus name is `org.kde.StatusNotifierItem-<pid>-1`.) So
+  quitting the icon lasts until the window is next opened. The window
+  itself isn't single-instance yet (Open starts another one).
 - Snap: the `indicator` app plugs `unity7`, `x11`, `desktop`, `home`, all
-  auto-connected. Tested by disconnecting: without `unity7` the bus refuses
+  auto-connected. The `gui` app plugs `unity7` too, since the indicator it
+  starts runs under the window's confinement. Tested by disconnecting: without `unity7` the bus refuses
   the tray's names (`sni.NotAllowed`; `desktop` doesn't cover them);
   without `desktop` the icon still works, but it stays for the window that
   Open starts under the indicator's confinement (fonts, themes); `x11` and

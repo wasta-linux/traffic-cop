@@ -13,11 +13,10 @@ privileges and only talks to the daemon's socket.
 from __future__ import annotations
 
 import argparse
+import fcntl
 import logging
 import os
-import shutil
 import signal
-import subprocess
 import sys
 from collections.abc import Sequence
 from importlib import resources
@@ -25,7 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from trafficcop import __version__
-from trafficcop.common import paths, protocol
+from trafficcop.common import launch, paths, protocol
 from trafficcop.common.i18n import _
 from trafficcop.gui.editor import may_change
 
@@ -38,6 +37,27 @@ POLL_SECONDS = 3.0
 ON = ("wasta-traffic-cop-on-symbolic", "#3BA55C")
 PAUSED = ("wasta-traffic-cop-paused-symbolic", "#A3A8B4")
 OFFLINE = ("wasta-traffic-cop-offline-symbolic", "#D64545")
+LOCK_NAME = "traffic-cop-indicator.lock"
+
+
+def take_lock():
+    """Lock out a second copy, which would add a second icon to the tray.
+
+    The window starts the indicator every time it opens, and so will
+    login, so the indicator itself makes sure only one runs. flock is
+    released by the kernel when the process ends, even in a crash, so the
+    lock never goes stale. In a snap, $XDG_RUNTIME_DIR is shared by all of
+    the snap's apps (/run/user/<uid>/snap.<instance>).
+
+    Returns the open lock file, which must stay open (None if there's no
+    runtime directory); raises BlockingIOError if another copy holds it.
+    """
+    runtime = os.environ.get("XDG_RUNTIME_DIR")
+    if not runtime:
+        return None
+    lock = open(Path(runtime) / LOCK_NAME, "w")
+    fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    return lock
 
 
 def icon_dir() -> str:
@@ -131,25 +151,9 @@ class Indicator:
             self.call("resume" if self.status.get("paused") else "pause")
             self.show()
         elif key == "open":
-            open_window(self.socket_path)
+            launch.start("traffic-cop", self.socket_path)
         elif key == "quit":
             self.item.stopped = True
-
-
-def open_window(socket_path: Path) -> None:
-    """Start the window (traffic-cop), talking to the same daemon socket.
-
-    The window is installed beside the interpreter: in the snap both are in
-    $SNAP/bin, in a venv in .venv/bin, which may not be on PATH. (Not beside
-    sys.argv[0], which is the module's file under ``python -m``.) The
-    interpreter's path isn't resolved: in a venv it's a symlink out of it.
-    """
-    beside = Path(sys.executable).with_name("traffic-cop")
-    program = str(beside) if beside.exists() else shutil.which("traffic-cop")
-    if program is None:
-        log.error("can't find the traffic-cop program")
-        return
-    subprocess.Popen([program, "--socket", str(socket_path)], start_new_session=True)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -168,6 +172,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="traffic-cop-indicator: %(message)s",
     )
+    try:
+        _lock = take_lock()  # held until this process exits
+    except BlockingIOError:
+        log.debug("already running")
+        return 0
 
     # Windows it opens are never waited for; let the kernel reap them.
     signal.signal(signal.SIGCHLD, signal.SIG_IGN)

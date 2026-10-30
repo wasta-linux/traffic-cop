@@ -13,7 +13,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from trafficcop import __version__
-from trafficcop.common import paths
+from trafficcop.common import launch, paths
 from trafficcop.common.i18n import _
 
 
@@ -50,6 +50,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         message = _("can't open a window: {error}").format(error=e)
         print(f"traffic-cop: {message}", file=sys.stderr)
         return 1
+
+    # The tray icon comes with the window; it exits at once if it's
+    # already running (indicator.take_lock).
+    launch.start("traffic-cop-indicator", args.socket)
+
     client = Client(args.socket)
     try:
         MainWindow(root, client)

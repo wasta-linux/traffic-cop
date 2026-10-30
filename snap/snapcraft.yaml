@@ -72,7 +72,7 @@ apps:
   gui:
     command: bin/traffic-cop
     # Its launcher is snap/gui/gui.desktop (snapcraft finds it by the app's name).
-    plugs: [x11, desktop, home]
+    plugs: [unity7, x11, desktop, home]
     environment:
       # https://forum.snapcraft.io/t/modulenotfounderror-no-module-named-tkinter/28707/4
       TCL_LIBRARY: $SNAP/usr/share/tcltk/tcl8.6
@@ -84,8 +84,7 @@ apps:
   # needs the window's plugs and environment.
   indicator:
     command: bin/traffic-cop-indicator
-    # unity7: the tray's D-Bus names and paths. To verify: whether
-    # desktop-legacy also allows them, and which auto-connects.
+    # unity7: the tray's D-Bus names and paths.
     plugs: [unity7, x11, desktop, home]
     environment:
       TCL_LIBRARY: $SNAP/usr/share/tcltk/tcl8.6
