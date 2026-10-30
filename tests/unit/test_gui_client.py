@@ -96,4 +96,4 @@ def test_errors():
 def test_close_stops_the_worker():
     client = Client(Path("/x"), lambda *a: None)
     client.close()
-    assert not client._thread.is_alive()  # pyright: ignore[reportPrivateUsage]
+    assert not client._thread.is_alive()

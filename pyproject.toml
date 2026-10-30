@@ -80,6 +80,16 @@ typeCheckingMode = "standard"
 # venv is created with --system-site-packages, but pyright ignores that.
 extraPaths = ["/usr/lib/python3/dist-packages"]
 
+[[tool.pyright.executionEnvironments]]
+root = "tests"
+# The project folder, for "from tests.unit... import", and the apt packages.
+# (An environment's extraPaths replaces the one above rather than adding to it.)
+extraPaths = [".", "/usr/lib/python3/dist-packages"]
+# Tests pass fakes where the code expects real classes (e.g. FakeConnection
+# for jeepney's DBusConnection in test_indicator.py).
+reportArgumentType = false
+reportPrivateUsage = false
+
 [tool.ruff]
 line-length = 88
 target-version = "py310"

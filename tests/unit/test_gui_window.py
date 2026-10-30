@@ -35,7 +35,7 @@ def test_window_shows_status_and_rows():
         pump(root, client)
         assert window.headline.cget("text") == "Shaping traffic on wlp0s20f3"
         assert tk.ttk.Style(root).theme_use() == "alt"
-        assert list(window._rows) == ["Firefox", "Zoom", "Busy"]  # pyright: ignore[reportPrivateUsage]
+        assert list(window._rows) == ["Firefox", "Zoom", "Busy"]
         assert window.active.get() and window.switch.cget("text") == "Limits on"
         assert "selected" in window.switch.state()  # pressed = on
         window.switch.invoke()
@@ -115,15 +115,15 @@ def test_add_an_app():
         assert dialog is not None
         dialog.name.set("Skype")
         dialog.limits["download"][0].set("50")
-        dialog._rules[0][1].set("skype")  # pyright: ignore[reportPrivateUsage]
-        dialog._save()  # pyright: ignore[reportPrivateUsage]
+        dialog._rules[0][1].set("skype")
+        dialog._save()
         pump(root, client)
         assert not dialog.winfo_exists()
         assert daemon.config["apps"]["Skype"] == {
             "download": "400kbit",
             "match": [{"snap": "skype"}],
         }
-        assert "Skype" in window._rows  # pyright: ignore[reportPrivateUsage]
+        assert "Skype" in window._rows
     finally:
         root.destroy()
         client.close()
@@ -133,12 +133,12 @@ def test_edit_shows_errors_and_keeps_the_dialog():
     daemon = FakeDaemon()
     root, client, window = make(daemon)
     try:
-        window._edit_app("Zoom")  # pyright: ignore[reportPrivateUsage]
+        window._edit_app("Zoom")
         pump(root, client)
         dialog = window.dialog
         assert dialog is not None and dialog.name.get() == "Zoom"
         dialog.name.set("Firefox")  # clashes
-        dialog._save()  # pyright: ignore[reportPrivateUsage]
+        dialog._save()
         pump(root, client)
         assert "already an app called Firefox" in dialog.error.cget("text")
         assert dialog.winfo_exists()
@@ -152,7 +152,7 @@ def test_read_only_for_other_users():
     daemon = FakeDaemon()
     root, client, window = make(daemon, may_change=False)
     try:
-        window._edit_app("Zoom")  # pyright: ignore[reportPrivateUsage]
+        window._edit_app("Zoom")
         pump(root, client)
         dialog = window.dialog
         assert dialog is not None and dialog.save is None
