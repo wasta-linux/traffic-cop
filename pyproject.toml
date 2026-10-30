@@ -31,6 +31,7 @@ dependencies = [
 # The GUI uses tkinter, which is in the standard library (on Debian/Ubuntu:
 # apt install python3-tk).
 dev = [
+    "pyright",
     "pytest>=7",
     "pytest-cov",
     "ruff",

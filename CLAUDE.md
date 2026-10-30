@@ -27,9 +27,10 @@ Repo: https://github.com/wasta-linux/traffic-cop. The 2.x rewrite is on
 - Match the surrounding code's style and comment density. Absolute imports
   (`from trafficcop.common import config`). Shared constants live once, in
   `common/` (e.g. `protocol.WRITER_GROUPS`, used by daemon and GUI).
-- Before finishing a change: `ruff format`, `ruff check`, `pytest -m "not
-  integration"`; update `.po` files for changed user-facing strings (see
-  "Translations"); update this file when a decision or the state changes.
+- Before finishing a change: `ruff format`, `ruff check`, `pyright src tests`,
+  `pytest -m "not integration"`; update `.po` files for changed user-facing
+  strings (see "Translations"); update this file when a decision or the state
+  changes.
 - The maintainer usually commits; ask before committing. Commit subjects are
   short and lowercase (e.g. "define the admin group list once, in
   protocol.py"), with a body when the why isn't obvious.
@@ -293,7 +294,10 @@ traffic-cop/
 - Package data: the default config and the `.mo` files. Load them with
   `importlib.resources`, never hardcoded `/usr/share` paths.
 - pyright: standard mode, venv `.venv`, `extraPaths` for
-  `/usr/lib/python3/dist-packages` (nftables, tkinter).
+  `/usr/lib/python3/dist-packages` (nftables, tkinter). Under `tests/`
+  (an execution environment), `reportPrivateUsage` and `reportArgumentType`
+  are off, since tests reach into private members and pass fakes; its
+  `extraPaths` repeats the apt path and adds `.` for `from tests.unit…`.
 
 ## Dev environment
 
