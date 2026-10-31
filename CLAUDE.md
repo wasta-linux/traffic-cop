@@ -4,24 +4,25 @@ Repo: https://github.com/wasta-linux/traffic-cop. The 2.x rewrite is on
 `main` (merged from `snap`, PR #1; the indicator, PR #2). Current work
 branch: `ensure-indicator`.
 
-## Current state (2026-10-30)
+## Current state (2026-10-31)
 
-- Daemon, CLI, GUI and tray indicator are done and tested (391 unit tests;
+- Daemon, CLI, GUI and tray indicator are done and tested (393 unit tests;
   integration tests in network namespaces).
 - The snap `wasta-traffic-cop` is registered (publisher `n8marti`), and
   revision 2 (2.0.0.dev0) is on `latest/edge`.
 - The store request for auto-connecting `network-control`,
   `firewall-control` and `system-observe` (see "Store review") has been made;
   waiting on a response.
-- The tray indicator (see "Indicator design") works in the snap, tested as
-  a parallel install (`wasta-traffic-cop_test`): icon, menu, Open,
-  pause/resume.
-- **In progress:** one process for the window and the tray icon (see
-  "Indicator design"): closing the window hides it while the icon is
-  shown, and a second launch shows the running copy's window. Checked
-  unconfined (second launch hands over, tray Quit ends it); still to check
-  by eye (hide, show, raise) and in a rebuilt snap (dash icon and grouping,
-  `unity7` disconnected, AppArmor denials). Next: autostart.
+- The window and the tray icon are one process (see "Indicator design"):
+  closing the window hides it while the icon is shown, and a second launch
+  shows the running copy's window. Tested in the snap as a parallel install
+  (`wasta-traffic-cop_test`): icon, menu, Open, pause/resume, Quit; one
+  dash entry with the right icon however the window is opened; the window
+  is raised for a second launch; no AppArmor denials. With `unity7`
+  disconnected: the window works, close quits, `--hidden` exits 0, a
+  second launch still hands over, and the only denials are the tray's
+  D-Bus calls.
+- **Next:** autostart at login (`--hidden`).
 
 ## Working with the maintainer
 
@@ -469,14 +470,15 @@ Now everything runs under the `gui` label.
   AppArmor template allows `signal peer=snap.@{SNAP_INSTANCE_NAME}.*` (seen
   in the `_test` gui profile); a socket would need `network-bind`, a D-Bus
   name a `dbus` slot. (A D-Bus check couldn't tell anyway: the tray's bus
-  name is `org.kde.StatusNotifierItem-<pid>-1`.) **To check:** GNOME may
-  not raise a window another process asks for, and show "Traffic Cop is
-  ready" instead.
+  name is `org.kde.StatusNotifierItem-<pid>-1`.) GNOME does raise the
+  window for a second launch (checked; no "Traffic Cop is ready" notice).
 - Snap: the `gui` app plugs `unity7`, `x11`, `desktop`, `home`, all
-  auto-connected. Tested (with the old separate indicator) by
-  disconnecting: without `unity7` the bus refuses the tray's names
-  (`sni.NotAllowed`; `desktop` doesn't cover them), and the window then
-  works without an icon. `desktop-legacy` wasn't needed.
+  auto-connected. Tested by disconnecting: without `unity7` the bus
+  refuses the tray's names (`sni.NotAllowed`; `desktop` doesn't cover
+  them; the log says which `snap connect` command to run). The window
+  then works without an icon, close quits, `--hidden` exits, and a second
+  launch still hands over (a signal, not D-Bus). `desktop-legacy` wasn't
+  needed.
 - Shown on KDE, Cinnamon, Xfce, MATE and Ubuntu's GNOME (AppIndicator
   extension); plain GNOME (e.g. Fedora) has no tray (no
   StatusNotifierWatcher), so the window behaves as if there were no icon.
