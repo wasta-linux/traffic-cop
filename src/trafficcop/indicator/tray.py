@@ -101,10 +101,15 @@ class Tray:
             connection=self._connection,
         )
 
-    def pump(self) -> None:
-        """Show the latest queued state, if any."""
+    def pump(self, wait: bool = False) -> None:
+        """Show the latest queued state, if any (``wait``: until there's one)."""
         assert self.item is not None
         state = None
+        while wait and state is None and not self._stopped:
+            try:
+                state = self._states.get(timeout=SERVE_SECONDS)
+            except queue.Empty:
+                pass
         while True:
             try:
                 state = self._states.get_nowait()
@@ -132,7 +137,14 @@ class Tray:
             return
         assert self.item is not None
         try:
-            self.pump()  # the first icon and menu, before the panel reads them
+            # The window's first state, before the panel reads anything.
+            # The thread starts before the window exists, and registering
+            # without it showed the placeholder (no icon name, so the grey
+            # IconPixmap circle) until NewIcon; GNOME's AppIndicator
+            # extension then seemed to draw the circle behind the real icon.
+            self.pump(wait=True)
+            if self._stopped:
+                return
             self.item.register()
             self._events.put(READY)
             while not self._stopped:

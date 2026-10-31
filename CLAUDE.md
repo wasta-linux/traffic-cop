@@ -431,7 +431,11 @@ Now everything runs under the `gui` label.
   (the thread applies the latest one between `serve(0.25)` calls), and
   `Tray.events()` (menu clicks, and `READY`/`NO_TRAY`/`NOT_ALLOWED` from
   registration), drained by `MainWindow._dispatch`. jeepney is imported
-  only on that thread, so the window works without it.
+  only on that thread, so the window works without it. The thread starts
+  before the window exists, so it waits for the window's first state
+  before registering: registering with the placeholder (no `IconName`,
+  only the grey `IconPixmap` circle) seemed to leave the circle showing
+  behind the real icon in Ubuntu's GNOME (gone with the fix).
 - **The tray's state** comes from the window's existing status polling, not
   a second poll: each `_render` passes `menu.tray_state(status,
   may_change)` to `Tray.show`, which skips repeats. The tray's toggle
