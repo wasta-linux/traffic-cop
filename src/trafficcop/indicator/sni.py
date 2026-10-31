@@ -13,9 +13,10 @@ Specs:
 
 Written with jeepney, which is pure Python and has no GTK or GObject
 dependency (AyatanaAppIndicator would bring GTK back; dbus-fast is asyncio
-and partly compiled). Everything runs on one thread: ``serve`` answers the
-panel's calls for a while and returns, so the caller can poll the daemon
-in between.
+and partly compiled). It's blocking and not thread-safe: one thread owns a
+StatusNotifier and its connection. ``serve`` answers the panel's calls for
+a while and returns, so that thread can apply changes in between
+(``tray.Tray`` runs it beside the window's Tk thread).
 
 The names and object paths are the ones libappindicator uses
 (``org.kde.StatusNotifierItem-<pid>-<n>``, ``/StatusNotifierItem``,
@@ -28,7 +29,6 @@ import math
 import os
 import time
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
 from typing import Any
 
 from jeepney import (
@@ -44,6 +44,8 @@ from jeepney import (
     new_signal,
 )
 from jeepney.io.blocking import DBusConnection, open_dbus_connection
+
+from trafficcop.indicator.menu import Icon, MenuItem
 
 ITEM_PATH = "/StatusNotifierItem"
 MENU_PATH = "/MenuBar"
@@ -80,31 +82,6 @@ class NotAllowed(Exception):
     In the snap: the unity7 interface isn't connected. Seen with it
     disconnected; desktop alone doesn't allow the tray's names.
     """
-
-
-@dataclass(frozen=True)
-class MenuItem:
-    key: str  # passed to on_click; unique in the menu (it fixes the item's id)
-    label: str = ""
-    enabled: bool = True
-    visible: bool = True
-    separator: bool = False
-
-
-@dataclass(frozen=True)
-class Icon:
-    """What the panel shows: a named icon file, with a drawn fallback.
-
-    ``name`` is a file in the ``icon_dir`` given to StatusNotifier, without
-    its extension (``<name>.svg``). Panels look it up there through the
-    ``IconThemePath`` property, as Chromium and Electron do in snaps: the
-    panel runs outside the snap, but can read the snap's files under
-    /snap. If a panel can't load it, it uses ``IconPixmap``: a circle in
-    ``colour``.
-    """
-
-    name: str
-    colour: str  # "#rrggbb"
 
 
 def circle_pixmap(colour: str, size: int) -> tuple[int, int, bytes]:

@@ -32,6 +32,13 @@ that follows the window, not the numbers. A bar is Wasta blue, and
 turns yellow when the limit is holding its app back (``model.FULL``): limited,
 not stopped, so a caution colour rather than an alarm.
 
+The tray icon (indicator/tray.py, on its own thread) is fed from the same
+status polling: each render hands it a ``menu.TrayState``, and its clicks
+come back through ``_dispatch``. While it's shown, the close button only
+hides the window (as most apps with a tray icon do); its "Open" shows the
+window again and "Quit" ends the process. Without a tray, the close button
+quits. Usage isn't polled while the window is hidden.
+
 Changes: the "Limits on" button (a ttk toggle button: pressed means on)
 sends pause/resume. "+" adds an app, clicking an app's name opens it for
 changing or removing (``dialog.AppDialog``), and the "…" menu restores the
@@ -54,6 +61,8 @@ from trafficcop.gui import editor, fonts
 from trafficcop.gui.client import Client, Reply
 from trafficcop.gui.dialog import AppDialog
 from trafficcop.gui.model import AppRow, Direction, Level, View, build_view
+from trafficcop.indicator import menu
+from trafficcop.indicator.tray import NO_TRAY, NOT_ALLOWED, READY, Tray
 
 DISPATCH_MS = 100
 USAGE_MS = 1000
@@ -206,9 +215,20 @@ class _RowWidgets:
 
 
 class MainWindow:
-    def __init__(self, root: tk.Tk, client: Client):
+    def __init__(
+        self,
+        root: tk.Tk,
+        client: Client,
+        tray: Tray | None = None,
+        hidden: bool = False,
+    ):
+        """``hidden``: start with only the tray icon (quits if there's no tray)."""
         self.root = root
         self.client = client
+        self.tray = tray
+        self.tray_ready = False  # the icon is shown, so closing may only hide
+        self.hidden = hidden
+        self.closed = False  # destroyed: nothing more to do
         self.status: dict[str, Any] | None = None
         self.usage: dict[str, Any] | None = None
         self.error: Exception | None = None
@@ -216,6 +236,9 @@ class MainWindow:
         self._rows: dict[str, _RowWidgets] = {}
 
         root.title("Traffic Cop")
+        root.protocol("WM_DELETE_WINDOW", self.close)
+        if hidden:
+            root.withdraw()  # before Tk first maps it, so it never flashes up
         fonts.apply(root)
         _style(root)
         root.minsize(760, 200)
@@ -290,15 +313,21 @@ class MainWindow:
     # --- Polling -------------------------------------------------------------------
 
     def _dispatch(self) -> None:
-        self.client.dispatch()
+        # Scheduled first: a tray event may destroy the window, after which
+        # ``after`` would fail.
         self.root.after(DISPATCH_MS, self._dispatch)
+        self.client.dispatch()
+        if self.tray is not None:
+            for event in self.tray.events():
+                if not self.closed:
+                    self._on_tray(event)
 
     def _poll_status(self) -> None:
         self.client.request("status", self._on_status, once=True)
         self.root.after(STATUS_MS, self._poll_status)
 
     def _poll_usage(self) -> None:
-        if self.status is not None:
+        if self.status is not None and not self.hidden:
             self.client.request("usage", self._on_usage, once=True)
         self.root.after(USAGE_MS, self._poll_usage)
 
@@ -313,6 +342,41 @@ class MainWindow:
         if reply.ok:
             self.usage = reply.result
             self._render()
+
+    # --- Showing, hiding, and the tray ------------------------------------------------
+
+    def show(self) -> None:
+        """Bring the window back (from the tray, or for a second launch)."""
+        self.hidden = False
+        self.root.deiconify()
+        self.root.lift()
+        self.root.focus_force()
+
+    def close(self) -> None:
+        """The close button: hide while the tray icon can bring it back, else quit."""
+        if self.tray_ready:
+            self.hidden = True
+            self.root.withdraw()
+        else:
+            self._quit()
+
+    def _quit(self) -> None:
+        self.closed = True
+        self.root.destroy()  # ends the main loop
+
+    def _on_tray(self, event: str) -> None:
+        if event == READY:
+            self.tray_ready = True
+        elif event in (NO_TRAY, NOT_ALLOWED):
+            self.tray_ready = False
+            if self.hidden:  # nothing would ever show it
+                self._quit()
+        elif event == menu.TOGGLE:
+            self.switch.invoke()  # as if pressed: does nothing while disabled
+        elif event == menu.OPEN:
+            self.show()
+        elif event == menu.QUIT:
+            self._quit()
 
     # --- The limits button -----------------------------------------------------------
 
@@ -454,6 +518,8 @@ class MainWindow:
     # --- Drawing -----------------------------------------------------------------
 
     def _render(self) -> None:
+        if self.tray is not None:
+            self.tray.show(menu.tray_state(self.status, self.may_change))
         view = build_view(self.status, self.usage, self.error)
         self.headline.configure(text=view.headline)
         self.detail.configure(text=view.detail)

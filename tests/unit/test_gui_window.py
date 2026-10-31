@@ -161,3 +161,73 @@ def test_read_only_for_other_users():
     finally:
         root.destroy()
         client.close()
+
+
+class FakeTray:
+    """Stands in for indicator.tray.Tray: records states, hands out events."""
+
+    def __init__(self, *events: str) -> None:
+        self.pending = list(events)
+        self.states: list = []
+
+    def show(self, state) -> None:
+        self.states.append(state)
+
+    def events(self) -> list[str]:
+        out, self.pending = self.pending, []
+        return out
+
+
+def with_tray(tray: FakeTray, hidden: bool = False) -> tuple[Any, Client, MainWindow]:
+    client = Client(Path("/x"), FakeDaemon())
+    root = tk.Tk()
+    window = MainWindow(root, client, tray, hidden=hidden)
+    pump(root, client)
+    return root, client, window
+
+
+def test_close_hides_while_the_tray_is_shown():
+    from trafficcop.indicator import menu, tray
+
+    fake = FakeTray(tray.READY)
+    root, client, window = with_tray(fake)
+    try:
+        assert fake.states[-1].icon == menu.ON  # fed from the status polling
+        window.close()
+        pump(root, client, 0.1)
+        assert root.winfo_exists() and root.state() == "withdrawn"
+        fake.pending.append(menu.OPEN)
+        pump(root, client)
+        assert root.state() == "normal" and not window.hidden
+        fake.pending.append(menu.QUIT)
+        pump(root, client, 0.2)
+        assert window.closed
+    finally:
+        if not window.closed:
+            root.destroy()
+        client.close()
+
+
+def test_close_quits_without_a_tray():
+    from trafficcop.indicator import tray
+
+    root, client, window = with_tray(FakeTray(tray.NO_TRAY))
+    try:
+        window.close()
+        assert window.closed
+    finally:
+        client.close()
+
+
+def test_hidden_start_quits_when_there_is_no_tray():
+    from trafficcop.indicator import tray
+
+    fake = FakeTray()
+    root, client, window = with_tray(fake, hidden=True)
+    try:
+        assert root.state() == "withdrawn"
+        fake.pending.append(tray.NOT_ALLOWED)
+        pump(root, client, 0.2)
+        assert window.closed
+    finally:
+        client.close()

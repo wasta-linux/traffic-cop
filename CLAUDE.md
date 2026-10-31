@@ -6,7 +6,7 @@ branch: `ensure-indicator`.
 
 ## Current state (2026-10-30)
 
-- Daemon, CLI, GUI and tray indicator are done and tested (378 unit tests;
+- Daemon, CLI, GUI and tray indicator are done and tested (391 unit tests;
   integration tests in network namespaces).
 - The snap `wasta-traffic-cop` is registered (publisher `n8marti`), and
   revision 2 (2.0.0.dev0) is on `latest/edge`.
@@ -16,11 +16,12 @@ branch: `ensure-indicator`.
 - The tray indicator (see "Indicator design") works in the snap, tested as
   a parallel install (`wasta-traffic-cop_test`): icon, menu, Open,
   pause/resume.
-- **In progress:** the window starts the indicator, which is
-  single-instance. Works unconfined; still to check in the snap that the
-  window and the indicator share `$XDG_RUNTIME_DIR`
-  (`/run/user/<uid>/snap.<instance>/` should hold
-  `traffic-cop-indicator.lock`). Next: `menu.py`, autostart.
+- **In progress:** one process for the window and the tray icon (see
+  "Indicator design"): closing the window hides it while the icon is
+  shown, and a second launch shows the running copy's window. Checked
+  unconfined (second launch hands over, tray Quit ends it); still to check
+  by eye (hide, show, raise) and in a rebuilt snap (dash icon and grouping,
+  `unity7` disconnected, AppArmor denials). Next: autostart.
 
 ## Working with the maintainer
 
@@ -173,7 +174,8 @@ the ISP's; CAKE's `overhead` options can compensate.
 
 `snap/snapcraft.yaml`: name `wasta-traffic-cop` (title "Traffic Cop"),
 `core26`, strict, amd64 + arm64. Apps: `daemon` (service), `wasta-traffic-cop`
-(the CLI, named like the snap), `gui` (launcher `snap/gui/gui.desktop`).
+(the CLI, named like the snap), `gui` (the window and its tray icon;
+launcher `snap/gui/gui.desktop`).
 
 **Interfaces.**
 - Daemon: `network-control` (ip, tc), `firewall-control` (nftables),
@@ -184,7 +186,7 @@ the ISP's; CAKE's `overhead` options can compensate.
   dropped: nothing reads whole-interface counts.
 - CLI: `home` (for `config set FILE`).
 - GUI (tkinter): `x11` (Tk runs through XWayland), `desktop`, `home`, and
-  `unity7` for the indicator it starts (see "Indicator design"). Stages
+  `unity7` for its tray icon (see "Indicator design"). Stages
   `python3-tk` and `fonts-sil-andika`; `gui/fonts.py` registers the snap's
   Andika with fontconfig before Tk starts.
 
@@ -254,7 +256,7 @@ traffic-cop/
 │   │   ├── protocol.py             # API (JSON lines), commands, WRITER_GROUPS, client call()
 │   │   ├── display.py              # rates/sizes/state as text (shared by CLI and GUI)
 │   │   ├── i18n.py                 # gettext: _, ngettext, pgettext, number
-│   │   ├── launch.py               # starts the window or the indicator (beside the interpreter)
+│   │   ├── instance.py             # single instance: lock file with the PID, AlreadyRunning
 │   │   └── traffic-cop.yaml.default
 │   ├── locale/fr/LC_MESSAGES/      # traffic-cop.po + .mo
 │   ├── daemon/                     # traffic-copd
@@ -267,14 +269,15 @@ traffic-cop/
 │   │   ├── meter.py                # counters → smoothed per-app rates and totals
 │   │   └── server.py               # Unix socket API + SO_PEERCRED auth
 │   ├── cli/__main__.py             # traffic-cop-ctl: status/rates/pause/resume/reload/config
-│   ├── gui/                        # traffic-cop (tkinter/ttk)
+│   ├── gui/                        # traffic-cop (tkinter/ttk), with the tray icon
 │   │   ├── client.py               # daemon calls on a background thread + queue
 │   │   ├── model.py                # status/usage → view (pure, tested)
 │   │   ├── window.py               # main window, Wasta palette, bars
 │   │   ├── editor.py, dialog.py    # editing apps; may_change()
 │   │   └── fonts.py                # registers the snap's Andika
-│   └── indicator/                  # tray indicator (see "Indicator design")
-│       ├── __main__.py             # traffic-cop-indicator: polls the daemon, menu actions, lock
+│   └── indicator/                  # tray icon, run by the window (see "Indicator design")
+│       ├── menu.py                 # status → TrayState (pure); Icon, MenuItem, icon_dir
+│       ├── tray.py                 # Tray: the icon on its own thread, queues to and from Tk
 │       ├── sni.py                  # StatusNotifierItem + dbusmenu over jeepney
 │       └── icons/                  # tray icons, made by tools/tray-icons.py
 ├── tests/
@@ -395,24 +398,55 @@ paused. The editor is read-only for non-admins (`editor.may_change`).
 
 ## Indicator design
 
-A tray icon with a menu: Pause/Resume (whichever applies; disabled for
-non-admins), Open, Quit. Planned structure:
+A tray icon with a menu: Turn limits on/off (whichever applies; disabled
+for non-admins), Open Traffic Cop, Quit.
 
-- **Separate process** `traffic-cop-indicator`, started at login (snapd's
-  `autostart` desktop file), not part of the Tk window: it lives all
-  session, and D-Bus and Tk event loops don't mix. Quit closes only the
-  indicator, never the daemon.
-- `indicator/menu.py`: **pure** status/usage → `Indicator(icon, tooltip,
-  items)`; reuse `gui/model.py` and `display` for wording; unit-tested.
-  Icons for running / paused / an app at its limit / daemon unreachable.
-- `indicator/sni.py` (done): thin D-Bus layer, StatusNotifierItem +
-  dbusmenu, with **jeepney** (pure Python, blocking; no GTK/`gi`). One
-  thread: `serve(seconds)` answers the panel, then the caller polls. The
-  icon is `IconName` + `IconThemePath` pointing at `indicator/icons/`, as
-  Chromium and Electron do in snaps: the panel runs outside the snap and
-  reads `/snap/<instance>/<revision>/…`, which differs from `$SNAP` for
-  parallel installs (`indicator.icon_dir`). A drawn circle in `IconPixmap`
-  is the fallback.
+**One process for the window and the icon** (decided 2026-10-31), as most
+apps with a tray icon do (Discord, Slack, Signal, Electron and Qt apps):
+
+| action | tray running | no tray (plain GNOME, or `unity7` missing) |
+|---|---|---|
+| window's close button | hides the window | quits |
+| tray: Open Traffic Cop | shows and raises the window | – |
+| tray: Quit | quits the window and the icon (never the daemon) | – |
+| second launch (menu, terminal) | the running copy shows its window; the new one exits | same |
+| `--hidden` (for autostart, later) | starts with only the icon | exits: nothing to show |
+
+Why: the icon used to be a separate program (`traffic-cop-indicator`, snap
+app `indicator`) that started the window as its child. A process can't
+change its AppArmor label (nor can a strict snap `snap run` its own `gui`
+app), so that window ran under the indicator's label, and GNOME took it
+for a different app: mutter turns the label `snap.<instance>.<app>` into the
+window's sandboxed app id `<instance>_<app>` (`meta_window_update_snap_id`
+in `core/window.c`), and gnome-shell matches a sandboxed window's
+`WM_CLASS` only to an app whose id starts with that id
+(`get_app_from_window_wmclass` in `shell-window-tracker.c`). It needed its
+own desktop file for a dash icon, still grouped apart from the menu's
+Traffic Cop, and opening from the menu after the tray made a second window.
+Now everything runs under the `gui` label.
+
+- **Threads** (`indicator/tray.py`): Tk on the main thread; the tray on a
+  background thread that owns the jeepney connection (only it sends or
+  receives). Queues between them, as in `gui/client.py`: `Tray.show(state)`
+  (the thread applies the latest one between `serve(0.25)` calls), and
+  `Tray.events()` (menu clicks, and `READY`/`NO_TRAY`/`NOT_ALLOWED` from
+  registration), drained by `MainWindow._dispatch`. jeepney is imported
+  only on that thread, so the window works without it.
+- **The tray's state** comes from the window's existing status polling, not
+  a second poll: each `_render` passes `menu.tray_state(status,
+  may_change)` to `Tray.show`, which skips repeats. The tray's toggle
+  invokes the window's switch, so errors are reported the same way. Usage
+  isn't polled while the window is hidden.
+- `indicator/menu.py`: **pure** status → `TrayState(icon, tooltip, items)`,
+  plus `Icon`, `MenuItem` (here rather than in `sni.py`, which imports
+  jeepney), the icon constants and `icon_dir`; unit-tested.
+- `indicator/sni.py`: thin D-Bus layer, StatusNotifierItem + dbusmenu, with
+  **jeepney** (pure Python, blocking; no GTK/`gi`). Not thread-safe: one
+  thread owns it. The icon is `IconName` + `IconThemePath` pointing at
+  `indicator/icons/`, as Chromium and Electron do in snaps: the panel runs
+  outside the snap and reads `/snap/<instance>/<revision>/…`, which differs
+  from `$SNAP` for parallel installs (`menu.icon_dir`). A drawn circle in
+  `IconPixmap` is the fallback.
 - Tray icons: monochrome "-symbolic" SVGs that panels recolour to their
   text colour; bold (on), faint (paused), faint + X (offline), since only
   opacity survives recolouring. Made from the visible layers of
@@ -420,29 +454,31 @@ non-admins), Open, Quit. Planned structure:
   `tools/tray-icons.py`, which needs `shapely`. Good enough for now but
   muddled at 22 px; to refine later, probably as a simple hand-drawn
   one-colour version that the script only fades and crosses out.
-- `indicator/__main__.py`: poll the daemon (`protocol.call`) every few
-  seconds, push changes, handle clicks (`pause`/`resume` via the API; `open`
-  starts `traffic-cop` with `launch.start`; `quit` exits).
-- **The window starts the indicator** each time it opens
-  (`gui/__main__.py`, `common/launch.py`), and the indicator is
-  **single-instance**: it holds an `flock` on
-  `$XDG_RUNTIME_DIR/traffic-cop-indicator.lock`, and a second copy exits
-  quietly. The indicator decides rather than the window, so one rule covers
-  every way a copy starts (window, login, by hand), and the kernel releases
-  the lock when the process ends, even in a crash. (A D-Bus check can't
-  tell: the tray's bus name is `org.kde.StatusNotifierItem-<pid>-1`.) So
-  quitting the icon lasts until the window is next opened. The window
-  itself isn't single-instance yet (Open starts another one).
-- Snap: the `indicator` app plugs `unity7`, `x11`, `desktop`, `home`, all
-  auto-connected. The `gui` app plugs `unity7` too, since the indicator it
-  starts runs under the window's confinement. Tested by disconnecting: without `unity7` the bus refuses
-  the tray's names (`sni.NotAllowed`; `desktop` doesn't cover them);
-  without `desktop` the icon still works, but it stays for the window that
-  Open starts under the indicator's confinement (fonts, themes); `x11` and
-  `home` are for that window too. `desktop-legacy` wasn't needed.
+- **Single instance** (`common/instance.py`): the window holds an `flock`
+  on `$XDG_RUNTIME_DIR/traffic-cop.lock` with its PID inside; a second copy
+  sends that PID `SIGUSR1` and exits before creating any window, and the
+  first schedules `show()` with `after_idle`. The handler is installed
+  before the lock is taken (SIGUSR1's default action would kill a copy
+  signalled while starting). The kernel releases the lock when the process
+  ends, even in a crash. In a snap, all its apps share `$XDG_RUNTIME_DIR`
+  (`/run/user/<uid>/snap.<instance>/`). A signal needs no new plug: snapd's
+  AppArmor template allows `signal peer=snap.@{SNAP_INSTANCE_NAME}.*` (seen
+  in the `_test` gui profile); a socket would need `network-bind`, a D-Bus
+  name a `dbus` slot. (A D-Bus check couldn't tell anyway: the tray's bus
+  name is `org.kde.StatusNotifierItem-<pid>-1`.) **To check:** GNOME may
+  not raise a window another process asks for, and show "Traffic Cop is
+  ready" instead.
+- Snap: the `gui` app plugs `unity7`, `x11`, `desktop`, `home`, all
+  auto-connected. Tested (with the old separate indicator) by
+  disconnecting: without `unity7` the bus refuses the tray's names
+  (`sni.NotAllowed`; `desktop` doesn't cover them), and the window then
+  works without an icon. `desktop-legacy` wasn't needed.
 - Shown on KDE, Cinnamon, Xfce, MATE and Ubuntu's GNOME (AppIndicator
-  extension); plain GNOME (e.g. Fedora) has no tray, so exit quietly when no
-  StatusNotifierWatcher is running.
+  extension); plain GNOME (e.g. Fedora) has no tray (no
+  StatusNotifierWatcher), so the window behaves as if there were no icon.
+- **Autostart** (next): snapd's `autostart` key on the `gui` app, with a
+  desktop file in `$SNAP_USER_DATA/.config/autostart/` that runs it with
+  `--hidden` (from the snapcraft docs; unchecked).
 
 ## Open questions and ideas
 

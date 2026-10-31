@@ -68,25 +68,15 @@ apps:
     plugs:
       - home  # `config set FILE`
 
-  # The window. Tk speaks only X11 (XWayland on Wayland desktops).
+  # The window and its tray icon, one process. Tk speaks only X11
+  # (XWayland on Wayland desktops).
   gui:
     command: bin/traffic-cop
     # Its launcher is snap/gui/gui.desktop (snapcraft finds it by the app's name).
+    # unity7: the tray icon's D-Bus names and paths.
     plugs: [unity7, x11, desktop, home]
     environment:
       # https://forum.snapcraft.io/t/modulenotfounderror-no-module-named-tkinter/28707/4
-      TCL_LIBRARY: $SNAP/usr/share/tcltk/tcl8.6
-      TK_LIBRARY: $SNAP/usr/share/tcltk/tk8.6
-      XLOCALEDIR: $SNAP/usr/share/X11/locale
-
-  # The tray icon (StatusNotifierItem over D-Bus). Its "Open" item starts
-  # the window as its own child, under this app's confinement, so it also
-  # needs the window's plugs and environment.
-  indicator:
-    command: bin/traffic-cop-indicator
-    # unity7: the tray's D-Bus names and paths.
-    plugs: [unity7, x11, desktop, home]
-    environment:
       TCL_LIBRARY: $SNAP/usr/share/tcltk/tcl8.6
       TK_LIBRARY: $SNAP/usr/share/tcltk/tk8.6
       XLOCALEDIR: $SNAP/usr/share/X11/locale
