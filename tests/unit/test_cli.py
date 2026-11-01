@@ -10,7 +10,7 @@ from trafficcop.cli import __main__ as cli
 from trafficcop.common import config, protocol
 
 STATUS = {
-    "version": "2.0.0.dev0",
+    "version": "2.0.0rc1",
     "paused": False,
     "wan": "wlp0s20f3",
     "shaping": "wlp0s20f3",
@@ -62,7 +62,7 @@ def test_status():
     assert code == 0
     assert daemon.calls == [("status", None, Path("/tmp/t.sock"))]
     assert out.splitlines()[:2] == [
-        "traffic-copd 2.0.0.dev0: shaping traffic on wlp0s20f3",
+        "traffic-copd 2.0.0rc1: shaping traffic on wlp0s20f3",
         "config: /var/lib/traffic-cop-dev/traffic-cop.yaml",
     ]
     assert "\n".join(out.splitlines()[3:]) == (

@@ -1,8 +1,14 @@
 # Traffic Cop 2.x: project notes
 
 Repo: https://github.com/wasta-linux/traffic-cop. The 2.x rewrite is on
-`main` (merged from `snap`, PR #1; the indicator, PR #2). Current work
-branch: `ensure-indicator`.
+`main` (merged from `snap`, PR #1; the indicator, PR #2; window and
+indicator in one process, PR #3). Current work branch: `release-2.0.0rc1`.
+
+Version: 2.0.0rc1 (feature-complete; the snap's grade stays `devel`, so
+`edge`/`beta` only). 2.0.0 waits for the store's auto-connect grant (see
+"Store review"), or for missing connections to be reported (see
+"Missing connections"): until then a store install's daemon dies at
+startup.
 
 ## Current state (2026-11-01)
 
@@ -259,7 +265,7 @@ traffic-cop/
 ├── pyproject.toml
 ├── README.md, screenshot.png       # user-facing docs (screenshot: cropped GUI, English)
 ├── src/trafficcop/
-│   ├── __init__.py                 # __version__ = "2.0.0.dev0"
+│   ├── __init__.py                 # __version__ = "2.0.0rc1"
 │   ├── common/
 │   │   ├── config.py               # schema, load/validate/dump, rate parsing
 │   │   ├── paths.py                # snap vs development locations; the only place that knows
