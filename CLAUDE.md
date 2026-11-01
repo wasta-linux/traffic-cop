@@ -2,13 +2,17 @@
 
 Repo: https://github.com/wasta-linux/traffic-cop. The 2.x rewrite is on
 `main` (merged from `snap`, PR #1; the indicator, PR #2; window and
-indicator in one process, PR #3). Current work branch: `release-2.0.0rc1`.
+indicator in one process, PR #3). Current work branch: `release-2.0.0`.
 
-Version: 2.0.0rc1 (feature-complete; the snap's grade stays `devel`, so
-`edge`/`beta` only). 2.0.0 waits for the store's auto-connect grant (see
-"Store review"): until then a store install's daemon dies at startup, and
-the window and CLI show the command that connects what's missing (see
-"Missing connections").
+Version: 2.0.0, so the snap builds with grade `stable` (see "Releasing").
+It doesn't wait for the store's auto-connect grant (see "Store review"):
+until that comes, a store install's daemon dies at startup, and the window
+and CLI show the command that connects what's missing (see "Missing
+connections"). The 1.x deb (`traffic-cop`, last 1.2.12 for noble) is
+only documented: README and the snap's description say to remove it
+first (`sudo apt purge traffic-cop`); no transitional deb, and the snap
+doesn't look for it. Both running at once would probably fight over the
+WAN's root qdisc (not verified).
 
 ## Current state (2026-11-01)
 
@@ -16,6 +20,8 @@ the window and CLI show the command that connects what's missing (see
   integration tests in network namespaces).
 - The snap `wasta-traffic-cop` is registered (publisher `n8marti`), and
   revision 2 (2.0.0.dev0) is on `latest/edge`.
+- Releasing 2.0.0 (see "Releasing"): version bumped on `release-2.0.0`;
+  next, merge, then candidate, test on a fresh VM, and stable.
 - The store request for auto-connecting `network-control`,
   `firewall-control` and `system-observe` (see "Store review") has been made;
   waiting on a response.
@@ -194,7 +200,9 @@ the ISP's; CAKE's `overhead` options can compensate.
 `snap/snapcraft.yaml`: name `wasta-traffic-cop` (title "Traffic Cop"),
 `core26`, strict, amd64 + arm64. Apps: `daemon` (service), `wasta-traffic-cop`
 (the CLI, named like the snap), `gui` (the window and its tray icon;
-launcher `snap/gui/gui.desktop`).
+launcher `snap/gui/gui.desktop`). Licence: GPL-3.0-or-later
+(`license:` in snapcraft.yaml; `LICENSE` is the GPL v3 text; confirmed by
+the maintainer, 2026-11-01).
 
 **Interfaces.**
 - Daemon: `network-control` (ip, tc), `firewall-control` (nftables),
@@ -329,6 +337,34 @@ request is granted. So the clients check for themselves, not the daemon
   start doesn't show the helper until the window is opened; the CLI
   prints the command. AppArmor denials weren't checked.
 
+## Releasing
+
+The snap's version and grade come from `trafficcop.__version__`
+(`override-pull` in snapcraft.yaml): a version containing `dev`, `a`, `b`
+or `rc` builds as grade `devel`, which the store allows only on `edge` and
+`beta`; any other (e.g. `2.0.0`) builds as `stable`. So a release is:
+
+1. On a branch, bump `__version__` (and the version in "File layout"),
+   update README/description if needed, run the checks (including
+   `pytest -m integration`), and merge.
+2. Launchpad builds amd64 and arm64 from `main` and uploads them to
+   `latest/edge`. `snapcraft status wasta-traffic-cop` shows the revisions;
+   check the version and grade.
+3. `snapcraft release wasta-traffic-cop <rev> candidate` for each
+   architecture's revision.
+4. Test the candidate, installed from the store (not `--dangerous`) on a
+   fresh VM: missing connections and the connect helper; starts paused; a
+   real limit holds; tray, close/Open/Quit, second launch, start at login;
+   reboot keeps state; `snap refresh --candidate` from edge with the window
+   open; French UI; `snap remove` takes the tray icon away; AppArmor
+   denials (`journalctl -k | grep -i apparmor | grep wasta-traffic-cop`).
+   If something fails: fix, rebuild (the same version may be uploaded
+   again as a new revision), and repeat from 2.
+5. `snapcraft release wasta-traffic-cop <rev> stable`, the same revisions.
+6. Tag the merge commit (`git tag -a v<version> <commit> -m "Traffic Cop
+   <version>"`, `git push origin v<version>`) and make a GitHub release
+   from the tag.
+
 ## File layout
 
 ```
@@ -336,7 +372,7 @@ traffic-cop/
 ├── pyproject.toml
 ├── README.md, screenshot.png       # user-facing docs (screenshot: cropped GUI, English)
 ├── src/trafficcop/
-│   ├── __init__.py                 # __version__ = "2.0.0rc1"
+│   ├── __init__.py                 # __version__ = "2.0.0"
 │   ├── common/
 │   │   ├── config.py               # schema, load/validate/dump, rate parsing
 │   │   ├── paths.py                # snap vs development locations; the only place that knows
@@ -665,4 +701,3 @@ Now everything runs under the `gui` label.
 - **Other ideas:** a "pick a running app" list in the editor (the daemon
   would report the units it sees, with their traffic); a short "recent
   events" list from the daemon; opt-in ECN.
-- **Licence:** confirm GPL-3.0-or-later (snapcraft.yaml) vs. "only".

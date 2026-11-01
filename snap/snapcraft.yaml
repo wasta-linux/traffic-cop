@@ -11,7 +11,12 @@ description: |
   always have; desktop apps get one when the desktop launches them in their
   own scope (GNOME does). Limits are applied with nftables and tc (CAKE).
 
-  After installing, connect the interfaces the background service needs:
+  If Traffic Cop 1.x (the traffic-cop deb) is installed, remove it first:
+  sudo apt purge traffic-cop. Its settings can't be read by 2.x and might
+  be in conflict with it.
+
+  After installing, connect the interfaces the background service needs
+  (the window shows this command while they're missing):
 
     sudo snap connect wasta-traffic-cop:network-control
     sudo snap connect wasta-traffic-cop:firewall-control
