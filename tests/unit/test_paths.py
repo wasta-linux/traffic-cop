@@ -67,3 +67,14 @@ def test_autostart_name_matches_the_snap():
     assert isinstance(snap, dict)
     apps = snap["apps"]
     assert apps["gui"]["autostart"] == paths.AUTOSTART_NAME
+
+
+def test_updates_dont_wait_for_the_window():
+    """The window and tray icon run all session, and snapd won't refresh a
+    snap while its apps run unless they're marked ignore-running."""
+    import yaml
+
+    snapcraft = Path(__file__).parents[2] / "snap" / "snapcraft.yaml"
+    snap = yaml.safe_load(snapcraft.read_text())
+    assert isinstance(snap, dict)
+    assert snap["apps"]["gui"]["refresh-mode"] == "ignore-running"

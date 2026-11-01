@@ -6,7 +6,7 @@ branch: `ensure-indicator`.
 
 ## Current state (2026-11-01)
 
-- Daemon, CLI, GUI and tray indicator are done and tested (400 unit tests;
+- Daemon, CLI, GUI and tray indicator are done and tested (402 unit tests;
   integration tests in network namespaces).
 - The snap `wasta-traffic-cop` is registered (publisher `n8marti`), and
   revision 2 (2.0.0.dev0) is on `latest/edge`.
@@ -27,6 +27,9 @@ branch: `ensure-indicator`.
   icon is shown; at login only the icon starts; opening from the menu
   shows that hidden window; switched off (`Hidden=true`), nothing starts
   at the next login.
+- Updates no longer wait for the window or tray icon to close
+  (`refresh-mode: ignore-running`; see "Indicator design"). Not yet
+  tested in the snap.
 
 ## Working with the maintainer
 
@@ -515,6 +518,29 @@ Now everything runs under the `gui` label.
     one starts us before its tray, `--hidden` gets `NO_TRAY` and quits;
     the fix would be to wait for the watcher (sni.py already hears it
     appear).
+- **Updates while it runs** (decided 2026-11-01): the `gui` app has
+  `refresh-mode: ignore-running` (a test checks it). Without it, snapd's
+  "refresh app awareness" refuses to refresh a snap whose non-service apps
+  are running: a manual `snap refresh`/`snap install` fails, and an
+  automatic refresh is postponed while snapd-desktop-integration asks the
+  user to close the app. Since the tray lives all session, that would hit
+  almost every update. Evidence: snapd's `refreshAppsCheck`
+  (`overlord/snapstate/refresh.go`) skips services and `ignore-running`
+  apps; `snap/validate.go` allows that value only for non-services (and
+  only that value for them); snapd 2.77.1 and snapcraft 9.2.1 accept it.
+  The daemon is unaffected: snapd restarts services on refresh, as before.
+  - The running copy keeps the old revision until it quits (Quit, or the
+    next login); snapd keeps the old revision mounted (2 kept by default).
+    Nearly all code is imported at startup (imports inside functions run
+    during startup or the tray thread's first moments), and Tk is found
+    through `$SNAP`, which includes the revision. Only stdlib modules
+    Python loads lazily could come from the new revision, since
+    `sys.path` goes through `/snap/<name>/current`; low risk.
+  - A second launch hands over to the old copy, so the new version takes
+    effect after a Quit or the next login. Not built: a "restart to
+    update" notice (detectable when `/snap/<name>/current` no longer
+    matches `$SNAP_REVISION`, but a strict snap can't `snap run` itself,
+    and re-running with the old environment is fragile).
 
 ## Open questions and ideas
 

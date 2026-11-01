@@ -79,6 +79,10 @@ apps:
     # ~/snap/<instance>/current/.config/autostart/ has this file, which the
     # window writes (common/autostart.py; the name is paths.AUTOSTART_NAME).
     autostart: traffic-cop.desktop
+    # Don't hold up updates: the window and tray icon live all session
+    # (autostart), and snapd won't refresh a snap while its apps run.
+    # The running copy carries on with the old version until it quits.
+    refresh-mode: ignore-running
     environment:
       # https://forum.snapcraft.io/t/modulenotfounderror-no-module-named-tkinter/28707/4
       TCL_LIBRARY: $SNAP/usr/share/tcltk/tcl8.6
