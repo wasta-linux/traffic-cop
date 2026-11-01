@@ -34,6 +34,21 @@ def load_or_create(path: Path) -> config.Config:
     return config.load(path)
 
 
+def clear_removing_note(path: Path) -> None:
+    """Delete the remove hook's note (``paths.Paths.removing``), if any.
+
+    snap/hooks/remove writes it to ask running windows to quit. If the
+    removal then fails, snapd undoes it and starts the daemon again, and a
+    note left behind would make the next windows quit. (They also ignore a
+    note older than themselves, but this keeps it from lingering.)
+    """
+    try:
+        path.unlink()
+        log.info("deleted %s, left by a removal that didn't finish", path)
+    except FileNotFoundError:
+        pass
+
+
 async def _run(
     cfg: config.Config, config_path: Path, socket_path: Path, state_path: Path
 ) -> None:
@@ -69,6 +84,7 @@ def main(argv: list[str] | None = None) -> int:
         log.error("must run as root")
         return 2
 
+    clear_removing_note(paths.get().removing)
     path = args.config or paths.get().config
     try:
         cfg = load_or_create(path)

@@ -245,6 +245,27 @@ def test_close_quits_without_a_tray():
         client.close()
 
 
+def test_quits_when_the_snap_is_being_removed(tmp_path: Path):
+    note = tmp_path / "removing"
+    client = Client(Path("/x"), FakeDaemon())
+    root = tk.Tk()
+    window = MainWindow(root, client, FakeTray(), removing_file=note)
+    try:
+        window._poll_status()  # no note
+        assert not window.closed
+        note.touch()
+        os.utime(note, (window.started - 60, window.started - 60))
+        window._poll_status()  # a stale note, from before this window started
+        assert not window.closed
+        os.utime(note, (window.started + 1, window.started + 1))
+        window._poll_status()
+        assert window.closed
+    finally:
+        if not window.closed:
+            root.destroy()
+        client.close()
+
+
 def test_hidden_start_quits_when_there_is_no_tray():
     from trafficcop.indicator import tray
 

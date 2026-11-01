@@ -1,0 +1,8 @@
+#!/bin/sh
+# Ask any running Traffic Cop windows and tray icons to quit before
+# snapd deletes their files: snapd doesn't stop a snap's apps on removal
+# unless `snap remove --terminate`. The window checks for this file on
+# each status poll (every 3 s); see gui/window.py. The daemon deletes it
+# at startup, in case the removal failed and was undone.
+touch "$SNAP_COMMON/removing"
+sleep 5

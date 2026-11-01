@@ -16,6 +16,7 @@ def test_development():
         config=Path("/var/lib/traffic-cop-dev/traffic-cop.yaml"),
         socket=Path("/run/traffic-cop-dev/traffic-cop.sock"),
         state=Path("/var/lib/traffic-cop-dev/state.json"),
+        removing=Path("/run/traffic-cop-dev/removing"),
         snap=False,
     )
 
@@ -25,6 +26,7 @@ def test_snap():
         config=Path("/var/snap/traffic-cop/42/traffic-cop.yaml"),
         socket=Path("/var/snap/traffic-cop/common/traffic-cop.sock"),
         state=Path("/var/snap/traffic-cop/42/state.json"),
+        removing=Path("/var/snap/traffic-cop/common/removing"),
         snap=True,
     )
 
@@ -78,3 +80,12 @@ def test_updates_dont_wait_for_the_window():
     snap = yaml.safe_load(snapcraft.read_text())
     assert isinstance(snap, dict)
     assert snap["apps"]["gui"]["refresh-mode"] == "ignore-running"
+
+
+def test_remove_hook_writes_the_removing_note():
+    """The window quits when it sees the note, so the names must agree."""
+    import os
+
+    hook = Path(__file__).parents[2] / "snap" / "hooks" / "remove"
+    assert os.access(hook, os.X_OK)  # snapcraft packs it as is
+    assert f'touch "$SNAP_COMMON/{paths.REMOVING_NAME}"' in hook.read_text()

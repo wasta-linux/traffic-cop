@@ -7,9 +7,13 @@ This is the only module that knows. The daemon and its clients both call
     config    $SNAP_DATA/traffic-cop.yaml    /var/lib/traffic-cop-dev/traffic-cop.yaml
     socket    $SNAP_COMMON/traffic-cop.sock  /run/traffic-cop-dev/traffic-cop.sock
     state     $SNAP_DATA/state.json          /var/lib/traffic-cop-dev/state.json
+    removing  $SNAP_COMMON/removing          /run/traffic-cop-dev/removing
 
 The state file holds what the daemon remembers between runs (whether it's
-paused); see ``supervisor.load_state``.
+paused); see ``supervisor.load_state``. The ``removing`` file is a note from
+the snap's remove hook (snap/hooks/remove) asking running windows to quit:
+the window looks for it on each status poll, and the daemon deletes a stale
+one when it starts.
 
 The window's login file (``autostart_file``) is per user, so it's apart
 from ``get()``, which the root daemon calls too.
@@ -40,10 +44,13 @@ from pathlib import Path
 CONFIG_NAME = "traffic-cop.yaml"
 SOCKET_NAME = "traffic-cop.sock"
 STATE_NAME = "state.json"
+# Must match the file snap/hooks/remove creates.
+REMOVING_NAME = "removing"
 
 DEV_CONFIG = Path("/var/lib/traffic-cop-dev") / CONFIG_NAME
 DEV_SOCKET = Path("/run/traffic-cop-dev") / SOCKET_NAME
 DEV_STATE = DEV_CONFIG.parent / STATE_NAME
+DEV_REMOVING = DEV_SOCKET.parent / REMOVING_NAME
 # Must match the gui app's ``autostart:`` in snap/snapcraft.yaml.
 AUTOSTART_NAME = "traffic-cop.desktop"
 
@@ -53,6 +60,7 @@ class Paths:
     config: Path
     socket: Path
     state: Path
+    removing: Path  # beside the socket: root writes it, users can read it
     snap: bool  # False: a development run from a source checkout
 
 
@@ -70,9 +78,16 @@ def get(env: Mapping[str, str] | None = None) -> Paths:
             config=data / CONFIG_NAME,
             socket=common / SOCKET_NAME,
             state=data / STATE_NAME,
+            removing=common / REMOVING_NAME,
             snap=True,
         )
-    return Paths(config=DEV_CONFIG, socket=DEV_SOCKET, state=DEV_STATE, snap=False)
+    return Paths(
+        config=DEV_CONFIG,
+        socket=DEV_SOCKET,
+        state=DEV_STATE,
+        removing=DEV_REMOVING,
+        snap=False,
+    )
 
 
 def autostart_file(env: Mapping[str, str] | None = None) -> Path | None:
