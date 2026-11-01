@@ -28,8 +28,10 @@ branch: `ensure-indicator`.
   shows that hidden window; switched off (`Hidden=true`), nothing starts
   at the next login.
 - Updates no longer wait for the window or tray icon to close
-  (`refresh-mode: ignore-running`; see "Indicator design"). Not yet
-  tested in the snap.
+  (`refresh-mode: ignore-running`; see "Indicator design"). Tested in the
+  `_test` snap: reinstalling with the window and icon open succeeds; they
+  keep working (menu, dialog, limits on/off); after Quit, a new launch
+  runs the new revision; no AppArmor denials.
 
 ## Working with the maintainer
 
