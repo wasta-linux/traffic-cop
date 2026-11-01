@@ -272,7 +272,8 @@ then unlinks, removes the AppArmor profiles and data.
   that ignores a note older than itself.
 - Tested in the `_test` snap, with and without `--purge`: with the window
   hidden in the tray, the icon goes within ~3 s and the window process
-  ends; removal takes ~5 s longer.
+  ends; removal takes ~5 s longer. After reinstalling, the window doesn't
+  quit (no note left). AppArmor denials weren't checked.
 
 **Missing connections** (idea, not built): a strict snap can't connect its
 own plugs, and snapd's runtime prompting doesn't cover these interfaces. The
