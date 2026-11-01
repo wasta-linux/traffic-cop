@@ -52,10 +52,11 @@ from __future__ import annotations
 import tkinter as tk
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 from tkinter import font, messagebox, ttk
 from typing import Any
 
-from trafficcop.common import config, protocol
+from trafficcop.common import autostart, config, protocol
 from trafficcop.common.i18n import _
 from trafficcop.gui import editor, fonts
 from trafficcop.gui.client import Client, Reply
@@ -221,11 +222,17 @@ class MainWindow:
         client: Client,
         tray: Tray | None = None,
         hidden: bool = False,
+        autostart_file: Path | None = None,
     ):
-        """``hidden``: start with only the tray icon (quits if there's no tray)."""
+        """``hidden``: start with only the tray icon (quits if there's no tray).
+
+        ``autostart_file``: the login file (``paths.autostart_file``); None
+        (outside the snap) leaves out the "Start in the tray at login" item.
+        """
         self.root = root
         self.client = client
         self.tray = tray
+        self.autostart_file = autostart_file
         self.tray_ready = False  # the icon is shown, so closing may only hide
         self.hidden = hidden
         self.closed = False  # destroyed: nothing more to do
@@ -281,6 +288,16 @@ class MainWindow:
         self.menu.add_command(
             label=_("Restore the default apps\u2026"), command=self._restore_defaults
         )
+        self.start_at_login = tk.BooleanVar(
+            value=autostart_file is not None and autostart.enabled(autostart_file)
+        )
+        if autostart_file is not None:
+            self.menu.add_separator()
+            self.menu.add_checkbutton(
+                label=_("Start in the tray at login"),
+                variable=self.start_at_login,
+                command=self._set_start_at_login,
+            )
         self.more = ttk.Button(
             header,
             text="\u2026",
@@ -367,6 +384,7 @@ class MainWindow:
     def _on_tray(self, event: str) -> None:
         if event == READY:
             self.tray_ready = True
+            self._default_start_at_login()
         elif event in (NO_TRAY, NOT_ALLOWED):
             self.tray_ready = False
             if self.hidden:  # nothing would ever show it
@@ -377,6 +395,30 @@ class MainWindow:
             self.show()
         elif event == menu.QUIT:
             self._quit()
+
+    # --- Starting at login ---------------------------------------------------------
+
+    def _default_start_at_login(self) -> None:
+        """On by default, once there's a tray to start in (see autostart.py)."""
+        if self.autostart_file is None:
+            return
+        try:
+            autostart.set_default(self.autostart_file)
+        except OSError:
+            return  # not worth a message; the menu item shows it's off
+        self.start_at_login.set(autostart.enabled(self.autostart_file))
+
+    def _set_start_at_login(self) -> None:
+        assert self.autostart_file is not None
+        try:
+            autostart.set_enabled(self.autostart_file, self.start_at_login.get())
+        except OSError as e:
+            messagebox.showerror(
+                "Traffic Cop",
+                _("Can't change starting at login: {error}").format(error=e),
+                parent=self.root,
+            )
+            self.start_at_login.set(autostart.enabled(self.autostart_file))
 
     # --- The limits button -----------------------------------------------------------
 

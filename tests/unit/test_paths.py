@@ -46,3 +46,24 @@ def test_defaults_to_environment(monkeypatch: pytest.MonkeyPatch):
     assert paths.get().snap
     monkeypatch.delenv("SNAP")
     assert not paths.get().snap
+
+
+def test_autostart_file_in_the_snap():
+    env = {**SNAP_ENV, "SNAP_USER_DATA": "/home/u/snap/traffic-cop/42"}
+    assert paths.autostart_file(env) == Path(
+        "/home/u/snap/traffic-cop/42/.config/autostart/traffic-cop.desktop"
+    )
+
+
+def test_no_autostart_file_in_development():
+    assert paths.autostart_file({"HOME": "/home/u"}) is None
+
+
+def test_autostart_name_matches_the_snap():
+    import yaml
+
+    snapcraft = Path(__file__).parents[2] / "snap" / "snapcraft.yaml"
+    snap = yaml.safe_load(snapcraft.read_text())
+    assert isinstance(snap, dict)
+    apps = snap["apps"]
+    assert apps["gui"]["autostart"] == paths.AUTOSTART_NAME

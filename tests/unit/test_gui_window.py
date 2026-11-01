@@ -231,3 +231,47 @@ def test_hidden_start_quits_when_there_is_no_tray():
         assert window.closed
     finally:
         client.close()
+
+
+def menu_labels(window: MainWindow) -> list[str]:
+    end = window.menu.index("end")
+    return [
+        window.menu.entrycget(i, "label")
+        for i in range(0 if end is None else end + 1)
+        if window.menu.type(i) != "separator"
+    ]
+
+
+def test_start_at_login_on_once_the_tray_is_shown(tmp_path: Path):
+    from trafficcop.common import autostart
+    from trafficcop.indicator import tray
+
+    path = tmp_path / "autostart" / "traffic-cop.desktop"
+    fake = FakeTray()
+    client = Client(Path("/x"), FakeDaemon())
+    root = tk.Tk()
+    try:
+        window = MainWindow(root, client, fake, autostart_file=path)
+        assert "Start in the tray at login" in menu_labels(window)
+        pump(root, client, 0.1)
+        assert not path.exists()  # not before there's a tray to start in
+        fake.pending.append(tray.READY)
+        pump(root, client, 0.2)
+        assert autostart.enabled(path) and window.start_at_login.get()
+        # Switched off in the menu: stays off.
+        window.start_at_login.set(False)
+        window._set_start_at_login()
+        window._default_start_at_login()
+        assert not autostart.enabled(path)
+    finally:
+        root.destroy()
+        client.close()
+
+
+def test_no_start_at_login_item_outside_the_snap():
+    root, client, window = with_tray(FakeTray())
+    try:
+        assert "Start in the tray at login" not in menu_labels(window)
+    finally:
+        root.destroy()
+        client.close()

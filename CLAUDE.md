@@ -4,9 +4,9 @@ Repo: https://github.com/wasta-linux/traffic-cop. The 2.x rewrite is on
 `main` (merged from `snap`, PR #1; the indicator, PR #2). Current work
 branch: `ensure-indicator`.
 
-## Current state (2026-10-31)
+## Current state (2026-11-01)
 
-- Daemon, CLI, GUI and tray indicator are done and tested (393 unit tests;
+- Daemon, CLI, GUI and tray indicator are done and tested (400 unit tests;
   integration tests in network namespaces).
 - The snap `wasta-traffic-cop` is registered (publisher `n8marti`), and
   revision 2 (2.0.0.dev0) is on `latest/edge`.
@@ -22,7 +22,11 @@ branch: `ensure-indicator`.
   disconnected: the window works, close quits, `--hidden` exits 0, a
   second launch still hands over, and the only denials are the tray's
   D-Bus calls.
-- **Next:** autostart at login (`--hidden`).
+- Starting in the tray at login (see "Indicator design") works in the
+  `_test` snap on Ubuntu's GNOME: the default file is written once the
+  icon is shown; at login only the icon starts; opening from the menu
+  shows that hidden window; switched off (`Hidden=true`), nothing starts
+  at the next login.
 
 ## Working with the maintainer
 
@@ -258,6 +262,7 @@ traffic-cop/
 │   │   ├── display.py              # rates/sizes/state as text (shared by CLI and GUI)
 │   │   ├── i18n.py                 # gettext: _, ngettext, pgettext, number
 │   │   ├── instance.py             # single instance: lock file with the PID, AlreadyRunning
+│   │   ├── autostart.py            # the login desktop file: on by default, Hidden=true when off
 │   │   └── traffic-cop.yaml.default
 │   ├── locale/fr/LC_MESSAGES/      # traffic-cop.po + .mo
 │   ├── daemon/                     # traffic-copd
@@ -482,9 +487,31 @@ Now everything runs under the `gui` label.
 - Shown on KDE, Cinnamon, Xfce, MATE and Ubuntu's GNOME (AppIndicator
   extension); plain GNOME (e.g. Fedora) has no tray (no
   StatusNotifierWatcher), so the window behaves as if there were no icon.
-- **Autostart** (next): snapd's `autostart` key on the `gui` app, with a
-  desktop file in `$SNAP_USER_DATA/.config/autostart/` that runs it with
-  `--hidden` (from the snapcraft docs; unchecked).
+- **Starting at login** (`common/autostart.py`): on by default, with a
+  "Start in the tray at login" switch in the window's "…" menu. snapd does
+  the starting (read in snapd's source, `usersession/autostart` and
+  `desktop/desktopentry`; snapd 2.77 here): at login every desktop runs
+  `/etc/xdg/autostart/snap-userd-autostart.desktop` (`snap userd
+  --autostart`), which globs `~/snap/*/current/.config/autostart/*.desktop`
+  and runs the app whose `autostart:` key equals the file name
+  (`traffic-cop.desktop`, `paths.AUTOSTART_NAME`; a test checks it against
+  snapcraft.yaml). It replaces the first word of `Exec=` with the app's
+  launcher and keeps the rest (`--hidden`), and skips files with
+  `Hidden=true` (also `X-GNOME-Autostart-enabled=false` on GNOME, and
+  `OnlyShowIn`/`NotShownIn`). snapd never writes the file; the app does, in
+  `$SNAP_USER_DATA/.config/autostart/` (no plug needed; it goes away with
+  the snap). Development runs have none (`paths.autostart_file` is None),
+  so the menu item is left out.
+  - Off is `Hidden=true`, not a deleted file, so the choice is remembered:
+    a missing file means "not chosen", and only then is the default
+    written.
+  - The default is written when the tray reports `READY`, not at startup:
+    without a tray, a hidden start would only quit at every login.
+  - At login on Ubuntu's GNOME, the tray watcher was up before snapd
+    started us, so nothing waits for it. Other desktops are unchecked: if
+    one starts us before its tray, `--hidden` gets `NO_TRAY` and quits;
+    the fix would be to wait for the watcher (sni.py already hears it
+    appear).
 
 ## Open questions and ideas
 

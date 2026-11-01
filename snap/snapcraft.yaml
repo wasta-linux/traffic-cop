@@ -75,6 +75,10 @@ apps:
     # Its launcher is snap/gui/gui.desktop (snapcraft finds it by the app's name).
     # unity7: the tray icon's D-Bus names and paths.
     plugs: [unity7, x11, desktop, home]
+    # At login, snapd starts this app if the user's
+    # ~/snap/<instance>/current/.config/autostart/ has this file, which the
+    # window writes (common/autostart.py; the name is paths.AUTOSTART_NAME).
+    autostart: traffic-cop.desktop
     environment:
       # https://forum.snapcraft.io/t/modulenotfounderror-no-module-named-tkinter/28707/4
       TCL_LIBRARY: $SNAP/usr/share/tcltk/tcl8.6

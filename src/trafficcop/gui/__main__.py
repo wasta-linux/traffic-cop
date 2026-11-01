@@ -95,7 +95,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     client = Client(args.socket)
     tray = Tray(menu.icon_dir())
     try:
-        window = MainWindow(root, client, tray, hidden=args.hidden)
+        window = MainWindow(
+            root,
+            client,
+            tray,
+            hidden=args.hidden,
+            autostart_file=paths.autostart_file(),
+        )
         root.mainloop()
     finally:
         tray.stop()
