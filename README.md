@@ -21,11 +21,21 @@ app from using up the whole connection or your data bundle.
 ## Installing
 Traffic Cop is a snap, so it needs a Linux distribution with snapd. (Linux
 Mint blocks snapd by default; it has to be enabled first.)
+
+If Traffic Cop 1.x is installed, remove it first. Its settings can't be
+read by 2.x (see [About](#about)), and both versions would try to shape the
+same connection.
+```bash
+sudo apt purge traffic-cop
+```
+Then install the snap:
 ```bash
 sudo snap install wasta-traffic-cop
 ```
 The background service needs a few permissions that snaps don't get
-automatically. Connect them once, then restart the service:
+automatically. If they're missing, the Traffic Cop window (and the
+`wasta-traffic-cop` command) shows the command that connects them. Connect
+them once, then restart the service:
 ```bash
 sudo snap connect wasta-traffic-cop:network-control
 sudo snap connect wasta-traffic-cop:firewall-control
