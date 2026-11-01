@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: traffic-cop VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-31 11:56+0100\n"
+"POT-Creation-Date: 2026-11-01 16:26+0100\n"
 "PO-Revision-Date: 2026-10-25 15:32+0100\n"
 "Last-Translator: Traffic Cop developers\n"
 "Language: fr\n"
@@ -24,7 +24,7 @@ msgid "config: {path}"
 msgstr "configuration : {path}"
 
 #: src/trafficcop/cli/__main__.py:72 src/trafficcop/cli/__main__.py:97
-#: src/trafficcop/gui/window.py:322
+#: src/trafficcop/gui/window.py:397
 msgid "No apps configured."
 msgstr "Aucune application configurée."
 
@@ -128,15 +128,20 @@ msgstr "valider, appliquer et enregistrer un fichier de configuration"
 msgid "YAML config file, or \"-\" for stdin"
 msgstr "fichier de configuration YAML, ou « - » pour l’entrée standard"
 
-#: src/trafficcop/cli/__main__.py:239
+#: src/trafficcop/cli/__main__.py:240
 #, python-brace-format
 msgid "'{command}' needs root or an administrator account (try sudo)"
 msgstr "« {command} » nécessite root ou un compte administrateur (essayez sudo)"
 
-#: src/trafficcop/cli/__main__.py:255
+#: src/trafficcop/cli/__main__.py:257
 #, python-brace-format
-msgid "can't reach the daemon at {path}; is it running? Start it with: {command}"
-msgstr "impossible de joindre le démon sur {path} ; est-il lancé ? Lancez-le avec : {command}"
+msgid "can't reach the daemon at {path}: it needs these connections: {plugs}. Connect them and restart it with:"
+msgstr "impossible de joindre le démon sur {path} : il lui manque ces connexions : {plugs}. Connectez-les et relancez-le avec :"
+
+#: src/trafficcop/cli/__main__.py:263
+#, python-brace-format
+msgid "can't reach the daemon at {path}; is it running? Start it with:"
+msgstr "impossible de joindre le démon sur {path} ; est-il lancé ? Lancez-le avec :"
 
 #: src/trafficcop/common/display.py:22
 msgid "MB/s"
@@ -211,6 +216,46 @@ msgstr "la fenêtre nécessite tkinter (sudo apt install python3-tk)"
 msgid "can't open a window: {error}"
 msgstr "impossible d’ouvrir une fenêtre : {error}"
 
+#: src/trafficcop/gui/connections.py:40
+msgid "set the speed limits (tc) and see where traffic goes"
+msgstr "fixer les limites de débit (tc) et voir par où passe le trafic"
+
+#: src/trafficcop/gui/connections.py:42
+msgid "mark each app's traffic so it can be limited (nftables); it adds only its own table, and removes it when paused or stopped"
+msgstr "marquer le trafic de chaque application pour pouvoir le limiter (nftables) ; il n’ajoute que sa propre table, et la retire en pause ou à l’arrêt"
+
+#: src/trafficcop/gui/connections.py:45
+msgid "see which app each program belongs to, for all users"
+msgstr "voir à quelle application appartient chaque programme, pour tous les utilisateurs"
+
+#: src/trafficcop/gui/connections.py:80
+msgid "Traffic Cop needs your permission"
+msgstr "Traffic Cop a besoin de votre autorisation"
+
+#: src/trafficcop/gui/connections.py:87
+msgid "Its background service needs these connections to limit apps' traffic. To connect them, run this command in a terminal (it asks for your password):"
+msgstr "Son service d’arrière-plan a besoin de ces connexions pour limiter le trafic des applications. Pour les connecter, lancez cette commande dans un terminal (elle demande votre mot de passe) :"
+
+#: src/trafficcop/gui/connections.py:105
+msgid "Copy"
+msgstr "Copier"
+
+#: src/trafficcop/gui/connections.py:111
+msgid "Ask an administrator to run it."
+msgstr "Demandez à un administrateur de la lancer."
+
+#: src/trafficcop/gui/connections.py:122
+msgid "Check again"
+msgstr "Vérifier à nouveau"
+
+#: src/trafficcop/gui/connections.py:126 src/trafficcop/gui/dialog.py:136
+msgid "Close"
+msgstr "Fermer"
+
+#: src/trafficcop/gui/connections.py:152
+msgid "More about it"
+msgstr "En savoir plus"
+
 #: src/trafficcop/gui/dialog.py:43
 msgid "Add an app"
 msgstr "Ajouter une application"
@@ -219,35 +264,31 @@ msgstr "Ajouter une application"
 msgid "Change an app"
 msgstr "Modifier une application"
 
-#: src/trafficcop/gui/dialog.py:59
+#: src/trafficcop/gui/dialog.py:61
 msgid "Name"
 msgstr "Nom"
 
-#: src/trafficcop/gui/dialog.py:87
+#: src/trafficcop/gui/dialog.py:96
 msgid "blank: no limit"
 msgstr "vide : pas de limite"
 
-#: src/trafficcop/gui/dialog.py:92
+#: src/trafficcop/gui/dialog.py:100
 msgid "Recognise the app by"
 msgstr "Reconnaître l’application par"
 
-#: src/trafficcop/gui/dialog.py:113 src/trafficcop/gui/window.py:549
+#: src/trafficcop/gui/dialog.py:123 src/trafficcop/gui/window.py:697
 msgid "Only administrators can change apps."
 msgstr "Seuls les administrateurs peuvent modifier les applications."
 
-#: src/trafficcop/gui/dialog.py:121
+#: src/trafficcop/gui/dialog.py:132
 msgid "Remove"
 msgstr "Supprimer"
 
-#: src/trafficcop/gui/dialog.py:125
+#: src/trafficcop/gui/dialog.py:136
 msgid "Cancel"
 msgstr "Annuler"
 
-#: src/trafficcop/gui/dialog.py:125
-msgid "Close"
-msgstr "Fermer"
-
-#: src/trafficcop/gui/dialog.py:133
+#: src/trafficcop/gui/dialog.py:144
 msgid "Save"
 msgstr "Enregistrer"
 
@@ -305,68 +346,77 @@ msgstr "Ajoutez au moins une règle pour reconnaître l’application."
 msgid "There's already an app called {name}."
 msgstr "Il existe déjà une application nommée {name}."
 
-#: src/trafficcop/gui/model.py:97 src/trafficcop/gui/window.py:551
-#: src/trafficcop/indicator/menu.py:74
-msgid "Traffic Cop isn't running"
-msgstr "Traffic Cop n’est pas lancé"
+#: src/trafficcop/gui/model.py:102
+#, python-brace-format
+msgid "Not connected: {plugs}"
+msgstr "Non connecté : {plugs}"
 
-#: src/trafficcop/gui/model.py:98
+#: src/trafficcop/gui/model.py:104
 #, python-brace-format
 msgid "Start it with: {command}"
 msgstr "Lancez-le avec : {command}"
 
-#: src/trafficcop/gui/window.py:270 src/trafficcop/gui/window.py:571
+#: src/trafficcop/gui/model.py:107 src/trafficcop/gui/window.py:699
+#: src/trafficcop/indicator/menu.py:74
+msgid "Traffic Cop isn't running"
+msgstr "Traffic Cop n’est pas lancé"
+
+#: src/trafficcop/gui/window.py:321 src/trafficcop/gui/window.py:719
 #: src/trafficcop/indicator/menu.py:78
 msgid "Limits on"
 msgstr "Limites activées"
 
-#: src/trafficcop/gui/window.py:287
+#: src/trafficcop/gui/window.py:331
+msgid "Connect…"
+msgstr "Connecter…"
+
+#: src/trafficcop/gui/window.py:362
 msgid "Add an app…"
 msgstr "Ajouter une application…"
 
-#: src/trafficcop/gui/window.py:289
+#: src/trafficcop/gui/window.py:364
 msgid "Restore the default apps…"
 msgstr "Restaurer les applications par défaut…"
 
-#: src/trafficcop/gui/window.py:297
+#: src/trafficcop/gui/window.py:372
 msgid "Start in the tray at login"
 msgstr "Démarrer dans la barre d’état à l’ouverture de session"
 
-#: src/trafficcop/gui/window.py:418
+#: src/trafficcop/gui/window.py:566
 #, python-brace-format
 msgid "Can't change starting at login: {error}"
 msgstr "Impossible de modifier le démarrage à l’ouverture de session : {error}"
 
-#: src/trafficcop/gui/window.py:437
+#: src/trafficcop/gui/window.py:585
 msgid "Not allowed"
 msgstr "Non autorisé"
 
-#: src/trafficcop/gui/window.py:438
+#: src/trafficcop/gui/window.py:586
 msgid "Only administrators can turn the limits on or off."
 msgstr "Seuls les administrateurs peuvent activer ou désactiver les limites."
 
-#: src/trafficcop/gui/window.py:484
+#: src/trafficcop/gui/window.py:632
 msgid "Remove an app"
 msgstr "Supprimer une application"
 
-#: src/trafficcop/gui/window.py:485
+#: src/trafficcop/gui/window.py:633
 #, python-brace-format
 msgid "Remove {name}? Its limits will stop applying."
 msgstr "Supprimer {name} ? Ses limites ne s’appliqueront plus."
 
-#: src/trafficcop/gui/window.py:506
+#: src/trafficcop/gui/window.py:654
 msgid "Restore the default apps"
 msgstr "Restaurer les applications par défaut"
 
-#: src/trafficcop/gui/window.py:507
+#: src/trafficcop/gui/window.py:655
 msgid "Replace all your apps and limits with the defaults?"
 msgstr "Remplacer toutes vos applications et limites par celles par défaut ?"
 
-#: src/trafficcop/gui/window.py:571 src/trafficcop/indicator/menu.py:76
+#: src/trafficcop/gui/window.py:719 src/trafficcop/indicator/menu.py:76
 msgid "Limits off"
 msgstr "Limites désactivées"
 
-#: src/trafficcop/gui/window.py:575
+#: src/trafficcop/gui/window.py:723
 msgid "Limits"
 msgstr "Limites"
 

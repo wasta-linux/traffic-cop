@@ -24,6 +24,15 @@ The window polls the daemon through ``Client`` (``usage`` every second,
 ``status`` every few seconds) and redraws from ``model.build_view``. If the
 daemon isn't running it says how to start it and keeps trying.
 
+Until the store connects the daemon's interfaces automatically, a store
+install's daemon may lack them and die at startup. So the window checks
+(``connections.missing``, on a thread since it runs snapctl) at startup,
+whenever the daemon stops answering, and from the helper's "Check again".
+While plugs are missing, a "Connect…" button replaces the limits switch and
+opens the helper (``gui/connections.py``) with the command to run; it also
+opens on its own, once per launch, when the window is shown (so not at a
+hidden start at login).
+
 Look: ttk's "alt" theme, restyled with the Wasta Linux website's palette
 (its dark slate and blue, from the Arc theme) on a white body, and SIL's
 Andika font (see ``fonts.py``). The bar column takes all the spare width,
@@ -49,6 +58,8 @@ who may (see server.py); for other users the editor is read-only.
 
 from __future__ import annotations
 
+import queue
+import threading
 import time
 import tkinter as tk
 from collections.abc import Callable
@@ -57,10 +68,11 @@ from pathlib import Path
 from tkinter import font, messagebox, ttk
 from typing import Any
 
-from trafficcop.common import autostart, config, protocol
+from trafficcop.common import autostart, config, connections, paths, protocol
 from trafficcop.common.i18n import _
 from trafficcop.gui import editor, fonts
 from trafficcop.gui.client import Client, Reply
+from trafficcop.gui.connections import ConnectionsDialog
 from trafficcop.gui.dialog import AppDialog
 from trafficcop.gui.model import AppRow, Direction, Level, View, build_view
 from trafficcop.indicator import menu
@@ -160,6 +172,17 @@ def _style(root: tk.Tk) -> ttk.Style:
         relief=[("disabled", "solid")],
         bordercolor=[("disabled", SLATE_LIGHT)],
     )
+    # "Connect…" stands in for the limits switch, in blue since it's the one
+    # thing to do.
+    style.configure(
+        "Connect.TButton",
+        background=BLUE,
+        foreground=WHITE,
+        padding=(14, 6),
+        relief="raised",
+        borderwidth=1,
+    )
+    style.map("Connect.TButton", background=[("active", BLUE_DARK)])
     style.configure("Link.TLabel", foreground=TEXT)
     # Dialog buttons: blue for the main action, slate (like the header's "+")
     # for the rest; both stand out on white.
@@ -236,6 +259,7 @@ class MainWindow:
         hidden: bool = False,
         autostart_file: Path | None = None,
         removing_file: Path | None = None,
+        check_connections: Callable[[], tuple[str, ...] | None] = connections.missing,
     ):
         """``hidden``: start with only the tray icon (quits if there's no tray).
 
@@ -244,6 +268,9 @@ class MainWindow:
 
         ``removing_file``: the snap's remove hook writes it (``paths.Paths.removing``);
         see ``_being_removed``.
+
+        ``check_connections``: returns the daemon's unconnected plugs, or
+        None if unknown; run on a thread. Tests pass a fake.
         """
         self.root = root
         self.client = client
@@ -259,6 +286,12 @@ class MainWindow:
         self.error: Exception | None = None
         self.busy = False  # a pause/resume request is in flight
         self._rows: dict[str, _RowWidgets] = {}
+        self.check_connections = check_connections
+        self.missing: tuple[str, ...] = ()  # the daemon's unconnected plugs
+        self._checking = False  # a check is running on its thread
+        self._checked: queue.Queue[tuple[str, ...] | None] = queue.Queue()
+        self.helper: ConnectionsDialog | None = None
+        self._helper_opened = False  # it opens on its own only once per launch
 
         root.title("Traffic Cop")
         root.protocol("WM_DELETE_WINDOW", self.close)
@@ -292,6 +325,16 @@ class MainWindow:
             cursor="hand2",
         )
         self.switch.grid(row=0, column=3, rowspan=2, sticky="e")
+        # In the switch's place while plugs are missing (see _render).
+        self.connect = ttk.Button(
+            header,
+            text=_("Connect\u2026"),
+            command=self.open_helper,
+            style="Connect.TButton",
+            cursor="hand2",
+        )
+        self.connect.grid(row=0, column=3, rowspan=2, sticky="e")
+        self.connect.grid_remove()
         self.add = ttk.Button(
             header,
             text="+",
@@ -358,6 +401,7 @@ class MainWindow:
         self._dispatch()
         self._poll_status()
         self._poll_usage()
+        self._check()
 
     # --- Polling -------------------------------------------------------------------
 
@@ -366,6 +410,8 @@ class MainWindow:
         # ``after`` would fail.
         self.root.after(DISPATCH_MS, self._dispatch)
         self.client.dispatch()
+        while not self._checked.empty():
+            self._on_connections(self._checked.get_nowait())
         if self.tray is not None:
             for event in self.tray.events():
                 if not self.closed:
@@ -405,6 +451,8 @@ class MainWindow:
         if reply.ok:
             self.status, self.error = reply.result, None
         elif reply.unreachable:
+            if self.status is not None:  # it just stopped answering: why?
+                self._check()
             self.status, self.usage, self.error = None, None, reply.error
         self._render()
 
@@ -421,6 +469,7 @@ class MainWindow:
         self.root.deiconify()
         self.root.lift()
         self.root.focus_force()
+        self._open_helper_once()
 
     def close(self) -> None:
         """The close button: hide while the tray icon can bring it back, else quit."""
@@ -448,6 +497,52 @@ class MainWindow:
             self.show()
         elif event == menu.QUIT:
             self._quit()
+
+    # --- Missing connections ---------------------------------------------------------
+
+    def _check(self) -> None:
+        """Check the daemon's plugs on a thread; ``_dispatch`` gets the answer."""
+        if self._checking:
+            return
+        self._checking = True
+
+        def run() -> None:
+            try:
+                result = self.check_connections()
+            except Exception:  # unknown: show nothing rather than a wrong fix
+                result = None
+            self._checked.put(result)
+
+        threading.Thread(target=run, name="check-connections", daemon=True).start()
+
+    def _on_connections(self, missing: tuple[str, ...] | None) -> None:
+        self._checking = False
+        self.missing = missing or ()
+        if self.helper is not None and self.helper.winfo_exists():
+            if self.missing:
+                self.helper.set_missing(self.missing)
+            else:
+                self.helper.close()  # all connected; the status poll reconnects
+        self._open_helper_once()
+        self._render()
+
+    def _open_helper_once(self) -> None:
+        """Open the helper on its own: once per launch, and only while shown."""
+        if self.missing and not self.hidden and not self._helper_opened:
+            self.open_helper()
+
+    def open_helper(self) -> None:
+        self._helper_opened = True
+        if self.helper is not None and self.helper.winfo_exists():
+            self.helper.lift()
+            return
+        self.helper = ConnectionsDialog(
+            self.root,
+            paths.instance_name(),
+            self.missing,
+            may_change=self.may_change,
+            on_check=self._check,
+        )
 
     # --- Starting at login ---------------------------------------------------------
 
@@ -615,7 +710,7 @@ class MainWindow:
     def _render(self) -> None:
         if self.tray is not None:
             self.tray.show(menu.tray_state(self.status, self.may_change))
-        view = build_view(self.status, self.usage, self.error)
+        view = build_view(self.status, self.usage, self.error, self.missing)
         self.headline.configure(text=view.headline)
         self.detail.configure(text=view.detail)
         if view.paused is not None:
@@ -630,6 +725,12 @@ class MainWindow:
         self.switch.state(
             ["!disabled"] if view.connected and not self.busy else ["disabled"]
         )
+        if self.missing:
+            self.switch.grid_remove()
+            self.connect.grid()
+        else:
+            self.connect.grid_remove()
+            self.switch.grid()
         for button in (self.add, self.more):
             button.state(["!disabled"] if view.connected else ["disabled"])
         self._render_rows(view)

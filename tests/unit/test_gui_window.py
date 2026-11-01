@@ -322,3 +322,110 @@ def test_no_start_at_login_item_outside_the_snap():
     finally:
         root.destroy()
         client.close()
+
+
+class FakeCheck:
+    """Stands in for connections.missing: answers with ``self.missing``."""
+
+    def __init__(self, missing: tuple[str, ...] | None) -> None:
+        self.missing = missing
+        self.calls = 0
+
+    def __call__(self) -> tuple[str, ...] | None:
+        self.calls += 1
+        return self.missing
+
+
+def without_connections(
+    check: FakeCheck, hidden: bool = False
+) -> tuple[Any, Client, MainWindow]:
+    def unreachable(cmd: str, args: Any, path: Any) -> Any:
+        raise FileNotFoundError(path)
+
+    client = Client(Path("/x"), unreachable)
+    root = tk.Tk()
+    window = MainWindow(
+        root, client, FakeTray(), hidden=hidden, check_connections=check
+    )
+    pump(root, client)
+    return root, client, window
+
+
+def test_helper_opens_once_when_plugs_are_missing():
+    check = FakeCheck(("firewall-control", "system-observe"))
+    root, client, window = without_connections(check)
+    try:
+        helper = window.helper
+        assert helper is not None and helper.winfo_exists()
+        assert helper.command.get().startswith(
+            "sudo snap connect wasta-traffic-cop:firewall-control && "
+        )
+        assert window.detail.cget("text") == (
+            "Not connected: firewall-control, system-observe"
+        )
+        assert window.connect.winfo_ismapped() and not window.switch.winfo_ismapped()
+        helper.close()
+        window._check()  # e.g. the daemon stopped answering again
+        pump(root, client)
+        assert not helper.winfo_exists()  # not again on its own
+        window.connect.invoke()  # but from the header, at any time
+        assert window.helper is not None and window.helper.winfo_exists()
+    finally:
+        root.destroy()
+        client.close()
+
+
+def test_check_again_closes_the_helper_once_connected():
+    check = FakeCheck(("firewall-control",))
+    root, client, window = without_connections(check)
+    try:
+        helper = window.helper
+        assert helper is not None
+        check.missing = ()
+        helper.check.invoke()
+        pump(root, client)
+        assert not helper.winfo_exists()
+        assert window.missing == ()
+        assert window.switch.winfo_ismapped() and not window.connect.winfo_ismapped()
+        assert window.detail.cget("text").startswith("Start it with: ")
+    finally:
+        root.destroy()
+        client.close()
+
+
+def test_helper_waits_for_a_hidden_window_to_be_shown():
+    check = FakeCheck(("firewall-control",))
+    root, client, window = without_connections(check, hidden=True)
+    try:
+        assert check.calls == 1 and window.missing == ("firewall-control",)
+        assert window.helper is None  # nothing pops up at login
+        window.show()
+        assert window.helper is not None and window.helper.winfo_exists()
+    finally:
+        root.destroy()
+        client.close()
+
+
+def test_no_helper_when_unknown():
+    root, client, window = without_connections(FakeCheck(None))
+    try:
+        assert window.helper is None and window.missing == ()
+        assert window.detail.cget("text").startswith("Start it with: ")
+    finally:
+        root.destroy()
+        client.close()
+
+
+def test_copy_puts_the_command_on_the_clipboard():
+    root, client, window = without_connections(FakeCheck(("system-observe",)))
+    try:
+        helper = window.helper
+        assert helper is not None
+        helper.copy()
+        assert root.clipboard_get() == (
+            "sudo snap connect wasta-traffic-cop:system-observe"
+            " && sudo snap restart wasta-traffic-cop.daemon"
+        )
+    finally:
+        root.destroy()
+        client.close()

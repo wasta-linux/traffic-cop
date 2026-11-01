@@ -69,6 +69,15 @@ def test_unreachable():
     assert view.detail.startswith("Start it with: sudo ")
 
 
+def test_unreachable_with_missing_connections():
+    error = FileNotFoundError(2, "x")
+    view = build_view(None, None, error, ("firewall-control", "system-observe"))
+    assert view.headline == "Traffic Cop isn't running"
+    assert view.detail == "Not connected: firewall-control, system-observe"
+    # Nothing missing: as before.
+    assert build_view(None, None, error, ()).detail.startswith("Start it with: ")
+
+
 def test_no_apps():
     view = build_view({**STATUS, "apps": []}, {"apps": {}})
     assert view.connected and view.rows == ()

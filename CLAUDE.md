@@ -6,13 +6,13 @@ indicator in one process, PR #3). Current work branch: `release-2.0.0rc1`.
 
 Version: 2.0.0rc1 (feature-complete; the snap's grade stays `devel`, so
 `edge`/`beta` only). 2.0.0 waits for the store's auto-connect grant (see
-"Store review"), or for missing connections to be reported (see
-"Missing connections"): until then a store install's daemon dies at
-startup.
+"Store review"): until then a store install's daemon dies at startup, and
+the window and CLI show the command that connects what's missing (see
+"Missing connections").
 
 ## Current state (2026-11-01)
 
-- Daemon, CLI, GUI and tray indicator are done and tested (402 unit tests;
+- Daemon, CLI, GUI and tray indicator are done and tested (422 unit tests;
   integration tests in network namespaces).
 - The snap `wasta-traffic-cop` is registered (publisher `n8marti`), and
   revision 2 (2.0.0.dev0) is on `latest/edge`.
@@ -38,6 +38,9 @@ startup.
   `_test` snap: reinstalling with the window and icon open succeeds; they
   keep working (menu, dialog, limits on/off); after Quit, a new launch
   runs the new revision; no AppArmor denials.
+- Missing connections are reported, with the command that connects them,
+  in the window and the CLI (see "Missing connections"). Tested in the
+  `_test` snap.
 
 ## Working with the maintainer
 
@@ -275,16 +278,56 @@ then unlinks, removes the AppArmor profiles and data.
   ends; removal takes ~5 s longer. After reinstalling, the window doesn't
   quit (no note left). AppArmor denials weren't checked.
 
-**Missing connections** (idea, not built): a strict snap can't connect its
-own plugs, and snapd's runtime prompting doesn't cover these interfaces. The
-daemon could check `snapctl is-connected <plug>` at startup and report missing
-ones in `status`, so the CLI and GUI show the `sudo snap connect …` commands
-(plus restarting the daemon) instead of failing vaguely. Today, without
-`firewall-control` the daemon dies at startup: libnftables prints `src/mnl.c:66:
-Unable to initialize Netlink socket: Operation not permitted` and exits the
-process (status 3), so Python can't catch it, and systemd gives up after 5
-restarts. Seen on the parallel test install; a store install would hit it
-until the auto-connect request is granted.
+**Missing connections** (built 2026-11-01, `common/connections.py`): a
+strict snap can't connect its own plugs, and snapd's runtime prompting
+doesn't cover these interfaces. Without `firewall-control` the daemon dies
+at startup: libnftables prints `src/mnl.c:66: Unable to initialize Netlink
+socket: Operation not permitted` and exits the process (status 3), so
+Python can't catch it, and systemd gives up after 5 restarts. Seen on the
+parallel test install; a store install hits it until the auto-connect
+request is granted. So the clients check for themselves, not the daemon
+(which may not be running):
+- `connections.missing()` runs `snapctl is-connected --list` and returns
+  the `DAEMON_PLUGS` not in it; None (show nothing) outside the snap or if
+  snapctl fails. Checked in snapd 2.77.1's source
+  (`overlord/hookstate/ctlcmd/`): `is-connected` is in `nonRootAllowed`;
+  it looks at the whole snap's plugs (`info.Plugs`), so the `gui` app sees
+  the daemon's; `--list` prints every connected plug and slot, one per
+  line. The AppArmor template allows `/usr/bin/snapctl ixr` and
+  `/run/snapd-snap.socket rw`, so no extra plug. A test checks
+  `DAEMON_PLUGS` against snapcraft.yaml (the daemon's plugs minus
+  `network-bind`).
+- `connections.fix_command()` is one line: a `sudo snap connect
+  <instance>:<plug>` per missing plug (one plug per call; sudo remembers
+  the password for the rest), then `sudo snap restart <instance>.daemon`,
+  which also starts a daemon systemd gave up on (checked in the `_test`
+  snap). `<instance>` is `paths.instance_name()`, so parallel
+  installs get theirs; `display.start_hint` and the CLI's name use it too.
+- The window checks on a thread (snapctl may be slow; the result comes back
+  through a queue drained by `_dispatch`) at startup, when the status poll
+  goes from reachable to unreachable, and from the helper's "Check again".
+  While plugs are missing, a "Connect…" button replaces the limits switch,
+  and the header says "Not connected: …" instead of the start command
+  (`model.build_view(…, missing)`). The helper (`gui/connections.py`) has
+  the command in a read-only entry with a Copy button, a sentence per
+  missing plug (from the store request) with a link to
+  `https://snapcraft.io/docs/<plug>-interface`, and "Ask an administrator
+  to run it" for non-admins. It opens on its own once per launch, only
+  while the window is shown (so not at login); "Check again" closes it
+  once nothing is missing, and the status poll then reconnects.
+- The CLI prints the same command instead of the start hint when the
+  socket can't be reached and plugs are missing. Both commands (connect,
+  and start) go on a line of their own, outside the translated sentence,
+  so they're easy to see and copy.
+- Tested in the `_test` snap (2026-11-01), with the daemon dead after
+  systemd gave up: the helper lists all three plugs, or only
+  `system-observe` when just that one is disconnected, and the command
+  names `wasta-traffic-cop_test`; the copied command, run in a terminal,
+  connects the plugs and brings the daemon back; "Check again" closes the
+  helper and the window then shows the daemon's status; the "More about
+  it" links open in the browser (through the `desktop` plug); a hidden
+  start doesn't show the helper until the window is opened; the CLI
+  prints the command. AppArmor denials weren't checked.
 
 ## File layout
 
@@ -302,6 +345,7 @@ traffic-cop/
 │   │   ├── i18n.py                 # gettext: _, ngettext, pgettext, number
 │   │   ├── instance.py             # single instance: lock file with the PID, AlreadyRunning
 │   │   ├── autostart.py            # the login desktop file: on by default, Hidden=true when off
+│   │   ├── connections.py          # the daemon's unconnected plugs (snapctl), the fix command
 │   │   └── traffic-cop.yaml.default
 │   ├── locale/fr/LC_MESSAGES/      # traffic-cop.po + .mo
 │   ├── daemon/                     # traffic-copd
@@ -319,6 +363,7 @@ traffic-cop/
 │   │   ├── model.py                # status/usage → view (pure, tested)
 │   │   ├── window.py               # main window, Wasta palette, bars
 │   │   ├── editor.py, dialog.py    # editing apps; may_change()
+│   │   ├── connections.py          # the helper shown while the daemon's plugs are missing
 │   │   └── fonts.py                # registers the snap's Andika
 │   └── indicator/                  # tray icon, run by the window (see "Indicator design")
 │       ├── menu.py                 # status → TrayState (pure); Icon, MenuItem, icon_dir

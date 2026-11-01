@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Any, TextIO
 
 from trafficcop import __version__
-from trafficcop.common import config, paths, protocol
+from trafficcop.common import config, connections, paths, protocol
 from trafficcop.common.display import (
     human_bytes,
     human_limit,
@@ -172,7 +172,7 @@ def prog_name(env: Mapping[str, str] | None = None) -> str:
     """What this command is called: in the snap it's the snap's own name."""
     env = os.environ if env is None else env
     if paths.get(env).snap:
-        return env.get("SNAP_INSTANCE_NAME") or env.get("SNAP_NAME", "traffic-cop-ctl")
+        return paths.instance_name(env)
     return "traffic-cop-ctl"
 
 
@@ -223,6 +223,7 @@ def main(
     argv: Sequence[str] | None = None,
     call: Callable[..., Any] = protocol.call,
     out: TextIO | None = None,
+    check_connections: Callable[[], tuple[str, ...] | None] = connections.missing,
 ) -> int:
     out = out or sys.stdout
     args = build_parser().parse_args(argv)
@@ -249,14 +250,20 @@ def main(
         if getattr(e, "filename", None) not in (None, str(socket_path)):
             print(f"{prog_name()}: {e}", file=sys.stderr)  # e.g. config set FILE
             return EXIT_FAILED
-        print(
-            f"{prog_name()}: "
-            + _(
-                "can't reach the daemon at {path}; is it running?"
-                " Start it with: {command}"
-            ).format(path=socket_path, command=start_hint()),
-            file=sys.stderr,
-        )
+        missing = check_connections()
+        # The command goes on a line of its own, so it's easy to see and copy.
+        if missing:  # then that's why the daemon isn't running
+            message = _(
+                "can't reach the daemon at {path}: it needs these connections:"
+                " {plugs}. Connect them and restart it with:"
+            ).format(path=socket_path, plugs=", ".join(missing))
+            message += "\n" + connections.fix_command(paths.instance_name(), missing)
+        else:
+            message = _(
+                "can't reach the daemon at {path}; is it running? Start it with:"
+            ).format(path=socket_path)
+            message += "\n" + start_hint()
+        print(f"{prog_name()}: {message}", file=sys.stderr)
         return EXIT_UNREACHABLE
     except OSError as e:
         print(f"{prog_name()}: {e}", file=sys.stderr)
