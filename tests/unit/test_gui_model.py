@@ -5,7 +5,7 @@ import pytest
 from trafficcop.gui.model import Direction, build_view, level
 
 STATUS: dict[str, Any] = {
-    "version": "2.0.0.dev0",
+    "version": "2.0.0rc1",
     "paused": False,
     "wan": "wlp0s20f3",
     "shaping": "wlp0s20f3",
@@ -29,7 +29,7 @@ def test_connected():
     view = build_view(STATUS, USAGE)
     assert view.connected and view.paused is False
     assert view.headline == "Shaping traffic on wlp0s20f3"
-    assert view.detail == "Traffic Cop 2.0.0.dev0"
+    assert view.detail == "Traffic Cop 2.0.0rc1"
     assert [r.name for r in view.rows] == ["Firefox", "Zoom", "Busy"]
 
 
