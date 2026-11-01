@@ -134,6 +134,9 @@ def test_daemon_answers_the_cli_and_cleans_up(tmp_path):
             )
             return json.loads(p.stdout) if p.returncode == 0 else p.returncode
 
+        # A fresh install starts paused (no state file; the dev path isn't
+        # writable here), so turn the limits on before checking the shaping.
+        ctl("resume")
         status = ctl("status")
         paused = ctl("pause")
         qdisc_paused = out("tc", "qdisc", "show", "dev", "wan0").split()[1]
