@@ -145,7 +145,7 @@ def test_internal_errors_are_reported(api: server.Server, monkeypatch, caplog):
     def broken(args: dict[str, Any]) -> None:
         raise RuntimeError("boom")
 
-    monkeypatch.setitem(api._handlers, "status", broken)  # pyright: ignore[reportPrivateUsage]
+    monkeypatch.setitem(api._handlers, "status", broken)
     assert error_code(ask(api, USER, "status")) == protocol.FAILED
     assert "error handling a request" in caplog.text
 
@@ -165,7 +165,7 @@ def test_group_ids():
 
 def test_over_a_real_socket(api: server.Server, tmp_path: Path):
     """Start the server, then talk to it as traffic-cop-ctl will."""
-    api._peer = lambda sock: ADMIN  # pyright: ignore[reportPrivateUsage]
+    api._peer = lambda sock: ADMIN
 
     async def main() -> list[Any]:
         await api.start()

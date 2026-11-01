@@ -31,6 +31,7 @@ dependencies = [
 # The GUI uses tkinter, which is in the standard library (on Debian/Ubuntu:
 # apt install python3-tk).
 dev = [
+    "pyright",
     "pytest>=7",
     "pytest-cov",
     "ruff",
@@ -46,7 +47,6 @@ traffic-cop-ctl = "trafficcop.cli.__main__:main"
 
 [project.gui-scripts]
 traffic-cop = "trafficcop.gui.__main__:main"
-traffic-cop-indicator = "trafficcop.indicator.__main__:main"
 
 [tool.setuptools.dynamic]
 version = {attr = "trafficcop.__version__"}
@@ -79,6 +79,16 @@ typeCheckingMode = "standard"
 # Packages only available from apt (python3-nftables, later python3-gi). The
 # venv is created with --system-site-packages, but pyright ignores that.
 extraPaths = ["/usr/lib/python3/dist-packages"]
+
+[[tool.pyright.executionEnvironments]]
+root = "tests"
+# The project folder, for "from tests.unit... import", and the apt packages.
+# (An environment's extraPaths replaces the one above rather than adding to it.)
+extraPaths = [".", "/usr/lib/python3/dist-packages"]
+# Tests pass fakes where the code expects real classes (e.g. FakeConnection
+# for jeepney's DBusConnection in test_indicator.py).
+reportArgumentType = false
+reportPrivateUsage = false
 
 [tool.ruff]
 line-length = 88

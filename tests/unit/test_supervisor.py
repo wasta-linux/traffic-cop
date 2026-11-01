@@ -153,7 +153,7 @@ def test_sample_error_keeps_last_usage(sup: supervisor.Supervisor, system, caplo
     def broken():
         raise nft.NftError("Error: No such file or directory")
 
-    sup.meter._read = broken  # pyright: ignore[reportPrivateUsage]
+    sup.meter._read = broken
     sup.sample()
     assert sup.usage["Zoom"].up_total == 4000
     assert "couldn't read the traffic counters" in caplog.text

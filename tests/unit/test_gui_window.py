@@ -35,7 +35,7 @@ def test_window_shows_status_and_rows():
         pump(root, client)
         assert window.headline.cget("text") == "Shaping traffic on wlp0s20f3"
         assert tk.ttk.Style(root).theme_use() == "alt"
-        assert list(window._rows) == ["Firefox", "Zoom", "Busy"]  # pyright: ignore[reportPrivateUsage]
+        assert list(window._rows) == ["Firefox", "Zoom", "Busy"]
         assert window.active.get() and window.switch.cget("text") == "Limits on"
         assert "selected" in window.switch.state()  # pressed = on
         window.switch.invoke()
@@ -115,15 +115,15 @@ def test_add_an_app():
         assert dialog is not None
         dialog.name.set("Skype")
         dialog.limits["download"][0].set("50")
-        dialog._rules[0][1].set("skype")  # pyright: ignore[reportPrivateUsage]
-        dialog._save()  # pyright: ignore[reportPrivateUsage]
+        dialog._rules[0][1].set("skype")
+        dialog._save()
         pump(root, client)
         assert not dialog.winfo_exists()
         assert daemon.config["apps"]["Skype"] == {
             "download": "400kbit",
             "match": [{"snap": "skype"}],
         }
-        assert "Skype" in window._rows  # pyright: ignore[reportPrivateUsage]
+        assert "Skype" in window._rows
     finally:
         root.destroy()
         client.close()
@@ -133,15 +133,41 @@ def test_edit_shows_errors_and_keeps_the_dialog():
     daemon = FakeDaemon()
     root, client, window = make(daemon)
     try:
-        window._edit_app("Zoom")  # pyright: ignore[reportPrivateUsage]
+        window._edit_app("Zoom")
         pump(root, client)
         dialog = window.dialog
         assert dialog is not None and dialog.name.get() == "Zoom"
         dialog.name.set("Firefox")  # clashes
-        dialog._save()  # pyright: ignore[reportPrivateUsage]
+        dialog._save()
         pump(root, client)
         assert "already an app called Firefox" in dialog.error.cget("text")
         assert dialog.winfo_exists()
+        dialog.close()
+    finally:
+        root.destroy()
+        client.close()
+
+
+def test_dialog_colours():
+    """Light grey dialog; drop-downs and read-only fields one grey darker."""
+    from trafficcop.gui import window as w
+
+    daemon = FakeDaemon()
+    root, client, window = make(daemon)
+    try:
+        window._edit_app("Zoom")
+        pump(root, client)
+        dialog = window.dialog
+        assert dialog is not None
+        assert dialog.cget("background") == w.FIELD_GREY
+        style = tk.ttk.Style(root)
+        assert style.lookup("Dialog.TCombobox", "fieldbackground", ["readonly"]) == (
+            w.TROUGH
+        )
+        assert style.lookup("Dialog.TEntry", "fieldbackground", ["disabled"]) == (
+            w.TROUGH
+        )
+        assert str(window.menu.cget("background")) == w.FIELD_GREY
         dialog.close()
     finally:
         root.destroy()
@@ -152,12 +178,126 @@ def test_read_only_for_other_users():
     daemon = FakeDaemon()
     root, client, window = make(daemon, may_change=False)
     try:
-        window._edit_app("Zoom")  # pyright: ignore[reportPrivateUsage]
+        window._edit_app("Zoom")
         pump(root, client)
         dialog = window.dialog
         assert dialog is not None and dialog.save is None
         assert "Only administrators" in dialog.error.cget("text")
         dialog.close()
+    finally:
+        root.destroy()
+        client.close()
+
+
+class FakeTray:
+    """Stands in for indicator.tray.Tray: records states, hands out events."""
+
+    def __init__(self, *events: str) -> None:
+        self.pending = list(events)
+        self.states: list = []
+
+    def show(self, state) -> None:
+        self.states.append(state)
+
+    def events(self) -> list[str]:
+        out, self.pending = self.pending, []
+        return out
+
+
+def with_tray(tray: FakeTray, hidden: bool = False) -> tuple[Any, Client, MainWindow]:
+    client = Client(Path("/x"), FakeDaemon())
+    root = tk.Tk()
+    window = MainWindow(root, client, tray, hidden=hidden)
+    pump(root, client)
+    return root, client, window
+
+
+def test_close_hides_while_the_tray_is_shown():
+    from trafficcop.indicator import menu, tray
+
+    fake = FakeTray(tray.READY)
+    root, client, window = with_tray(fake)
+    try:
+        assert fake.states[-1].icon == menu.ON  # fed from the status polling
+        window.close()
+        pump(root, client, 0.1)
+        assert root.winfo_exists() and root.state() == "withdrawn"
+        fake.pending.append(menu.OPEN)
+        pump(root, client)
+        assert root.state() == "normal" and not window.hidden
+        fake.pending.append(menu.QUIT)
+        pump(root, client, 0.2)
+        assert window.closed
+    finally:
+        if not window.closed:
+            root.destroy()
+        client.close()
+
+
+def test_close_quits_without_a_tray():
+    from trafficcop.indicator import tray
+
+    root, client, window = with_tray(FakeTray(tray.NO_TRAY))
+    try:
+        window.close()
+        assert window.closed
+    finally:
+        client.close()
+
+
+def test_hidden_start_quits_when_there_is_no_tray():
+    from trafficcop.indicator import tray
+
+    fake = FakeTray()
+    root, client, window = with_tray(fake, hidden=True)
+    try:
+        assert root.state() == "withdrawn"
+        fake.pending.append(tray.NOT_ALLOWED)
+        pump(root, client, 0.2)
+        assert window.closed
+    finally:
+        client.close()
+
+
+def menu_labels(window: MainWindow) -> list[str]:
+    end = window.menu.index("end")
+    return [
+        window.menu.entrycget(i, "label")
+        for i in range(0 if end is None else end + 1)
+        if window.menu.type(i) != "separator"
+    ]
+
+
+def test_start_at_login_on_once_the_tray_is_shown(tmp_path: Path):
+    from trafficcop.common import autostart
+    from trafficcop.indicator import tray
+
+    path = tmp_path / "autostart" / "traffic-cop.desktop"
+    fake = FakeTray()
+    client = Client(Path("/x"), FakeDaemon())
+    root = tk.Tk()
+    try:
+        window = MainWindow(root, client, fake, autostart_file=path)
+        assert "Start in the tray at login" in menu_labels(window)
+        pump(root, client, 0.1)
+        assert not path.exists()  # not before there's a tray to start in
+        fake.pending.append(tray.READY)
+        pump(root, client, 0.2)
+        assert autostart.enabled(path) and window.start_at_login.get()
+        # Switched off in the menu: stays off.
+        window.start_at_login.set(False)
+        window._set_start_at_login()
+        window._default_start_at_login()
+        assert not autostart.enabled(path)
+    finally:
+        root.destroy()
+        client.close()
+
+
+def test_no_start_at_login_item_outside_the_snap():
+    root, client, window = with_tray(FakeTray())
+    try:
+        assert "Start in the tray at login" not in menu_labels(window)
     finally:
         root.destroy()
         client.close()

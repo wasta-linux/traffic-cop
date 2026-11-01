@@ -32,6 +32,13 @@ that follows the window, not the numbers. A bar is Wasta blue, and
 turns yellow when the limit is holding its app back (``model.FULL``): limited,
 not stopped, so a caution colour rather than an alarm.
 
+The tray icon (indicator/tray.py, on its own thread) is fed from the same
+status polling: each render hands it a ``menu.TrayState``, and its clicks
+come back through ``_dispatch``. While it's shown, the close button only
+hides the window (as most apps with a tray icon do); its "Open" shows the
+window again and "Quit" ends the process. Without a tray, the close button
+quits. Usage isn't polled while the window is hidden.
+
 Changes: the "Limits on" button (a ttk toggle button: pressed means on)
 sends pause/resume. "+" adds an app, clicking an app's name opens it for
 changing or removing (``dialog.AppDialog``), and the "…" menu restores the
@@ -45,15 +52,18 @@ from __future__ import annotations
 import tkinter as tk
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 from tkinter import font, messagebox, ttk
 from typing import Any
 
-from trafficcop.common import config, protocol
+from trafficcop.common import autostart, config, protocol
 from trafficcop.common.i18n import _
 from trafficcop.gui import editor, fonts
 from trafficcop.gui.client import Client, Reply
 from trafficcop.gui.dialog import AppDialog
 from trafficcop.gui.model import AppRow, Direction, Level, View, build_view
+from trafficcop.indicator import menu
+from trafficcop.indicator.tray import NO_TRAY, NOT_ALLOWED, READY, Tray
 
 DISPATCH_MS = 100
 USAGE_MS = 1000
@@ -176,6 +186,17 @@ def _style(root: tk.Tk) -> ttk.Style:
         fieldbackground=[("disabled", FIELD_GREY), ("readonly", FIELD_GREY)],
     )
     style.map("TEntry", fieldbackground=[("disabled", FIELD_GREY)])
+    # The app dialog has a light grey background, so the fields you type in
+    # stand out in white. Its drop-downs and read-only fields go one grey
+    # darker (TROUGH), or they'd vanish into the background.
+    style.configure("Dialog.TFrame", background=FIELD_GREY)
+    style.configure("Dialog.TLabel", background=FIELD_GREY, foreground=TEXT)
+    style.configure("DialogDim.TLabel", background=FIELD_GREY, foreground=DIM)
+    style.map(
+        "Dialog.TCombobox",
+        fieldbackground=[("disabled", TROUGH), ("readonly", TROUGH)],
+    )
+    style.map("Dialog.TEntry", fieldbackground=[("disabled", TROUGH)])
     return style
 
 
@@ -206,9 +227,26 @@ class _RowWidgets:
 
 
 class MainWindow:
-    def __init__(self, root: tk.Tk, client: Client):
+    def __init__(
+        self,
+        root: tk.Tk,
+        client: Client,
+        tray: Tray | None = None,
+        hidden: bool = False,
+        autostart_file: Path | None = None,
+    ):
+        """``hidden``: start with only the tray icon (quits if there's no tray).
+
+        ``autostart_file``: the login file (``paths.autostart_file``); None
+        (outside the snap) leaves out the "Start in the tray at login" item.
+        """
         self.root = root
         self.client = client
+        self.tray = tray
+        self.autostart_file = autostart_file
+        self.tray_ready = False  # the icon is shown, so closing may only hide
+        self.hidden = hidden
+        self.closed = False  # destroyed: nothing more to do
         self.status: dict[str, Any] | None = None
         self.usage: dict[str, Any] | None = None
         self.error: Exception | None = None
@@ -216,6 +254,9 @@ class MainWindow:
         self._rows: dict[str, _RowWidgets] = {}
 
         root.title("Traffic Cop")
+        root.protocol("WM_DELETE_WINDOW", self.close)
+        if hidden:
+            root.withdraw()  # before Tk first maps it, so it never flashes up
         fonts.apply(root)
         _style(root)
         root.minsize(760, 200)
@@ -253,11 +294,35 @@ class MainWindow:
             width=2,
         )
         self.add.grid(row=0, column=1, rowspan=2, sticky="e", padx=(0, 6))
-        self.menu = tk.Menu(root, tearoff=False)
+        # A tk.Menu isn't themed by ttk. Without colours it had Tk's own
+        # grey (#d9d9d9), darker than anything in the palette. On the light
+        # grey, Tk's hover colour (#ececec) would barely show, so the item
+        # under the pointer is blue.
+        self.menu = tk.Menu(
+            root,
+            tearoff=False,
+            background=FIELD_GREY,
+            foreground=TEXT,
+            activebackground=BLUE,
+            activeforeground=WHITE,
+            selectcolor=TEXT,  # the tick of "Start in the tray at login"
+            relief="solid",
+            borderwidth=1,
+        )
         self.menu.add_command(label=_("Add an app\u2026"), command=self._add_app)
         self.menu.add_command(
             label=_("Restore the default apps\u2026"), command=self._restore_defaults
         )
+        self.start_at_login = tk.BooleanVar(
+            value=autostart_file is not None and autostart.enabled(autostart_file)
+        )
+        if autostart_file is not None:
+            self.menu.add_separator()
+            self.menu.add_checkbutton(
+                label=_("Start in the tray at login"),
+                variable=self.start_at_login,
+                command=self._set_start_at_login,
+            )
         self.more = ttk.Button(
             header,
             text="\u2026",
@@ -290,15 +355,21 @@ class MainWindow:
     # --- Polling -------------------------------------------------------------------
 
     def _dispatch(self) -> None:
-        self.client.dispatch()
+        # Scheduled first: a tray event may destroy the window, after which
+        # ``after`` would fail.
         self.root.after(DISPATCH_MS, self._dispatch)
+        self.client.dispatch()
+        if self.tray is not None:
+            for event in self.tray.events():
+                if not self.closed:
+                    self._on_tray(event)
 
     def _poll_status(self) -> None:
         self.client.request("status", self._on_status, once=True)
         self.root.after(STATUS_MS, self._poll_status)
 
     def _poll_usage(self) -> None:
-        if self.status is not None:
+        if self.status is not None and not self.hidden:
             self.client.request("usage", self._on_usage, once=True)
         self.root.after(USAGE_MS, self._poll_usage)
 
@@ -313,6 +384,66 @@ class MainWindow:
         if reply.ok:
             self.usage = reply.result
             self._render()
+
+    # --- Showing, hiding, and the tray ------------------------------------------------
+
+    def show(self) -> None:
+        """Bring the window back (from the tray, or for a second launch)."""
+        self.hidden = False
+        self.root.deiconify()
+        self.root.lift()
+        self.root.focus_force()
+
+    def close(self) -> None:
+        """The close button: hide while the tray icon can bring it back, else quit."""
+        if self.tray_ready:
+            self.hidden = True
+            self.root.withdraw()
+        else:
+            self._quit()
+
+    def _quit(self) -> None:
+        self.closed = True
+        self.root.destroy()  # ends the main loop
+
+    def _on_tray(self, event: str) -> None:
+        if event == READY:
+            self.tray_ready = True
+            self._default_start_at_login()
+        elif event in (NO_TRAY, NOT_ALLOWED):
+            self.tray_ready = False
+            if self.hidden:  # nothing would ever show it
+                self._quit()
+        elif event == menu.TOGGLE:
+            self.switch.invoke()  # as if pressed: does nothing while disabled
+        elif event == menu.OPEN:
+            self.show()
+        elif event == menu.QUIT:
+            self._quit()
+
+    # --- Starting at login ---------------------------------------------------------
+
+    def _default_start_at_login(self) -> None:
+        """On by default, once there's a tray to start in (see autostart.py)."""
+        if self.autostart_file is None:
+            return
+        try:
+            autostart.set_default(self.autostart_file)
+        except OSError:
+            return  # not worth a message; the menu item shows it's off
+        self.start_at_login.set(autostart.enabled(self.autostart_file))
+
+    def _set_start_at_login(self) -> None:
+        assert self.autostart_file is not None
+        try:
+            autostart.set_enabled(self.autostart_file, self.start_at_login.get())
+        except OSError as e:
+            messagebox.showerror(
+                "Traffic Cop",
+                _("Can't change starting at login: {error}").format(error=e),
+                parent=self.root,
+            )
+            self.start_at_login.set(autostart.enabled(self.autostart_file))
 
     # --- The limits button -----------------------------------------------------------
 
@@ -454,6 +585,8 @@ class MainWindow:
     # --- Drawing -----------------------------------------------------------------
 
     def _render(self) -> None:
+        if self.tray is not None:
+            self.tray.show(menu.tray_state(self.status, self.may_change))
         view = build_view(self.status, self.usage, self.error)
         self.headline.configure(text=view.headline)
         self.detail.configure(text=view.detail)

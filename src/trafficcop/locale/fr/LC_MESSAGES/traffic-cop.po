@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: traffic-cop VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-29 20:28+0100\n"
+"POT-Creation-Date: 2026-10-31 11:56+0100\n"
 "PO-Revision-Date: 2026-10-25 15:32+0100\n"
 "Last-Translator: Traffic Cop developers\n"
 "Language: fr\n"
@@ -24,7 +24,7 @@ msgid "config: {path}"
 msgstr "configuration : {path}"
 
 #: src/trafficcop/cli/__main__.py:72 src/trafficcop/cli/__main__.py:97
-#: src/trafficcop/gui/window.py:282
+#: src/trafficcop/gui/window.py:322
 msgid "No apps configured."
 msgstr "Aucune application configurée."
 
@@ -79,8 +79,7 @@ msgstr "Contrôler et surveiller le démon Traffic Cop."
 msgid "print raw JSON"
 msgstr "afficher le JSON brut"
 
-#: src/trafficcop/cli/__main__.py:188 src/trafficcop/gui/__main__.py:27
-#: src/trafficcop/indicator/__main__.py:162
+#: src/trafficcop/cli/__main__.py:188 src/trafficcop/gui/__main__.py:38
 #, python-brace-format
 msgid "daemon socket (default: {path})"
 msgstr "socket du démon (par défaut : {path})"
@@ -190,15 +189,24 @@ msgctxt "decimal separator"
 msgid "."
 msgstr ","
 
-#: src/trafficcop/gui/__main__.py:22
+#: src/trafficcop/gui/__main__.py:33
 msgid "The Traffic Cop window."
 msgstr "La fenêtre de Traffic Cop."
 
-#: src/trafficcop/gui/__main__.py:37
+#: src/trafficcop/gui/__main__.py:43
+msgid "start with only the tray icon, not the window"
+msgstr "démarrer avec seulement l’icône dans la barre d’état, sans la fenêtre"
+
+#: src/trafficcop/gui/__main__.py:66
+#, python-brace-format
+msgid "already running, but can't reach it: {error}"
+msgstr "déjà ouvert, mais impossible de le joindre : {error}"
+
+#: src/trafficcop/gui/__main__.py:76
 msgid "the window needs tkinter (sudo apt install python3-tk)"
 msgstr "la fenêtre nécessite tkinter (sudo apt install python3-tk)"
 
-#: src/trafficcop/gui/__main__.py:50
+#: src/trafficcop/gui/__main__.py:91
 #, python-brace-format
 msgid "can't open a window: {error}"
 msgstr "impossible d’ouvrir une fenêtre : {error}"
@@ -223,7 +231,7 @@ msgstr "vide : pas de limite"
 msgid "Recognise the app by"
 msgstr "Reconnaître l’application par"
 
-#: src/trafficcop/gui/dialog.py:113 src/trafficcop/gui/window.py:443
+#: src/trafficcop/gui/dialog.py:113 src/trafficcop/gui/window.py:549
 msgid "Only administrators can change apps."
 msgstr "Seuls les administrateurs peuvent modifier les applications."
 
@@ -297,8 +305,8 @@ msgstr "Ajoutez au moins une règle pour reconnaître l’application."
 msgid "There's already an app called {name}."
 msgstr "Il existe déjà une application nommée {name}."
 
-#: src/trafficcop/gui/model.py:97 src/trafficcop/gui/window.py:445
-#: src/trafficcop/indicator/__main__.py:106
+#: src/trafficcop/gui/model.py:97 src/trafficcop/gui/window.py:551
+#: src/trafficcop/indicator/menu.py:74
 msgid "Traffic Cop isn't running"
 msgstr "Traffic Cop n’est pas lancé"
 
@@ -307,69 +315,74 @@ msgstr "Traffic Cop n’est pas lancé"
 msgid "Start it with: {command}"
 msgstr "Lancez-le avec : {command}"
 
-#: src/trafficcop/gui/window.py:240 src/trafficcop/gui/window.py:463
-#: src/trafficcop/indicator/__main__.py:110
+#: src/trafficcop/gui/window.py:270 src/trafficcop/gui/window.py:571
+#: src/trafficcop/indicator/menu.py:78
 msgid "Limits on"
 msgstr "Limites activées"
 
-#: src/trafficcop/gui/window.py:257
+#: src/trafficcop/gui/window.py:287
 msgid "Add an app…"
 msgstr "Ajouter une application…"
 
-#: src/trafficcop/gui/window.py:259
+#: src/trafficcop/gui/window.py:289
 msgid "Restore the default apps…"
 msgstr "Restaurer les applications par défaut…"
 
-#: src/trafficcop/gui/window.py:331
+#: src/trafficcop/gui/window.py:297
+msgid "Start in the tray at login"
+msgstr "Démarrer dans la barre d’état à l’ouverture de session"
+
+#: src/trafficcop/gui/window.py:418
+#, python-brace-format
+msgid "Can't change starting at login: {error}"
+msgstr "Impossible de modifier le démarrage à l’ouverture de session : {error}"
+
+#: src/trafficcop/gui/window.py:437
 msgid "Not allowed"
 msgstr "Non autorisé"
 
-#: src/trafficcop/gui/window.py:332
+#: src/trafficcop/gui/window.py:438
 msgid "Only administrators can turn the limits on or off."
 msgstr "Seuls les administrateurs peuvent activer ou désactiver les limites."
 
-#: src/trafficcop/gui/window.py:378
+#: src/trafficcop/gui/window.py:484
 msgid "Remove an app"
 msgstr "Supprimer une application"
 
-#: src/trafficcop/gui/window.py:379
+#: src/trafficcop/gui/window.py:485
 #, python-brace-format
 msgid "Remove {name}? Its limits will stop applying."
 msgstr "Supprimer {name} ? Ses limites ne s’appliqueront plus."
 
-#: src/trafficcop/gui/window.py:400
+#: src/trafficcop/gui/window.py:506
 msgid "Restore the default apps"
 msgstr "Restaurer les applications par défaut"
 
-#: src/trafficcop/gui/window.py:401
+#: src/trafficcop/gui/window.py:507
 msgid "Replace all your apps and limits with the defaults?"
 msgstr "Remplacer toutes vos applications et limites par celles par défaut ?"
 
-#: src/trafficcop/gui/window.py:463 src/trafficcop/indicator/__main__.py:108
+#: src/trafficcop/gui/window.py:571 src/trafficcop/indicator/menu.py:76
 msgid "Limits off"
 msgstr "Limites désactivées"
 
-#: src/trafficcop/gui/window.py:467
+#: src/trafficcop/gui/window.py:575
 msgid "Limits"
 msgstr "Limites"
 
-#: src/trafficcop/indicator/__main__.py:117
+#: src/trafficcop/indicator/menu.py:85
 msgid "Turn limits on"
 msgstr "Activer les limites"
 
-#: src/trafficcop/indicator/__main__.py:117
+#: src/trafficcop/indicator/menu.py:85
 msgid "Turn limits off"
 msgstr "Désactiver les limites"
 
-#: src/trafficcop/indicator/__main__.py:121
+#: src/trafficcop/indicator/menu.py:89
 msgid "Open Traffic Cop"
 msgstr "Ouvrir Traffic Cop"
 
-#: src/trafficcop/indicator/__main__.py:123
+#: src/trafficcop/indicator/menu.py:91
 msgid "Quit"
 msgstr "Quitter"
-
-#: src/trafficcop/indicator/__main__.py:157
-msgid "The Traffic Cop tray icon."
-msgstr "L’icône de Traffic Cop dans la barre d’état."
 

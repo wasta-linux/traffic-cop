@@ -11,6 +11,9 @@ This is the only module that knows. The daemon and its clients both call
 The state file holds what the daemon remembers between runs (whether it's
 paused); see ``supervisor.load_state``.
 
+The window's login file (``autostart_file``) is per user, so it's apart
+from ``get()``, which the root daemon calls too.
+
 * The snap's config and state are in ``$SNAP_DATA``, which is per revision: snapd copies
   it forward on refresh and restores the old copy on revert, so an older
   revision never sees a config written by a newer one.
@@ -41,6 +44,8 @@ STATE_NAME = "state.json"
 DEV_CONFIG = Path("/var/lib/traffic-cop-dev") / CONFIG_NAME
 DEV_SOCKET = Path("/run/traffic-cop-dev") / SOCKET_NAME
 DEV_STATE = DEV_CONFIG.parent / STATE_NAME
+# Must match the gui app's ``autostart:`` in snap/snapcraft.yaml.
+AUTOSTART_NAME = "traffic-cop.desktop"
 
 
 @dataclass(frozen=True)
@@ -68,3 +73,21 @@ def get(env: Mapping[str, str] | None = None) -> Paths:
             snap=True,
         )
     return Paths(config=DEV_CONFIG, socket=DEV_SOCKET, state=DEV_STATE, snap=False)
+
+
+def autostart_file(env: Mapping[str, str] | None = None) -> Path | None:
+    """The desktop file that starts the window at login; None outside a snap.
+
+    snapd starts snap apps at login itself (``snap userd --autostart``, run
+    from /etc/xdg/autostart): it looks for
+    ``~/snap/*/current/.config/autostart/*.desktop`` and runs the app whose
+    ``autostart:`` key names the file (snapd's usersession/autostart). In
+    the snap that directory is ``$SNAP_USER_DATA/.config/autostart``, which
+    goes away with the snap, so no login entry is left behind. A development
+    run has none, rather than writing to the real ~/.config/autostart.
+    """
+    env = os.environ if env is None else env
+    user_data = env.get("SNAP_USER_DATA")
+    if not env.get("SNAP") or not user_data:
+        return None
+    return Path(user_data) / ".config" / "autostart" / AUTOSTART_NAME

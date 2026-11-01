@@ -43,24 +43,28 @@ class AppDialog(tk.Toplevel):
         self.title(_("Add an app") if new else _("Change an app"))
         self.transient(master.winfo_toplevel())
         self.resizable(True, False)
-        self.configure(background="white")
+        # The window's styles (window._style) define the dialog's colours;
+        # the Toplevel itself isn't ttk, so it takes the frame's background.
+        self.configure(background=ttk.Style(self).lookup("Dialog.TFrame", "background"))
         self._editable = editable
         self._on_save = on_save
         self._fixed = list(draft.fixed_rules)
         self._unit_labels = {u: _(u) for u in UNITS}
         self._key_labels = dict(rule_keys())
 
-        body = ttk.Frame(self, padding=16)
+        body = ttk.Frame(self, padding=16, style="Dialog.TFrame")
         body.grid(sticky="nsew")
         self.columnconfigure(0, weight=1)
         body.columnconfigure(1, weight=1)
 
         label_pad = (0, 12)
-        ttk.Label(body, text=_("Name")).grid(
+        ttk.Label(body, text=_("Name"), style="Dialog.TLabel").grid(
             row=0, column=0, sticky="w", padx=label_pad, pady=4
         )
         self.name = tk.StringVar(value=draft.name)
-        self._name_entry = ttk.Entry(body, textvariable=self.name, width=32)
+        self._name_entry = ttk.Entry(
+            body, textvariable=self.name, width=32, style="Dialog.TEntry"
+        )
         self._name_entry.grid(row=0, column=1, columnspan=3, sticky="ew", pady=4)
 
         self.limits: dict[str, tuple[tk.StringVar, tk.StringVar]] = {}
@@ -68,31 +72,35 @@ class AppDialog(tk.Toplevel):
             (("download", "↓", draft.download), ("upload", "↑", draft.upload)),
             start=1,
         ):
-            ttk.Label(body, text=arrow).grid(
+            ttk.Label(body, text=arrow, style="Dialog.TLabel").grid(
                 row=row, column=0, sticky="w", padx=label_pad, pady=4
             )
             number = tk.StringVar(value=limit.number)
             unit = tk.StringVar(value=self._unit_labels[limit.unit])
-            pair = ttk.Frame(body)  # keeps the number and its unit together
+            # keeps the number and its unit together
+            pair = ttk.Frame(body, style="Dialog.TFrame")
             pair.grid(row=row, column=1, sticky="w", pady=4)
-            ttk.Entry(pair, textvariable=number, width=10).grid(row=0, column=0)
+            ttk.Entry(pair, textvariable=number, width=10, style="Dialog.TEntry").grid(
+                row=0, column=0
+            )
             ttk.Combobox(
                 pair,
                 textvariable=unit,
                 values=list(self._unit_labels.values()),
                 state="readonly",
                 width=7,
+                style="Dialog.TCombobox",
             ).grid(row=0, column=1, padx=(6, 0))
             if key == "download":
-                ttk.Label(pair, text=_("blank: no limit"), style="Dim.TLabel").grid(
-                    row=0, column=2, padx=(12, 0)
-                )
+                ttk.Label(
+                    pair, text=_("blank: no limit"), style="DialogDim.TLabel"
+                ).grid(row=0, column=2, padx=(12, 0))
             self.limits[key] = (number, unit)
 
-        ttk.Label(body, text=_("Recognise the app by")).grid(
+        ttk.Label(body, text=_("Recognise the app by"), style="Dialog.TLabel").grid(
             row=3, column=0, columnspan=4, sticky="w", pady=(12, 4)
         )
-        self._rules_frame = ttk.Frame(body)
+        self._rules_frame = ttk.Frame(body, style="Dialog.TFrame")
         self._rules_frame.grid(row=4, column=0, columnspan=4, sticky="ew")
         self._rules_frame.columnconfigure(1, weight=1)
         self._rules: list[tuple[tk.StringVar, tk.StringVar, list[tk.Widget]]] = []
@@ -106,14 +114,17 @@ class AppDialog(tk.Toplevel):
         if not draft.rules and not draft.fixed_rules:
             self._add_rule()
 
-        self.error = ttk.Label(body, foreground=ERROR, wraplength=420)
+        self.error = ttk.Label(
+            body, foreground=ERROR, wraplength=420, style="Dialog.TLabel"
+        )
         self.error.grid(row=6, column=0, columnspan=4, sticky="w", pady=(10, 0))
         if not editable:
             self.error.configure(
-                text=_("Only administrators can change apps."), style="Dim.TLabel"
+                text=_("Only administrators can change apps."),
+                style="DialogDim.TLabel",
             )
 
-        buttons = ttk.Frame(body)
+        buttons = ttk.Frame(body, style="Dialog.TFrame")
         buttons.grid(row=7, column=0, columnspan=4, sticky="ew", pady=(12, 0))
         buttons.columnconfigure(1, weight=1)
         if on_remove is not None and editable:
@@ -156,9 +167,12 @@ class AppDialog(tk.Toplevel):
             values=list(self._key_labels.values()),
             state="readonly",
             width=24,
+            style="Dialog.TCombobox",
         )
         combo.grid(row=row, column=0, sticky="w", pady=2)
-        entry = ttk.Entry(self._rules_frame, textvariable=value_var, width=28)
+        entry = ttk.Entry(
+            self._rules_frame, textvariable=value_var, width=28, style="Dialog.TEntry"
+        )
         entry.grid(row=row, column=1, sticky="ew", padx=6, pady=2)
         widgets: list[tk.Widget] = [combo, entry]
         item = (key_var, value_var, widgets)
@@ -186,7 +200,7 @@ class AppDialog(tk.Toplevel):
             text = " + ".join(
                 f"{self._key_labels.get(k, k)} = {v}" for k, v in rule.items()
             )
-            label = ttk.Label(self._rules_frame, text=text, style="Dim.TLabel")
+            label = ttk.Label(self._rules_frame, text=text, style="DialogDim.TLabel")
             label.grid(row=100 + i, column=0, columnspan=2, sticky="w", pady=2)
             button = ttk.Button(
                 self._rules_frame, text="−", width=3, style="Secondary.TButton"
