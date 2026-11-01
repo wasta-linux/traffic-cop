@@ -184,7 +184,31 @@ def test_daemon_not_running(error: OSError, capsys: pytest.CaptureFixture[str]):
     daemon = FakeDaemon()
     daemon.error = error
     assert run(daemon, "status")[0] == cli.EXIT_UNREACHABLE
-    assert "is it running? Start it with: sudo " in capsys.readouterr().err
+    first, command = capsys.readouterr().err.splitlines()
+    assert first.endswith("is it running? Start it with:")
+    assert command.startswith("sudo ")  # a line of its own, to copy
+
+
+def test_daemon_needs_connections(capsys: pytest.CaptureFixture[str]):
+    daemon = FakeDaemon()
+    daemon.error = FileNotFoundError(2, "x")
+    code = cli.main(
+        ["--socket", "/tmp/t.sock", "status"],
+        call=daemon,
+        out=io.StringIO(),
+        check_connections=lambda: ("firewall-control",),
+    )
+    assert code == cli.EXIT_UNREACHABLE
+    err = capsys.readouterr().err
+    first, command = err.splitlines()
+    assert first.endswith(
+        "it needs these connections: firewall-control."
+        " Connect them and restart it with:"
+    )
+    assert command == (  # a line of its own, to copy
+        "sudo snap connect wasta-traffic-cop:firewall-control"
+        " && sudo snap restart wasta-traffic-cop.daemon"
+    )
 
 
 def test_usage_errors():

@@ -8,7 +8,7 @@ display.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal
 
@@ -89,13 +89,23 @@ def build_view(
     status: Mapping[str, Any] | None,
     usage: Mapping[str, Any] | None,
     error: Exception | None = None,
+    missing: Sequence[str] = (),
 ) -> View:
-    """The window's contents. ``error`` is set if the daemon couldn't be reached."""
+    """The window's contents. ``error`` is set if the daemon couldn't be reached.
+
+    ``missing``: the daemon's plugs that aren't connected
+    (``connections.missing``). Then that's why it isn't running, and the
+    window offers the fix instead of the start command.
+    """
     if error is not None or status is None:
+        if missing:
+            detail = _("Not connected: {plugs}").format(plugs=", ".join(missing))
+        else:
+            detail = _("Start it with: {command}").format(command=start_hint())
         return View(
             connected=False,
             headline=_("Traffic Cop isn't running"),
-            detail=_("Start it with: {command}").format(command=start_hint()),
+            detail=detail,
             paused=None,
         )
     apps_usage = (usage or {}).get("apps", {})

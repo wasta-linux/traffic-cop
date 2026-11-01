@@ -90,6 +90,16 @@ def get(env: Mapping[str, str] | None = None) -> Paths:
     )
 
 
+def instance_name(env: Mapping[str, str] | None = None) -> str:
+    """The snap's name as installed, for ``snap`` commands shown to the user.
+
+    ``$SNAP_INSTANCE_NAME`` includes a parallel install's key
+    (``wasta-traffic-cop_test``); ``$SNAP_NAME`` doesn't.
+    """
+    env = os.environ if env is None else env
+    return env.get("SNAP_INSTANCE_NAME") or env.get("SNAP_NAME", "wasta-traffic-cop")
+
+
 def autostart_file(env: Mapping[str, str] | None = None) -> Path | None:
     """The desktop file that starts the window at login; None outside a snap.
 

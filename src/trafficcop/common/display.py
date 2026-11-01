@@ -81,8 +81,7 @@ def state_text(status: Mapping[str, Any]) -> str:
 def start_hint(env: Mapping[str, str] = os.environ, argv0: str = sys.argv[0]) -> str:
     """How to start the daemon (a command, so not translated)."""
     if paths.get(env).snap:
-        name = env.get("SNAP_INSTANCE_NAME") or env.get("SNAP_NAME", "traffic-cop")
-        return f"sudo snap start {name}"
+        return f"sudo snap start {paths.instance_name(env)}"
     # A development checkout: traffic-copd sits next to this script in the venv.
     daemon = Path(argv0).parent / "traffic-copd"
     return f"sudo {daemon}" if daemon.is_file() else "sudo traffic-copd"
