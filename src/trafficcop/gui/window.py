@@ -186,6 +186,17 @@ def _style(root: tk.Tk) -> ttk.Style:
         fieldbackground=[("disabled", FIELD_GREY), ("readonly", FIELD_GREY)],
     )
     style.map("TEntry", fieldbackground=[("disabled", FIELD_GREY)])
+    # The app dialog has a light grey background, so the fields you type in
+    # stand out in white. Its drop-downs and read-only fields go one grey
+    # darker (TROUGH), or they'd vanish into the background.
+    style.configure("Dialog.TFrame", background=FIELD_GREY)
+    style.configure("Dialog.TLabel", background=FIELD_GREY, foreground=TEXT)
+    style.configure("DialogDim.TLabel", background=FIELD_GREY, foreground=DIM)
+    style.map(
+        "Dialog.TCombobox",
+        fieldbackground=[("disabled", TROUGH), ("readonly", TROUGH)],
+    )
+    style.map("Dialog.TEntry", fieldbackground=[("disabled", TROUGH)])
     return style
 
 
@@ -283,7 +294,21 @@ class MainWindow:
             width=2,
         )
         self.add.grid(row=0, column=1, rowspan=2, sticky="e", padx=(0, 6))
-        self.menu = tk.Menu(root, tearoff=False)
+        # A tk.Menu isn't themed by ttk. Without colours it had Tk's own
+        # grey (#d9d9d9), darker than anything in the palette. On the light
+        # grey, Tk's hover colour (#ececec) would barely show, so the item
+        # under the pointer is blue.
+        self.menu = tk.Menu(
+            root,
+            tearoff=False,
+            background=FIELD_GREY,
+            foreground=TEXT,
+            activebackground=BLUE,
+            activeforeground=WHITE,
+            selectcolor=TEXT,  # the tick of "Start in the tray at login"
+            relief="solid",
+            borderwidth=1,
+        )
         self.menu.add_command(label=_("Add an app\u2026"), command=self._add_app)
         self.menu.add_command(
             label=_("Restore the default apps\u2026"), command=self._restore_defaults

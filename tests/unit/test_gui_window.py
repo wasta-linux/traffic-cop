@@ -148,6 +148,32 @@ def test_edit_shows_errors_and_keeps_the_dialog():
         client.close()
 
 
+def test_dialog_colours():
+    """Light grey dialog; drop-downs and read-only fields one grey darker."""
+    from trafficcop.gui import window as w
+
+    daemon = FakeDaemon()
+    root, client, window = make(daemon)
+    try:
+        window._edit_app("Zoom")
+        pump(root, client)
+        dialog = window.dialog
+        assert dialog is not None
+        assert dialog.cget("background") == w.FIELD_GREY
+        style = tk.ttk.Style(root)
+        assert style.lookup("Dialog.TCombobox", "fieldbackground", ["readonly"]) == (
+            w.TROUGH
+        )
+        assert style.lookup("Dialog.TEntry", "fieldbackground", ["disabled"]) == (
+            w.TROUGH
+        )
+        assert str(window.menu.cget("background")) == w.FIELD_GREY
+        dialog.close()
+    finally:
+        root.destroy()
+        client.close()
+
+
 def test_read_only_for_other_users():
     daemon = FakeDaemon()
     root, client, window = make(daemon, may_change=False)

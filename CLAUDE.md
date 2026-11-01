@@ -398,7 +398,10 @@ tkinter + ttk (chosen over GTK 4 to avoid the ~600 MB GNOME runtime snap;
 costs: X11 via XWayland, plain look, weak screen-reader support). ttk `alt`
 theme with the Wasta palette (`window.py`: SLATE header, BLUE bars, YELLOW
 at the limit, pale slate `SLATE_PALE` bars while paused, FIELD_GREY
-read-only fields), Andika font. One row per app: download bar above upload
+read-only fields), Andika font. The app dialog and the "…" menu have a
+FIELD_GREY background (the menu's hover is BLUE, since Tk's own hover
+colour barely shows on it); in the dialog, drop-downs and read-only fields
+are one grey darker (TROUGH) so they don't vanish into it. One row per app: download bar above upload
 bar, with ↓/↑ arrows and "rate / limit" text. Header button: "Limits on" /
 paused. The editor is read-only for non-admins (`editor.may_change`).
 
