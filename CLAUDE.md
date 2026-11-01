@@ -247,6 +247,33 @@ these interfaces; writes need an admin group; a fresh install starts paused,
 so auto-connecting doesn't shape anyone's traffic unexpectedly. A full draft
 was written; check with the maintainer whether it has been posted.
 
+**Removing the snap while the window runs** (added 2026-11-01).
+`snap remove` left the tray icon in the panel, with an empty menu, after
+the snap's files and AppArmor profile were gone. What snapd does on removal
+(read in snapd's `overlord/snapstate/snapstate.go`, `removeTasks`), in
+order: stops the services (the daemon); runs the `remove` hook, as root,
+while everything is still installed, and only when all revisions are being
+removed (not on refresh, nor `snap remove --revision`); kills the snap's
+apps **only with `snap remove --terminate`**, which users won't know to use;
+then unlinks, removes the AppArmor profiles and data.
+- The hook can't stop the window itself: the window's lock file (with its
+  PID) is in each user's `/run/user/<uid>/snap.<instance>/`, under an
+  `owner` AppArmor rule, so root's hook can't read it; finding processes
+  through `/proc` would need `system-observe` on the hook.
+- So `snap/hooks/remove` writes `$SNAP_COMMON/removing`
+  (`paths.Paths.removing`; a test checks the hook's name for it) and sleeps
+  5 s, longer than the window's status poll (`STATUS_MS`, 3 s). On each poll,
+  hidden or not, the window quits as the tray's Quit does if that file is
+  newer than its own start (`MainWindow._being_removed`). The gui profile
+  lets it read `/var/snap/<instance>/**`, as for the daemon's socket; it
+  can't write there (root's folder).
+- A failed removal is undone and the daemon restarted, which deletes a
+  stale note at startup (`clear_removing_note`); a window started before
+  that ignores a note older than itself.
+- Tested in the `_test` snap, with and without `--purge`: with the window
+  hidden in the tray, the icon goes within ~3 s and the window process
+  ends; removal takes ~5 s longer.
+
 **Missing connections** (idea, not built): a strict snap can't connect its
 own plugs, and snapd's runtime prompting doesn't cover these interfaces. The
 daemon could check `snapctl is-connected <plug>` at startup and report missing
@@ -304,7 +331,8 @@ traffic-cop/
 │   ├── zoom-limit.sh               # the original proof of concept
 │   ├── snap-permtest/              # confinement tests (see "Snap")
 │   └── i18n.sh                     # extract/update/compile translations
-└── snap/                           # snapcraft.yaml; gui/: gui.desktop, icon.svg
+└── snap/                           # snapcraft.yaml; gui/: gui.desktop, icon.svg;
+                                    # hooks/remove (asks running windows to quit)
 ```
 
 ## pyproject.toml

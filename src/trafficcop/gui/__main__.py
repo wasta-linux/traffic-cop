@@ -101,6 +101,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             tray,
             hidden=args.hidden,
             autostart_file=paths.autostart_file(),
+            removing_file=paths.get().removing,
         )
         root.mainloop()
     finally:

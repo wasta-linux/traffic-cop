@@ -49,6 +49,7 @@ who may (see server.py); for other users the editor is read-only.
 
 from __future__ import annotations
 
+import time
 import tkinter as tk
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -234,16 +235,22 @@ class MainWindow:
         tray: Tray | None = None,
         hidden: bool = False,
         autostart_file: Path | None = None,
+        removing_file: Path | None = None,
     ):
         """``hidden``: start with only the tray icon (quits if there's no tray).
 
         ``autostart_file``: the login file (``paths.autostart_file``); None
         (outside the snap) leaves out the "Start in the tray at login" item.
+
+        ``removing_file``: the snap's remove hook writes it (``paths.Paths.removing``);
+        see ``_being_removed``.
         """
         self.root = root
         self.client = client
         self.tray = tray
         self.autostart_file = autostart_file
+        self.removing_file = removing_file
+        self.started = time.time()
         self.tray_ready = False  # the icon is shown, so closing may only hide
         self.hidden = hidden
         self.closed = False  # destroyed: nothing more to do
@@ -365,8 +372,29 @@ class MainWindow:
                     self._on_tray(event)
 
     def _poll_status(self) -> None:
+        if self._being_removed():
+            self._quit()  # as the tray's Quit: the icon goes, the lock is freed
+            return
         self.client.request("status", self._on_status, once=True)
         self.root.after(STATUS_MS, self._poll_status)
+
+    def _being_removed(self) -> bool:
+        """Whether the snap is being removed, so this copy should quit.
+
+        snapd doesn't stop a snap's apps when it removes the snap (unless
+        ``snap remove --terminate``), so without this the tray icon would
+        stay, with an empty menu, after the files are gone. The remove hook
+        runs as root and can't reach this process, so it leaves a note
+        (snap/hooks/remove) and waits longer than ``STATUS_MS`` before snapd
+        goes on. A note older than this window is stale: the daemon deletes
+        those at startup, but a window may start first.
+        """
+        if self.removing_file is None:
+            return False
+        try:
+            return self.removing_file.stat().st_mtime > self.started
+        except OSError:  # usually: there's no note
+            return False
 
     def _poll_usage(self) -> None:
         if self.status is not None and not self.hidden:
